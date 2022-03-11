@@ -78,14 +78,13 @@
 	var/mob/living/silicon/robot/R = usr
 	R.toggle_ionpulse()
 
-/obj/screen/robot/panel
-	name = "installed modules"
-	icon_state = "panel"
+/obj/screen/robot/mov_intent
+	name = "fast/slow toggle"
+	icon_state = "running"
 
-/obj/screen/robot/panel/Click()
-	if(issilicon(usr))
-		var/mob/living/silicon/robot/R = usr
-		R.installed_modules()
+/obj/screen/robot/mov_intent/Click()
+	usr.toggle_move_intent()
+
 
 /mob/living/silicon/robot/create_mob_hud()
 	if(client && !hud_used)
@@ -131,19 +130,27 @@
 	static_inventory += using
 
 //Intent
+// Attack intent
 	using = new /obj/screen/act_intent/robot()
 	using.icon_state = mymob.a_intent
 	static_inventory += using
 	action_intent = using
+
+// Movement intent
+	using = new /obj/screen/robot/mov_intent()
+	using.icon_state = (mymob.m_intent == MOVE_INTENT_RUN ? "running" : "walking")
+	static_inventory += using
+	using.screen_loc = ui_movi
+	move_intent = using
 
 //Health
 	mymob.healths = new /obj/screen/healths/robot()
 	infodisplay += mymob.healths
 
 //Installed Module
-	mymob.hands = new /obj/screen/robot/module()
-	mymob.hands.screen_loc = ui_borg_module
-	static_inventory += mymob.hands
+	mymobR.hands = new /obj/screen/robot/module()
+	mymobR.hands.screen_loc = ui_borg_module
+	static_inventory += mymobR.hands
 
 	module_store_icon = new /obj/screen/robot/store()
 	module_store_icon.screen_loc = ui_borg_store
@@ -154,9 +161,9 @@
 	mymob.pullin.screen_loc = ui_borg_pull
 	hotkeybuttons += mymob.pullin
 
-	mymob.zone_sel = new /obj/screen/zone_sel/robot()
-	mymob.zone_sel.update_icon(mymob)
-	static_inventory += mymob.zone_sel
+	zone_select = new /obj/screen/zone_sel/robot()
+	zone_select.update_icon(mymob)
+	static_inventory += zone_select
 
 //Headlamp
 	mymobR.lamp_button = new /obj/screen/robot/lamp()
@@ -168,6 +175,17 @@
 	using.screen_loc = ui_borg_thrusters
 	static_inventory += using
 	mymobR.thruster_button = using
+
+/datum/hud/robot/Destroy()
+	var/mob/living/silicon/robot/myrob = mymob
+	myrob.inv1 = null
+	myrob.hands = null
+	myrob.inv2 = null
+	myrob.inv3 = null
+	myrob.lamp_button = null
+	myrob.thruster_button = null
+
+	return ..()
 
 /datum/hud/proc/toggle_show_robot_modules()
 	if(!isrobot(mymob))
@@ -201,22 +219,12 @@
 		if(!R.robot_modules_background)
 			return
 
-		var/display_rows = Ceiling(R.module.modules.len / 8)
+		var/display_rows = CEILING(R.module.modules.len / 8, 1)
 		R.robot_modules_background.screen_loc = "CENTER-4:16,SOUTH+1:7 to CENTER+3:16,SOUTH+[display_rows]:7"
 		R.client.screen += R.robot_modules_background
 
 		var/x = -4	//Start at CENTER-4,SOUTH+1
 		var/y = 1
-
-		//Unfortunately adding the emag module to the list of modules has to be here. This is because a borg can
-		//be emagged before they actually select a module. - or some situation can cause them to get a new module
-		// - or some situation might cause them to get de-emagged or something.
-		if(R.emagged || R.weapons_unlock)
-			if(!(R.module.emag in R.module.modules))
-				R.module.modules.Add(R.module.emag)
-		else
-			if(R.module.emag in R.module.modules)
-				R.module.modules.Remove(R.module.emag)
 
 		for(var/atom/movable/A in R.module.modules)
 			if( (A != R.module_state_1) && (A != R.module_state_2) && (A != R.module_state_3) )
@@ -226,8 +234,8 @@
 					A.screen_loc = "CENTER[x]:16,SOUTH+[y]:7"
 				else
 					A.screen_loc = "CENTER+[x]:16,SOUTH+[y]:7"
-				A.layer = 20
-				A.plane = HUD_PLANE
+				A.layer = ABOVE_HUD_LAYER
+				A.plane = ABOVE_HUD_PLANE
 
 				x++
 				if(x == 4)

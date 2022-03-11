@@ -7,9 +7,9 @@
 	desc = "Row row!"
 	icon_state = "gar"
 	item_state = "gar"
-	species_fit = list("Vox")
+
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/species/vox/eyes.dmi'
+		"Vox" = 'icons/mob/clothing/species/vox/eyes.dmi'
 		)
 
 

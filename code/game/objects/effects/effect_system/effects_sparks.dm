@@ -5,16 +5,27 @@
 // will always spawn at the items location.
 /////////////////////////////////////////////
 
+/proc/do_sparks(n, c, source)
+	// n - number of sparks
+	// c - cardinals, bool, do the sparks only move in cardinal directions?
+	// source - source of the sparks.
+
+	var/datum/effect_system/spark_spread/sparks = new
+	sparks.set_up(n, c, source)
+	sparks.autocleanup = TRUE
+	sparks.start()
+
 /obj/effect/particle_effect/sparks
 	name = "sparks"
 	desc = "it's a spark what do you need to know?"
 	icon_state = "sparks"
-	anchored = 1
+	anchored = TRUE
 	var/hotspottemp = 1000
 
 /obj/effect/particle_effect/sparks/New()
 	..()
-	playsound(loc, "sparks", 100, 1)
+	flick("sparks", src) // replay the animation
+	playsound(src, "sparks", 100, TRUE, SHORT_RANGE_SOUND_EXTRARANGE)
 	var/turf/T = loc
 	if(isturf(T))
 		T.hotspot_expose(hotspottemp, 100)

@@ -7,7 +7,7 @@
 
 /datum/action/innate/terrorspider/web/Activate()
 	var/mob/living/simple_animal/hostile/poison/terror_spider/user = owner
-	user.Web(0)
+	user.Web()
 
 /datum/action/innate/terrorspider/wrap
 	name = "Wrap"
@@ -30,16 +30,6 @@
 	var/mob/living/simple_animal/hostile/poison/terror_spider/green/user = owner
 	user.DoLayGreenEggs()
 
-// ---------- PRINCE ACTIONS
-
-/datum/action/innate/terrorspider/thickweb
-	name = "Thick Web"
-	icon_icon = 'icons/effects/effects.dmi'
-	button_icon_state = "stickyweb2"
-
-/datum/action/innate/terrorspider/thickweb/Activate()
-	var/mob/living/simple_animal/hostile/poison/terror_spider/user = owner
-	user.Web(1)
 
 // ---------- BOSS ACTIONS
 
@@ -51,6 +41,45 @@
 /datum/action/innate/terrorspider/ventsmash/Activate()
 	var/mob/living/simple_animal/hostile/poison/terror_spider/user = owner
 	user.DoVentSmash()
+
+/datum/action/innate/terrorspider/remoteview
+	name = "Remote View"
+	icon_icon = 'icons/obj/eyes.dmi'
+	button_icon_state = "heye"
+
+/datum/action/innate/terrorspider/remoteview/Activate()
+	var/mob/living/simple_animal/hostile/poison/terror_spider/user = owner
+	user.DoRemoteView()
+
+
+// ---------- MOTHER ACTIONS
+
+/datum/action/innate/terrorspider/mother/royaljelly
+	name = "Lay Royal Jelly"
+	icon_icon = 'icons/mob/actions/actions.dmi'
+	button_icon_state = "spiderjelly"
+
+/datum/action/innate/terrorspider/mother/royaljelly/Activate()
+	var/mob/living/simple_animal/hostile/poison/terror_spider/mother/user = owner
+	user.DoCreateJelly()
+
+/datum/action/innate/terrorspider/mother/gatherspiderlings
+	name = "Gather Spiderlings"
+	icon_icon = 'icons/effects/effects.dmi'
+	button_icon_state = "spiderling"
+
+/datum/action/innate/terrorspider/mother/gatherspiderlings/Activate()
+	var/mob/living/simple_animal/hostile/poison/terror_spider/mother/user = owner
+	user.PickupSpiderlings()
+
+/datum/action/innate/terrorspider/mother/incubateeggs
+	name = "Incubate Eggs"
+	icon_icon = 'icons/effects/effects.dmi'
+	button_icon_state = "eggs"
+
+/datum/action/innate/terrorspider/mother/incubateeggs/Activate()
+	var/mob/living/simple_animal/hostile/poison/terror_spider/mother/user = owner
+	user.IncubateEggs()
 
 // ---------- QUEEN ACTIONS
 
@@ -65,7 +94,7 @@
 
 /datum/action/innate/terrorspider/queen/queensense
 	name = "Hive Sense"
-	icon_icon = 'icons/mob/actions.dmi'
+	icon_icon = 'icons/mob/actions/actions.dmi'
 	button_icon_state = "mindswap"
 
 /datum/action/innate/terrorspider/queen/queensense/Activate()
@@ -81,19 +110,11 @@
 	var/mob/living/simple_animal/hostile/poison/terror_spider/queen/user = owner
 	user.LayQueenEggs()
 
-/datum/action/innate/terrorspider/queen/queenfakelings
-	name = "Fake Spiderlings"
-	icon_icon = 'icons/effects/effects.dmi'
-	button_icon_state = "spiderling"
-
-/datum/action/innate/terrorspider/queen/queenfakelings/Activate()
-	var/mob/living/simple_animal/hostile/poison/terror_spider/queen/user = owner
-	user.QueenFakeLings()
 
 // ---------- EMPRESS
 
 /datum/action/innate/terrorspider/queen/empress/empresserase
-	name = "Erase Brood"
+	name = "Empress Erase Brood"
 	icon_icon = 'icons/effects/blood.dmi'
 	button_icon_state = "mgibbl1"
 
@@ -101,9 +122,24 @@
 	var/mob/living/simple_animal/hostile/poison/terror_spider/queen/empress/user = owner
 	user.EraseBrood()
 
+/datum/action/innate/terrorspider/queen/empress/empresslings
+	name = "Empresss Spiderlings"
+	icon_icon = 'icons/effects/effects.dmi'
+	button_icon_state = "spiderling"
+
+/datum/action/innate/terrorspider/queen/empress/empresslings/Activate()
+	var/mob/living/simple_animal/hostile/poison/terror_spider/queen/empress/user = owner
+	user.EmpressLings()
+
+
 // ---------- WEB
 
-/mob/living/simple_animal/hostile/poison/terror_spider/proc/Web(var/thick = 0)
+/mob/living/simple_animal/hostile/poison/terror_spider/proc/Web()
+	if(!web_type)
+		return
+	if(!isturf(loc))
+		to_chat(src, "<span class='danger'>Webs can only be spun while standing on a floor.</span>")
+		return
 	var/turf/mylocation = loc
 	visible_message("<span class='notice'>[src] begins to secrete a sticky substance.</span>")
 	if(do_after(src, delay_web, target = loc))
@@ -116,15 +152,8 @@
 			if(T)
 				to_chat(src, "<span class='danger'>There is already a web here.</span>")
 			else
-				var/obj/structure/spider/terrorweb/W = new /obj/structure/spider/terrorweb(loc)
+				var/obj/structure/spider/terrorweb/W = new web_type(loc)
 				W.creator_ckey = ckey
-				if(thick)
-					W.opacity = 1
-					W.name = "thick terror web"
-					W.health = W.health * 2
-				if(web_infects)
-					W.infectious = 1
-					W.name = "sharp terror web"
 
 /obj/structure/spider/terrorweb
 	name = "terror web"
@@ -132,52 +161,49 @@
 	icon = 'icons/effects/effects.dmi'
 	anchored = 1 // prevents people dragging it
 	density = 0 // prevents it blocking all movement
-	health = 20 // two welders, or one laser shot (15 for the normal spider webs)
+	max_integrity = 20 // two welders, or one laser shot (15 for the normal spider webs)
 	icon_state = "stickyweb1"
 	var/creator_ckey = null
-	var/infectious = 0
 
-/obj/structure/spider/terrorweb/New()
-	..()
+/obj/structure/spider/terrorweb/Initialize(mapload)
+	. = ..()
 	if(prob(50))
 		icon_state = "stickyweb2"
 
-/obj/structure/spider/terrorweb/proc/DeCloakNearby()
-	for(var/mob/living/simple_animal/hostile/poison/terror_spider/gray/G in view(6,src))
-		if(!G.ckey && G.stat != DEAD)
-			G.GrayDeCloak()
-			G.Aggro()
-
 /obj/structure/spider/terrorweb/CanPass(atom/movable/mover, turf/target)
-	if(istype(mover, /mob/living/simple_animal/hostile/poison/terror_spider))
-		return 1
+	if(isterrorspider(mover))
+		return TRUE
 	if(istype(mover, /obj/item/projectile/terrorqueenspit))
-		return 1
+		return TRUE
 	if(isliving(mover))
 		var/mob/living/M = mover
 		if(M.lying)
-			return 1
-		if(prob(80))
-			to_chat(mover, "<span class='danger'>You get stuck in [src] for a moment.</span>")
-			M.Stun(4) // 8 seconds.
-			M.Weaken(4) // 8 seconds.
-			DeCloakNearby()
-			if(iscarbon(mover))
-				var/mob/living/carbon/C = mover
-				if(!IsTSInfected(C) && infectious)
-					var/inject_target = pick("chest","head")
-					if(C.can_inject(null, 0, inject_target, 0))
-						to_chat(C, "<span class='danger'>[src] slices into you!</span>")
-						new /obj/item/organ/internal/body_egg/terror_eggs(C)
-				spawn(70)
-					if(C.loc == loc)
-						qdel(src)
-			return 1
-		else
-			return 0
+			return TRUE
+		return prob(80)
 	if(istype(mover, /obj/item/projectile))
 		return prob(20)
 	return ..()
+
+/obj/structure/spider/terrorweb/Crossed(atom/movable/AM, oldloc)
+	..()
+	if(isliving(AM) && !isterrorspider(AM))
+		var/mob/living/M = AM
+		to_chat(M, "<span class='userdanger'>You get stuck in [src] for a moment.</span>")
+		M.Stun(4) // 8 seconds.
+		M.Weaken(4) // 8 seconds.
+		if(iscarbon(M))
+			web_special_ability(M)
+			addtimer(CALLBACK(src, .proc/after_carbon_crossed, M), 7 SECONDS, TIMER_UNIQUE | TIMER_OVERRIDE)
+
+/**
+  * Called some time after a carbon mob crossed the terror web.
+  *
+  * Arguments:
+  * * C - The carbon mob.
+  */
+/obj/structure/spider/terrorweb/proc/after_carbon_crossed(mob/living/carbon/C)
+	if(!QDELETED(C) && C.loc == loc)
+		qdel(src)
 
 /obj/structure/spider/terrorweb/bullet_act(obj/item/projectile/Proj)
 	if(Proj.damage_type != BRUTE && Proj.damage_type != BURN)
@@ -186,18 +212,34 @@
 		return
 	..()
 
+/obj/structure/spider/terrorweb/proc/web_special_ability(mob/living/carbon/C)
+	return
+
 // ---------- WRAP
+
+/mob/living/simple_animal/hostile/poison/terror_spider/proc/mobIsWrappable(mob/living/M)
+	if(!istype(M))
+		return FALSE
+	if(M.stat != DEAD)
+		return FALSE
+	if(M.anchored)
+		return FALSE
+	if(!Adjacent(M))
+		return FALSE
+	if(isterrorspider(M))
+		return FALSE
+	return TRUE
 
 /mob/living/simple_animal/hostile/poison/terror_spider/proc/FindWrapTarget()
 	if(!cocoon_target)
 		var/list/choices = list()
 		for(var/mob/living/L in oview(1,src))
-			if(Adjacent(L) && !L.anchored)
-				if(L.stat == DEAD)
-					choices += L
+			if(!mobIsWrappable(L))
+				continue
+			choices += L
 		for(var/obj/O in oview(1,src))
 			if(Adjacent(O) && !O.anchored)
-				if(!istype(O, /obj/structure/spider/terrorweb) && !istype(O, /obj/structure/spider/cocoon) && !istype(O, /obj/structure/spider/spiderling/terror_spiderling))
+				if(!istype(O, /obj/structure/spider))
 					choices += O
 		if(choices.len)
 			cocoon_target = input(src,"What do you wish to cocoon?") in null|choices
@@ -224,13 +266,14 @@
 						if(!O.anchored)
 							if(istype(O, /obj/item))
 								O.loc = C
-							else if(istype(O, /obj/machinery) || istype(O, /obj/structure))
+							else if(istype(O, /obj/machinery))
+								O.loc = C
+								large_cocoon = 1
+							else if(istype(O, /obj/structure) && !istype(O, /obj/structure/spider)) // can't wrap spiderlings/etc
 								O.loc = C
 								large_cocoon = 1
 					for(var/mob/living/L in C.loc)
-						if(istype(L, /mob/living/simple_animal/hostile/poison/terror_spider))
-							continue
-						if(L.stat != DEAD)
+						if(!mobIsWrappable(L))
 							continue
 						if(iscarbon(L))
 							regen_points += regen_points_per_kill
@@ -281,3 +324,4 @@
 				C.visible_message("<span class='danger'>[src] smashes the welded cover off [C]!</span>")
 				return
 		to_chat(src, "<span class='danger'>There is no welded vent or scrubber close enough to do this.</span>")
+

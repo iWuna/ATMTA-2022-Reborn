@@ -3,34 +3,52 @@
 	desc = "Used to monitor power levels across the station."
 	icon_screen = "power"
 	icon_keyboard = "power_key"
-	use_power = 2
+	use_power = ACTIVE_POWER_USE
 	idle_power_usage = 20
 	active_power_usage = 80
 	light_color = LIGHT_COLOR_ORANGE
 	circuit = /obj/item/circuitboard/powermonitor
 	var/datum/powernet/powernet = null
-	var/datum/nano_module/power_monitor/power_monitor
+	var/datum/ui_module/power_monitor/power_monitor
+	/// Will this monitor be hidden from viewers?
+	var/is_secret_monitor = FALSE
+	/// How many records to keep of supply and demand
+	var/record_size = 60
+	/// Interval between power snapshots
+	var/record_interval = 5 SECONDS
+	/// Time to next record power
+	var/next_record = 0
+	/// The history list itself of the power
+	var/list/history = list()
+
+/obj/machinery/computer/monitor/secret //Hides the power monitor (such as ones on ruins & CentCom) from PDA's to prevent metagaming.
+	name = "outdated power monitoring console"
+	desc = "It monitors power levels across the local powernet."
+	circuit = /obj/item/circuitboard/powermonitor/secret
+	is_secret_monitor = TRUE
 
 /obj/machinery/computer/monitor/New()
 	..()
-	power_monitors += src
-	power_monitors = sortAtom(power_monitors)
+	GLOB.power_monitors += src
+	GLOB.power_monitors = sortAtom(GLOB.power_monitors)
 	power_monitor = new(src)
 
 /obj/machinery/computer/monitor/Initialize()
 	..()
-	powermonitor_repository.update_cache()
+	GLOB.powermonitor_repository.update_cache()
 	powernet = find_powernet()
+	history["supply"] = list()
+	history["demand"] = list()
 
 /obj/machinery/computer/monitor/Destroy()
-	power_monitors -= src
-	powermonitor_repository.update_cache()
+	GLOB.power_monitors -= src
+	GLOB.powermonitor_repository.update_cache()
 	QDEL_NULL(power_monitor)
 	return ..()
 
 /obj/machinery/computer/monitor/power_change()
 	..()
-	powermonitor_repository.update_cache()
+	GLOB.powermonitor_repository.update_cache()
 
 /obj/machinery/computer/monitor/proc/find_powernet()
 	var/obj/structure/cable/attached = null
@@ -38,7 +56,7 @@
 	if(isturf(T))
 		attached = locate() in T
 	if(attached)
-		return attached.get_powernet()
+		return attached.powernet
 
 /obj/machinery/computer/monitor/attack_ai(mob/user)
 	attack_hand(user)
@@ -51,8 +69,33 @@
 	powernet = find_powernet()
 	ui_interact(user)
 
-/obj/machinery/computer/monitor/ui_interact(mob/user, ui_key = "main", var/datum/nanoui/ui = null, var/force_open = 1)
+/obj/machinery/computer/monitor/ui_interact(mob/user, ui_key = "main", datum/tgui/ui = null, force_open = FALSE, datum/tgui/master_ui = null, datum/ui_state/state = GLOB.default_state)
 	power_monitor.ui_interact(user, ui_key, ui, force_open)
 
 /obj/machinery/computer/monitor/interact(mob/user)
 	power_monitor.ui_interact(user)
+
+/obj/machinery/computer/monitor/process()
+	record()
+
+/**
+  * Power snapshot recording proc
+  *
+  * This proc handles recording powernet history for the graph on the TGUI
+  * It is called every process(), but only logs every 5 seconds
+  */
+/obj/machinery/computer/monitor/proc/record()
+	if(world.time >= next_record)
+		next_record = world.time + record_interval
+		if(!powernet)
+			return
+
+		var/list/supply = history["supply"]
+		supply += powernet.viewavail
+		if(length(supply) > record_size)
+			supply.Cut(1, 2)
+
+		var/list/demand = history["demand"]
+		demand += powernet.viewload
+		if(length(demand) > record_size)
+			demand.Cut(1, 2)

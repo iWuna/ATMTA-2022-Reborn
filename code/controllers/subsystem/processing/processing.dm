@@ -1,7 +1,5 @@
 //Used to process objects. Fires once every second.
 
-//TODO: Implement fully when process scheduler dies
-/*
 SUBSYSTEM_DEF(processing)
 	name = "Processing"
 	priority = FIRE_PRIORITY_PROCESS
@@ -11,12 +9,19 @@ SUBSYSTEM_DEF(processing)
 	var/stat_tag = "P" //Used for logging
 	var/list/processing = list()
 	var/list/currentrun = list()
+	offline_implications = "Objects using the default processor will no longer process. Shuttle call recommended."
 
 /datum/controller/subsystem/processing/stat_entry()
 	..("[stat_tag]:[processing.len]")
 
+/datum/controller/subsystem/processing/get_metrics()
+	. = ..()
+	var/list/cust = list()
+	cust["processing"] = length(processing)
+	.["custom"] = cust
+
 /datum/controller/subsystem/processing/fire(resumed = 0)
-	if (!resumed)
+	if(!resumed)
 		currentrun = processing.Copy()
 	//cache for sanic speed (lists are references anyways)
 	var/list/current_run = currentrun
@@ -24,15 +29,16 @@ SUBSYSTEM_DEF(processing)
 	while(current_run.len)
 		var/datum/thing = current_run[current_run.len]
 		current_run.len--
-		if(QDELETED(thing) || thing.process(wait) == PROCESS_KILL)
+		if(QDELETED(thing))
 			processing -= thing
-		if (MC_TICK_CHECK)
+		else if(thing.process(wait) == PROCESS_KILL)
+			// fully stop so that a future START_PROCESSING will work
+			STOP_PROCESSING(src, thing)
+		if(MC_TICK_CHECK)
 			return
-*/
+
 /datum/var/isprocessing = FALSE
-/*
+
 /datum/proc/process()
 	set waitfor = 0
-	STOP_PROCESSING(SSobj, src)
-	return 0
-*/
+	return PROCESS_KILL

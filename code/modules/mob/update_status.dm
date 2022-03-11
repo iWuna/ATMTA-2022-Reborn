@@ -35,9 +35,9 @@
 // Procs that give information about the status of the mob
 
 /mob/proc/can_hear()
-	return 1
+	. = 1
 
-/mob/proc/has_vision()
+/mob/proc/has_vision(information_only = FALSE)
 	return 1
 
 /mob/proc/can_speak()
@@ -48,17 +48,17 @@
 
 /mob/proc/restrained(ignore_grab)
 	// All are created free
-	return 0
+	return FALSE
+
+/mob/proc/get_restraining_item()
+	return null
 
 // Procs that update other things about the mob
 
-// Does various animations - Jitter, Flying, Spinning
-/mob/proc/update_animations()
-	if(flying)
-		animate(src, pixel_y = pixel_y + 5 , time = 10, loop = 1, easing = SINE_EASING)
-		animate(pixel_y = pixel_y - 5, time = 10, loop = 1, easing = SINE_EASING)
-
 /mob/proc/update_stat()
+	return
+
+/mob/proc/update_health_hud()
 	return
 
 /mob/proc/update_canmove()

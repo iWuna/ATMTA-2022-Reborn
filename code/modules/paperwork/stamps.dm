@@ -14,8 +14,8 @@
 	attack_verb = list("stamped")
 
 /obj/item/stamp/suicide_act(mob/user)
-	user.visible_message("<span class='suicide'>[user] stamps 'VOID' on \his forehead, then promptly falls over, dead.</span>")
-	return (OXYLOSS)
+	user.visible_message("<span class='suicide'>[user] stamps 'VOID' on [user.p_their()] forehead, then promptly falls over, dead.</span>")
+	return OXYLOSS
 
 /obj/item/stamp/qm
 	name = "Quartermaster's rubber stamp"
@@ -72,8 +72,18 @@
 	icon_state = "stamp-clown"
 	item_color = "clown"
 
-/obj/item/stamp/centcom
+/obj/item/stamp/rep
 	name = "Nanotrasen Representative's rubber stamp"
+	icon_state = "stamp-rep"
+	item_color = "rep"
+
+/obj/item/stamp/magistrate
+	name = "Magistrate's rubber stamp"
+	icon_state = "stamp-magistrate"
+	item_color = "rep"
+
+/obj/item/stamp/centcom
+	name = "Central Command rubber stamp"
 	icon_state = "stamp-cent"
 	item_color = "centcom"
 
@@ -82,27 +92,3 @@
 	icon_state = "stamp-syndicate"
 	item_color = "syndicate"
 
-// Syndicate stamp to forge documents.
-
-/obj/item/stamp/chameleon/attack_self(mob/user as mob)
-
-	var/list/stamp_types = typesof(/obj/item/stamp) - src.type // Get all stamp types except our own
-	var/list/stamps = list()
-
-	// Generate them into a list
-	for(var/stamp_type in stamp_types)
-		var/obj/item/stamp/S = new stamp_type
-		stamps[capitalize(S.name)] = S
-
-	var/list/show_stamps = list("EXIT" = null) + sortList(stamps) // the list that will be shown to the user to pick from
-
-	var/input_stamp = input(user, "Choose a stamp to disguise as.", "Choose a stamp.") in show_stamps
-
-	if(user && src in user.contents)
-
-		var/obj/item/stamp/chosen_stamp = stamps[capitalize(input_stamp)]
-
-		if(chosen_stamp)
-			name = chosen_stamp.name
-			icon_state = chosen_stamp.icon_state
-			item_color = chosen_stamp.item_color

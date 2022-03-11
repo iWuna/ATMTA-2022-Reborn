@@ -59,9 +59,9 @@
 		new/datum/data/pda/app/crew_records/security,
 		new/datum/data/pda/app/secbot_control)
 
-/obj/item/cartridge/security/Initialize()
+/obj/item/cartridge/security/Initialize(mapload)
+	. = ..()
 	radio = new /obj/item/integrated_radio/beepsky(src)
-	..()
 
 /obj/item/cartridge/detective
 	name = "D.E.T.E.C.T. Cartridge"
@@ -109,9 +109,9 @@
 	desc = "A data cartridge with an integrated radio signaler module."
 	programs = list(new/datum/data/pda/app/signaller)
 
-/obj/item/cartridge/signal/Initialize()
+/obj/item/cartridge/signal/Initialize(mapload)
+	. = ..()
 	radio = new /obj/item/integrated_radio/signal(src)
-	..()
 
 /obj/item/cartridge/signal/toxins
 	name = "Signal Ace 2"
@@ -132,9 +132,9 @@
 		new/datum/data/pda/app/supply,
 		new/datum/data/pda/app/mule_control)
 
-/obj/item/cartridge/quartermaster/Initialize()
+/obj/item/cartridge/quartermaster/Initialize(mapload)
+	. = ..()
 	radio = new /obj/item/integrated_radio/mule(src)
-	..()
 
 /obj/item/cartridge/head
 	name = "Easy-Record DELUXE"
@@ -154,9 +154,9 @@
 
 		new/datum/data/pda/app/status_display)
 
-/obj/item/cartridge/hop/Initialize()
+/obj/item/cartridge/hop/Initialize(mapload)
+	. = ..()
 	radio = new /obj/item/integrated_radio/mule(src)
-	..()
 
 /obj/item/cartridge/hos
 	name = "R.O.B.U.S.T. DELUXE"
@@ -167,9 +167,9 @@
 
 		new/datum/data/pda/app/status_display)
 
-/obj/item/cartridge/hos/Initialize()
+/obj/item/cartridge/hos/Initialize(mapload)
+	. = ..()
 	radio = new /obj/item/integrated_radio/beepsky(src)
-	..()
 
 /obj/item/cartridge/ce
 	name = "Power-On DELUXE"
@@ -205,9 +205,9 @@
 
 		new/datum/data/pda/app/status_display)
 
-/obj/item/cartridge/rd/Initialize()
+/obj/item/cartridge/rd/Initialize(mapload)
+	. = ..()
 	radio = new /obj/item/integrated_radio/signal(src)
-	..()
 
 /obj/item/cartridge/captain
 	name = "Value-PAK Cartridge"
@@ -233,9 +233,9 @@
 
 		new/datum/data/pda/app/status_display)
 
-/obj/item/cartridge/captain/Initialize()
+/obj/item/cartridge/captain/Initialize(mapload)
+	. = ..()
 	radio = new /obj/item/integrated_radio/beepsky(src)
-	..()
 
 /obj/item/cartridge/supervisor
 	name = "Easy-Record DELUXE"
@@ -266,23 +266,27 @@
 		new/datum/data/pda/app/janitor,
 
 		new/datum/data/pda/app/supply,
-		new/datum/data/pda/app/mule_control,
 
 		new/datum/data/pda/app/status_display)
 
-/obj/item/cartridge/centcom/Initialize()
+/obj/item/cartridge/centcom/Initialize(mapload)
+	. = ..()
 	radio = new /obj/item/integrated_radio/beepsky(src)
-	..()
 
 /obj/item/cartridge/syndicate
 	name = "Detomatix Cartridge"
 	icon_state = "cart"
-	var/initial_remote_door_id = "smindicate" //Make sure this matches the syndicate shuttle's shield/door id!!	//don't ask about the name, testing.
 	charges = 4
-	programs = list(new/datum/data/pda/utility/toggle_door)
 	messenger_plugins = list(new/datum/data/pda/messenger_plugin/virus/detonate)
 
-/obj/item/cartridge/syndicate/New()
+/obj/item/cartridge/syndicate/nuclear //needed subtype so regular traitors can't open and close nuclear shuttle doors
+	name = "Nuclear Agent Detomatix Cartridge"
+	desc = "The same reliable Detomatix program except with the added ability of remotely toggling your nuclear shuttle airlock from your PDA"
+	var/initial_remote_door_id = "smindicate" //Make sure this matches the syndicate shuttle's shield/door id!!	//don't ask about the name, testing.
+	programs = list(new/datum/data/pda/utility/toggle_door)
+
+/obj/item/cartridge/syndicate/nuclear/Initialize(mapload)
+	. = ..()
 	var/datum/data/pda/utility/toggle_door/D = programs[1]
 	if(istype(D))
 		D.remote_door_id = initial_remote_door_id
@@ -299,7 +303,10 @@
 	desc = "The hit new PDA game that lets you track down and capture your favorite Nano-Mobs living in your world!"
 	icon_state = "cart-eye"
 	programs = list(new/datum/data/pda/app/mob_hunter_game)
-	var/emagged = 0
+
+/obj/item/cartridge/mob_hunt_game/detailed_examine_antag()
+	if(emagged)
+		return "This copy of Nano-Mob Hunter GO! has been hacked to allow the creation of trap mobs which will cause any PDA that attempts to capture it to shock anyone holding it. Hacked copies of the game will not trigger the trap."
 
 /obj/item/cartridge/mob_hunt_game/attackby(obj/item/O, mob/user, params)
 	if(istype(O, /obj/item/nanomob_card))
@@ -320,4 +327,3 @@
 		my_game.hacked = 1
 		to_chat(user, "<span class='warning'>TR4P_M45T3R.mod successfully initialized. ToS violated. User Agreement nullified. Gotta pwn them all.</span>")
 		to_chat(user, "<span class='warning'>You can now create trapped versions of any mob in your collection that will damage hunters who attempt to capture it.</span>")
-		description_antag = "This copy of Nano-Mob Hunter GO! has been hacked to allow the creation of trap mobs which will cause any PDA that attempts to capture it to shock anyone holding it. Hacked copies of the game will not trigger the trap."

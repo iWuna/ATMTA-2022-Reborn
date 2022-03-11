@@ -5,7 +5,7 @@
 
 	var/id_tag
 
-/datum/computer/file/embedded_program/New(var/obj/machinery/embedded_controller/M)
+/datum/computer/file/embedded_program/New(obj/machinery/embedded_controller/M)
 	master = M
 	if(istype(M, /obj/machinery/embedded_controller/radio))
 		var/obj/machinery/embedded_controller/radio/R = M
@@ -17,8 +17,8 @@
 /datum/computer/file/embedded_program/proc/receive_signal(datum/signal/signal, receive_method, receive_param)
 	return
 
-/datum/computer/file/embedded_program/proc/process()
-	return
+/datum/computer/file/embedded_program/process()
+	return FALSE
 
 /datum/computer/file/embedded_program/proc/post_signal(datum/signal/signal, comm_line)
 	if(master)

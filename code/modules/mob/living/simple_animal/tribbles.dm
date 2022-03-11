@@ -1,4 +1,4 @@
-var/global/totaltribbles = 0   //global variable so it updates for all tribbles, not just the new one being made.
+GLOBAL_VAR_INIT(totaltribbles, 0)   //global variable so it updates for all tribbles, not just the new one being made.
 
 
 /mob/living/simple_animal/tribble
@@ -35,7 +35,7 @@ var/global/totaltribbles = 0   //global variable so it updates for all tribbles,
 	//random pixel offsets so they cover the floor
 	src.pixel_x = rand(-5.0, 5)
 	src.pixel_y = rand(-5.0, 5)
-	totaltribbles += 1
+	GLOB.totaltribbles += 1
 
 
 /mob/living/simple_animal/tribble/attack_hand(mob/user as mob)
@@ -51,7 +51,7 @@ var/global/totaltribbles = 0   //global variable so it updates for all tribbles,
 			qdel(src)
 
 
-/mob/living/simple_animal/tribble/attackby(var/obj/item/O as obj, var/mob/user as mob, params)
+/mob/living/simple_animal/tribble/attackby(obj/item/O as obj, mob/user as mob, params)
 	if(istype(O, /obj/item/scalpel))
 		to_chat(user, "<span class='notice'>You try to neuter the tribble, but it's moving too much and you fail!</span>")
 	else if(istype(O, /obj/item/cautery))
@@ -60,8 +60,7 @@ var/global/totaltribbles = 0   //global variable so it updates for all tribbles,
 
 
 /mob/living/simple_animal/tribble/proc/procreate()
-	..()
-	if(totaltribbles <= maxtribbles)
+	if(GLOB.totaltribbles <= maxtribbles)
 		for(var/mob/living/simple_animal/tribble/F in src.loc)
 			if(!F || F == src)
 				new /mob/living/simple_animal/tribble(src.loc)
@@ -80,8 +79,11 @@ var/global/totaltribbles = 0   //global variable so it updates for all tribbles,
 
 
 /mob/living/simple_animal/tribble/death(gibbed) // Gotta make sure to remove tribbles from the list on death
-	..()
-	totaltribbles -= 1
+	// Only execute the below if we successfully died
+	. = ..(gibbed)
+	if(!.)
+		return FALSE
+	GLOB.totaltribbles -= 1
 
 
 //||Item version of the trible ||
@@ -110,7 +112,7 @@ var/global/totaltribbles = 0   //global variable so it updates for all tribbles,
 	to_chat(user, "<span class='notice'>The tribble gets up and wanders around.</span>")
 	. = ..()
 
-/obj/item/toy/tribble/attackby(var/obj/item/O as obj, var/mob/user as mob) //neutering and un-neutering
+/obj/item/toy/tribble/attackby(obj/item/O as obj, mob/user as mob) //neutering and un-neutering
 	..()
 	if(istype(O, /obj/item/scalpel) && src.gestation != null)
 		gestation = null
@@ -118,98 +120,6 @@ var/global/totaltribbles = 0   //global variable so it updates for all tribbles,
 	else if(istype(O, /obj/item/cautery) && src.gestation == null)
 		gestation = 0
 		to_chat(user, "<span class='notice'>You fuse some recently cut tubes together, it should be able to reproduce again.</span>")
-
-
-
-//|| Tribble Cage - Lovingly lifted from the lamarr-cage ||
-/obj/structure/tribble_cage
-	name = "Lab Cage"
-	icon = 'icons/mob/tribbles.dmi'
-	icon_state = "labcage1"
-	desc = "A glass lab container for storing interesting creatures."
-	density = 1
-	anchored = 1
-	unacidable = 1//Dissolving the case would also delete tribble
-	var/health = 30
-	var/occupied = 1
-	var/destroyed = 0
-
-/obj/structure/tribble_cage/ex_act(severity)
-	switch(severity)
-		if(1)
-			new /obj/item/shard( src.loc )
-			Break()
-			qdel(src)
-		if(2)
-			if(prob(50))
-				src.health -= 15
-				src.healthcheck()
-		if(3)
-			if(prob(50))
-				src.health -= 5
-				src.healthcheck()
-
-
-/obj/structure/tribble_cage/bullet_act(var/obj/item/projectile/Proj)
-	health -= Proj.damage
-	..()
-	src.healthcheck()
-	return
-
-
-/obj/structure/tribble_cage/blob_act()
-	if(prob(75))
-		new /obj/item/shard( src.loc )
-		Break()
-		qdel(src)
-
-
-/obj/structure/tribble_cage/proc/healthcheck()
-	if(src.health <= 0)
-		if(!( src.destroyed ))
-			src.density = 0
-			src.destroyed = 1
-			new /obj/item/shard( src.loc )
-			playsound(src, "shatter", 70, 1)
-			Break()
-	else
-		playsound(src.loc, 'sound/effects/Glasshit.ogg', 75, 1)
-	return
-
-/obj/structure/tribble_cage/update_icon()
-	if(src.destroyed)
-		src.icon_state = "labcageb[src.occupied]"
-	else
-		src.icon_state = "labcage[src.occupied]"
-	return
-
-
-/obj/structure/tribble_cage/attackby(obj/item/W as obj, mob/user as mob, params)
-	src.health -= W.force
-	src.healthcheck()
-	..()
-	return
-
-
-/obj/structure/tribble_cage/attack_hand(mob/user as mob)
-	if(src.destroyed)
-		return
-	else
-		to_chat(usr, text("<span class='notice'>You kick the lab cage.</span>"))
-		for(var/mob/O in oviewers())
-			if((O.client && !( O.blinded )))
-				to_chat(O, text("<span class='warning'>[] kicks the lab cage.</span>", usr))
-		src.health -= 2
-		healthcheck()
-		return
-
-/obj/structure/tribble_cage/proc/Break()
-	if(occupied)
-		new /mob/living/simple_animal/tribble( src.loc )
-		occupied = 0
-	update_icon()
-	return
-
 
 //||Fur and Fur Products ||
 
@@ -270,7 +180,7 @@ var/global/totaltribbles = 0   //global variable so it updates for all tribbles,
 	item_state = "furcoat"
 	blood_overlay_type = "armor"
 	body_parts_covered = UPPER_TORSO|ARMS|LOWER_TORSO
-	allowed = list (/obj/item/tank/emergency_oxygen)
+	allowed = list (/obj/item/tank/internals/emergency_oxygen)
 	cold_protection = UPPER_TORSO | LOWER_TORSO | ARMS
 	min_cold_protection_temperature = FIRE_SUIT_MIN_TEMP_PROTECT
 

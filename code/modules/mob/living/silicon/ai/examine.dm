@@ -1,9 +1,5 @@
 /mob/living/silicon/ai/examine(mob/user)
-	to_chat(user, "<span class='info'>*---------*</span>")
-	if(!..(user))
-		to_chat(user, "<span class='info'>*---------*</span>")
-		return
-
+	. = ..()
 	var/msg = "<span class='info'>"
 	if(src.stat == DEAD)
 		msg += "<span class='deadsay'>It appears to be powered-down.</span>\n"
@@ -26,13 +22,13 @@
 		msg += "</span>"
 	msg += "*---------*</span>"
 
-	to_chat(user, msg)
+	. += msg
 	user.showLaws(src)
 
 
-/mob/proc/showLaws(var/mob/living/silicon/S)
+/mob/proc/showLaws(mob/living/silicon/S)
 	return
 
-/mob/dead/observer/showLaws(var/mob/living/silicon/S)
+/mob/dead/observer/showLaws(mob/living/silicon/S)
 	if(antagHUD || check_rights(R_ADMIN, 0, src))
 		S.laws.show_laws(src)

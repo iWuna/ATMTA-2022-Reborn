@@ -3,18 +3,16 @@
 	desc = "It's a high visibility jumpsuit given to those engineers insane enough to achieve the rank of \"Chief engineer\". It has minor radiation shielding."
 	name = "chief engineer's jumpsuit"
 	icon_state = "chiefengineer"
-	item_state = "g_suit"
+	item_state = "chief"
 	item_color = "chief"
-	armor = list(melee = 0, bullet = 0, laser = 0, energy = 0, bomb = 0, bio = 0, rad = 10)
-	flags_size = ONESIZEFITSALL
-	burn_state = FIRE_PROOF
+	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, RAD = 10, FIRE = 80, ACID = 40)
+	resistance_flags = NONE
 
 /obj/item/clothing/under/rank/chief_engineer/skirt
 	desc = "It's a high visibility jumpskirt given to those engineers insane enough to achieve the rank of \"Chief engineer\". It has minor radiation shielding."
 	name = "chief engineer's jumpskirt"
 	icon_state = "chieff"
 	item_color = "chieff"
-	flags_size = null
 	body_parts_covered = UPPER_TORSO|LOWER_TORSO|ARMS
 
 /obj/item/clothing/under/rank/atmospheric_technician
@@ -23,15 +21,13 @@
 	icon_state = "atmos"
 	item_state = "atmos_suit"
 	item_color = "atmos"
-	flags_size = ONESIZEFITSALL
-	burn_state = FIRE_PROOF
+	resistance_flags = NONE
 
 /obj/item/clothing/under/rank/atmospheric_technician/skirt
 	desc = "It's a jumpskirt worn by atmospheric technicians."
 	name = "atmospheric technician's jumpskirt"
 	icon_state = "atmosf"
 	item_color = "atmosf"
-	flags_size = null
 	body_parts_covered = UPPER_TORSO|LOWER_TORSO|ARMS
 
 /obj/item/clothing/under/rank/engineer
@@ -40,9 +36,12 @@
 	icon_state = "engine"
 	item_state = "engi_suit"
 	item_color = "engine"
-	armor = list(melee = 0, bullet = 0, laser = 0, energy = 0, bomb = 0, bio = 0, rad = 10)
-	flags_size = ONESIZEFITSALL
-	burn_state = FIRE_PROOF
+	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, RAD = 10, FIRE = 60, ACID = 20)
+	resistance_flags = NONE
+
+/obj/item/clothing/under/rank/engineer/sensor
+	sensor_mode = SENSOR_COORDS
+	random_sensor = FALSE
 
 
 /obj/item/clothing/under/rank/engineer/skirt
@@ -50,7 +49,6 @@
 	name = "engineer's jumpskirt"
 	icon_state = "enginef"
 	item_color = "enginef"
-	flags_size = null
 	body_parts_covered = UPPER_TORSO|LOWER_TORSO|ARMS
 
 /obj/item/clothing/under/rank/roboticist
@@ -59,18 +57,10 @@
 	icon_state = "robotics"
 	item_state = "robotics"
 	item_color = "robotics"
-	flags_size = ONESIZEFITSALL
+	resistance_flags = NONE
 
 /obj/item/clothing/under/rank/roboticist/skirt
 	desc = "It's a slimming black jumpskirt with reinforced seams; great for industrial work."
 	name = "roboticist's jumpskirt"
 	icon_state = "roboticsf"
 	item_color = "roboticsf"
-	flags_size = null
-
-/obj/item/clothing/under/rank/mechanic
-	desc = "It's a pair of overalls worn by mechanics."
-	name = "mechanic's overalls"
-	icon_state = "mechanic"
-	item_state = "mechanic"
-	item_color = "mechanic"

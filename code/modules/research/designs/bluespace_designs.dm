@@ -8,7 +8,7 @@
 	req_tech = list("bluespace" = 3, "materials" = 6, "plasmatech" = 4)
 	build_type = PROTOLATHE
 	materials = list(MAT_DIAMOND = 1500, MAT_PLASMA = 1500)
-	build_path = /obj/item/ore/bluespace_crystal/artificial
+	build_path = /obj/item/stack/ore/bluespace_crystal/artificial
 	category = list("Bluespace")
 
 /datum/design/bag_holding
@@ -53,7 +53,7 @@
 
 /datum/design/bluespace_belt_holder
 	name = "Bluespace Conveyor Belt Placer"
-	desc = "This device facilitates the rapid deployment of conveyor belts. This one is powered by bluespace"
+	desc = "This device facilitates the rapid deployment of conveyor belts. This one is powered by bluespace."
 	id = "bluespace_belt_holder"
 	req_tech = list("materials" = 1, "engineering" = 3, "bluespace" = 3)
 	build_type = PROTOLATHE
@@ -67,7 +67,7 @@
 	id = "telepad_beacon"
 	req_tech = list("programming" = 5, "bluespace" = 4, "engineering" = 4, "plasmatech" = 4)
 	build_type = PROTOLATHE
-	materials = list (MAT_METAL = 2000, MAT_GLASS = 1750, MAT_SILVER = 500)
+	materials = list(MAT_METAL = 2000, MAT_GLASS = 1750, MAT_SILVER = 500)
 	build_path = /obj/item/telepad_beacon
 	category = list("Bluespace")
 
@@ -77,18 +77,16 @@
 	id = "beacon"
 	req_tech = list("bluespace" = 1)
 	build_type = PROTOLATHE
-	materials = list (MAT_METAL = 150, MAT_GLASS = 100)
+	materials = list(MAT_METAL = 150, MAT_GLASS = 100)
 	build_path = /obj/item/radio/beacon
 	category = list("Bluespace")
 
-
-/datum/design/beacon/rig_teleporter
-
-	name = "Teleportation module"
-	desc = "A complex, sleek-looking, hardsuit-integrated teleportation module."
-	id = "rig_teleporter"
-	req_tech = list("bluespace" = 7, "programming" = 5)
+/datum/design/brpd
+	name = "Bluespace Rapid Pipe Dispenser (BRPD)"
+	desc = "Similar to the Rapid Pipe Dispenser, lets you rapidly dispense pipes. Now at long range!"
+	req_tech = list("bluespace" = 3, "toxins" = 6)
+	id = "brpd"
 	build_type = PROTOLATHE
-	materials = list (MAT_METAL = 4000, MAT_GLASS = 2000, MAT_DIAMOND = 3000)
-	build_path = /obj/item/rig_module/teleporter
+	materials = list(MAT_METAL = 75000, MAT_GLASS = 37500, MAT_SILVER = 3000)
+	build_path = /obj/item/rpd/bluespace
 	category = list("Bluespace")

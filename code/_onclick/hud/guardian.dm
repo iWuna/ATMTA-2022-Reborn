@@ -9,6 +9,11 @@
 	guardianhealthdisplay = new /obj/screen/healths/guardian()
 	infodisplay += guardianhealthdisplay
 
+	using = new /obj/screen/act_intent/guardian()
+	using.icon_state = mymob.a_intent
+	static_inventory += using
+	action_intent = using
+
 	using = new /obj/screen/guardian/Manifest()
 	using.screen_loc = ui_rhand
 	static_inventory += using
@@ -44,8 +49,8 @@
 /obj/screen/guardian/Manifest/Click()
 	if(isguardian(usr))
 		var/mob/living/simple_animal/hostile/guardian/G = usr
-		G.Manifest()
-
+		if(G.loc == G.summoner)
+			G.Manifest()
 
 /obj/screen/guardian/Recall
 	icon_state = "recall"

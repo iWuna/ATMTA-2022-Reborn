@@ -11,7 +11,7 @@
 	var/payload_name = null // used for spawned grenades
 	w_class = WEIGHT_CLASS_SMALL
 	force = 2
-	var/prime_sound = 'sound/items/Screwdriver2.ogg'
+	var/prime_sound = 'sound/items/screwdriver2.ogg'
 	var/stage = EMPTY
 	var/list/beakers = list()
 	var/list/allowed_containers = list(/obj/item/reagent_containers/glass/beaker, /obj/item/reagent_containers/glass/bottle)
@@ -26,6 +26,7 @@
 	var/cores = "" // Also for logging
 
 /obj/item/grenade/chem_grenade/New()
+	..()
 	create_reagents(1000)
 	if(payload_name)
 		payload_name += " " // formatting, ignore me
@@ -37,7 +38,7 @@
 	return ..()
 
 /obj/item/grenade/chem_grenade/examine(mob/user)
-	..(user)
+	. = ..()
 	display_timer = (stage == READY && !nadeassembly)	//show/hide the timer based on assembly state
 
 
@@ -100,10 +101,10 @@
 			update_icon()
 		else if(clown_check(user))
 			// This used to go before the assembly check, but that has absolutely zero to do with priming the damn thing.  You could spam the admins with it.
-			message_admins("[key_name_admin(usr)] has primed a [name] for detonation at <A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[bombturf.x];Y=[bombturf.y];Z=[bombturf.z]'>[A.name] (JMP)</a> [contained].")
 			log_game("[key_name(usr)] has primed a [name] for detonation at [A.name] ([bombturf.x],[bombturf.y],[bombturf.z]) [contained].")
-			bombers += "[key_name(usr)] has primed a [name] for detonation at [A.name] ([bombturf.x],[bombturf.y],[bombturf.z])[contained]."
-			to_chat(user, "<span class='warning'>You prime the [name]! [det_time / 10] second\s!</span>")
+			investigate_log("[key_name(usr)] has primed a [name] for detonation at [A.name] ([bombturf.x],[bombturf.y],[bombturf.z])[contained].", INVESTIGATE_BOMB)
+			add_attack_logs(user, src, "has primed (contained [contained])", ATKLOG_FEW)
+			to_chat(user, "<span class='warning'>You prime [src]! [det_time / 10] second\s!</span>")
 			playsound(user.loc, 'sound/weapons/armbomb.ogg', 60, 1)
 			active = 1
 			update_icon()
@@ -113,9 +114,13 @@
 			spawn(det_time)
 				prime()
 
-/obj/item/grenade/hit_reaction(mob/living/carbon/human/owner, attack_text, final_block_chance, damage, attack_type)
-	if(damage && attack_type == PROJECTILE_ATTACK && prob(15))
+/obj/item/grenade/hit_reaction(mob/living/carbon/human/owner, atom/movable/hitby, attack_text = "the attack", final_block_chance = 0, damage = 0, attack_type = MELEE_ATTACK)
+	var/obj/item/projectile/P = hitby
+	if(damage && attack_type == PROJECTILE_ATTACK && P.damage_type != STAMINA && prob(15))
 		owner.visible_message("<span class='danger'>[attack_text] hits [owner]'s [src], setting it off! What a shot!</span>")
+		var/turf/T = get_turf(src)
+		log_game("A projectile ([hitby]) detonated a grenade held by [key_name(owner)] at [COORD(T)]")
+		add_attack_logs(P.firer, owner, "A projectile ([hitby]) detonated a grenade held", ATKLOG_FEW)
 		prime()
 		return 1 //It hit the grenade, not them
 
@@ -144,16 +149,16 @@
 					if(!O.reagents) continue
 					if(istype(O,/obj/item/slime_extract))
 						cores += " [O]"
-					for(var/reagent in O.reagents.reagent_list)
-						contained += " [reagent] "
+					for(var/R in O.reagents.reagent_list)
+						var/datum/reagent/reagent = R
+						contained += "[reagent.volume] [reagent], "
 				if(contained)
 					if(cores)
-						contained = "\[[cores];[contained]\]"
+						contained = "\[[cores]; [contained]\]"
 					else
-						contained = "\[[contained]\]"
+						contained = "\[ [contained]\]"
 				var/turf/bombturf = get_turf(loc)
-				var/area/A = bombturf.loc
-				message_admins("[key_name_admin(usr)] has completed [name] at <A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[bombturf.x];Y=[bombturf.y];Z=[bombturf.z]'>[A.name] (JMP)</a> [contained].")
+				add_attack_logs(user, src, "has completed with [contained]", ATKLOG_MOST)
 				log_game("[key_name(usr)] has completed [name] at [bombturf.x], [bombturf.y], [bombturf.z]. [contained]")
 			else
 				to_chat(user, "<span class='notice'>You need to add at least one beaker before locking the assembly.</span>")
@@ -185,6 +190,8 @@
 
 		user.drop_item()
 		nadeassembly = A
+		if(nadeassembly.has_prox_sensors())
+			AddComponent(/datum/component/proximity_monitor)
 		A.master = src
 		A.loc = src
 		assemblyattacher = user.ckey
@@ -214,6 +221,7 @@
 			nadeassembly.loc = get_turf(src)
 			nadeassembly.master = null
 			nadeassembly = null
+			qdel(GetComponent(/datum/component/proximity_monitor))
 		if(beakers.len)
 			for(var/obj/O in beakers)
 				O.loc = get_turf(src)
@@ -235,21 +243,21 @@
 		nadeassembly.process_movement()
 
 /obj/item/grenade/chem_grenade/pickup()
-	..()
+	. = ..()
 	if(nadeassembly)
 		nadeassembly.process_movement()
 
-/obj/item/grenade/chem_grenade/Crossed(atom/movable/AM)
+/obj/item/grenade/chem_grenade/Crossed(atom/movable/AM, oldloc)
 	if(nadeassembly)
-		nadeassembly.Crossed(AM)
+		nadeassembly.Crossed(AM, oldloc)
 
 /obj/item/grenade/chem_grenade/on_found(mob/finder)
 	if(nadeassembly)
 		nadeassembly.on_found(finder)
 
-/obj/item/grenade/chem_grenade/hear_talk(mob/living/M, msg)
+/obj/item/grenade/chem_grenade/hear_talk(mob/living/M, list/message_pieces)
 	if(nadeassembly)
-		nadeassembly.hear_talk(M, msg)
+		nadeassembly.hear_talk(M, message_pieces)
 
 /obj/item/grenade/chem_grenade/hear_message(mob/living/M, msg)
 	if(nadeassembly)
@@ -275,7 +283,7 @@
 		reactants += G.reagents
 
 	if(!chem_splash(get_turf(src), affected_area, reactants, ignition_temp, threatscale) && !no_splash)
-		playsound(loc, 'sound/items/Screwdriver2.ogg', 50, 1)
+		playsound(loc, 'sound/items/screwdriver2.ogg', 50, 1)
 		if(beakers.len)
 			for(var/obj/O in beakers)
 				O.forceMove(get_turf(src))
@@ -289,16 +297,18 @@
 		var/mob/last = get_mob_by_ckey(nadeassembly.fingerprintslast)
 		var/turf/T = get_turf(src)
 		var/area/A = get_area(T)
-		message_admins("grenade primed by an assembly, attached by [key_name_admin(M)]<A HREF='?_src_=holder;adminmoreinfo=\ref[M]'>(?)</A> ([admin_jump_link(M)]) and last touched by [key_name_admin(last)]<A HREF='?_src_=holder;adminmoreinfo=\ref[last]'>(?)</A> ([admin_jump_link(last)]) ([nadeassembly.a_left.name] and [nadeassembly.a_right.name]) at <A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[T.x];Y=[T.y];Z=[T.z]'>[A.name] (JMP)</a>. [contained]")
+		message_admins("grenade primed by an assembly, attached by [key_name_admin(M)] and last touched by [key_name_admin(last)] ([nadeassembly.a_left.name] and [nadeassembly.a_right.name]) at <A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[T.x];Y=[T.y];Z=[T.z]'>[A.name] (JMP)</a>. [contained]")
 		log_game("grenade primed by an assembly, attached by [key_name(M)] and last touched by [key_name(last)] ([nadeassembly.a_left.name] and [nadeassembly.a_right.name]) at [A.name] ([T.x], [T.y], [T.z]) [contained]")
 
 	update_mob()
 
 	qdel(src)
 
-/obj/item/grenade/chem_grenade/proc/CreateDefaultTrigger(var/typekey)
+/obj/item/grenade/chem_grenade/proc/CreateDefaultTrigger(typekey)
 	if(ispath(typekey,/obj/item/assembly))
 		nadeassembly = new(src)
+		if(nadeassembly.has_prox_sensors())
+			AddComponent(/datum/component/proximity_monitor)
 		nadeassembly.a_left = new /obj/item/assembly/igniter(nadeassembly)
 		nadeassembly.a_left.holder = nadeassembly
 		nadeassembly.a_left.secured = 1
@@ -383,18 +393,18 @@
 	origin_tech = "combat=3;engineering=4"
 	var/unit_spread = 10 // Amount of units per repeat. Can be altered with a multitool.
 
-/obj/item/grenade/chem_grenade/adv_release/attackby(obj/item/I, mob/user, params)
-	if(ismultitool(I))
-		switch(unit_spread)
-			if(0 to 24)
-				unit_spread += 5
-			if(25 to 99)
-				unit_spread += 25
-			else
-				unit_spread = 5
-		to_chat(user, "<span class='notice'> You set the time release to [unit_spread] units per detonation.</span>")
+/obj/item/grenade/chem_grenade/adv_release/multitool_act(mob/user, obj/item/I)
+	. = TRUE
+	if(!I.use_tool(src, user, 0, volume = I.tool_volume))
 		return
-	..()
+	switch(unit_spread)
+		if(0 to 24)
+			unit_spread += 5
+		if(25 to 99)
+			unit_spread += 25
+		else
+			unit_spread = 5
+	to_chat(user, "<span class='notice'> You set the time release to [unit_spread] units per detonation.</span>")
 
 /obj/item/grenade/chem_grenade/adv_release/prime()
 	if(stage != READY)
@@ -419,7 +429,7 @@
 		var/mob/last = get_mob_by_ckey(nadeassembly.fingerprintslast)
 		var/turf/T = get_turf(src)
 		var/area/A = get_area(T)
-		message_admins("grenade primed by an assembly, attached by [key_name_admin(M)]<A HREF='?_src_=holder;adminmoreinfo=\ref[M]'>(?)</A> (<A HREF='?_src_=holder;adminplayerobservefollow=\ref[M]'>FLW</A>) and last touched by [key_name_admin(last)]<A HREF='?_src_=holder;adminmoreinfo=\ref[last]'>(?)</A> (<A HREF='?_src_=holder;adminplayerobservefollow=\ref[last]'>FLW</A>) ([nadeassembly.a_left.name] and [nadeassembly.a_right.name]) at <A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[T.x];Y=[T.y];Z=[T.z]'>[A.name] (JMP)</a>.")
+		message_admins("grenade primed by an assembly, attached by [key_name_admin(M)] and last touched by [key_name_admin(last)] ([nadeassembly.a_left.name] and [nadeassembly.a_right.name]) at <A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[T.x];Y=[T.y];Z=[T.z]'>[A.name] (JMP)</a>.")
 		log_game("grenade primed by an assembly, attached by [key_name(M)] and last touched by [key_name(last)] ([nadeassembly.a_left.name] and [nadeassembly.a_right.name]) at [A.name] ([T.x], [T.y], [T.z])")
 	else
 		addtimer(CALLBACK(src, .proc/prime), det_time)
@@ -432,38 +442,55 @@
 	desc = "Used for emergency sealing of air breaches."
 	stage = READY
 
-	New()
-		..()
-		var/obj/item/reagent_containers/glass/beaker/B1 = new(src)
-		var/obj/item/reagent_containers/glass/beaker/B2 = new(src)
+/obj/item/grenade/chem_grenade/metalfoam/New()
+	..()
+	var/obj/item/reagent_containers/glass/beaker/B1 = new(src)
+	var/obj/item/reagent_containers/glass/beaker/B2 = new(src)
 
-		B1.reagents.add_reagent("aluminum", 30)
-		B2.reagents.add_reagent("fluorosurfactant", 10)
-		B2.reagents.add_reagent("sacid", 10)
+	B1.reagents.add_reagent("aluminum", 30)
+	B2.reagents.add_reagent("fluorosurfactant", 10)
+	B2.reagents.add_reagent("sacid", 10)
 
-		beakers += B1
-		beakers += B2
-		update_icon()
+	beakers += B1
+	beakers += B2
+	update_icon()
 
+
+/obj/item/grenade/chem_grenade/firefighting
+	payload_name = "fire fighting"
+	desc = "Can help to put out dangerous fires from a distance."
+	stage = READY
+
+/obj/item/grenade/chem_grenade/firefighting/New()
+	..()
+	var/obj/item/reagent_containers/glass/beaker/B1 = new(src)
+	var/obj/item/reagent_containers/glass/beaker/B2 = new(src)
+
+	B1.reagents.add_reagent("firefighting_foam", 30)
+	B2.reagents.add_reagent("firefighting_foam", 30)
+
+	beakers += B1
+	beakers += B2
+	update_icon()
 
 /obj/item/grenade/chem_grenade/incendiary
 	payload_name = "incendiary"
 	desc = "Used for clearing rooms of living things."
 	stage = READY
 
-	New()
-		..()
-		var/obj/item/reagent_containers/glass/beaker/large/B1 = new(src)
-		var/obj/item/reagent_containers/glass/beaker/large/B2 = new(src)
+/obj/item/grenade/chem_grenade/incendiary/New()
+	..()
+	var/obj/item/reagent_containers/glass/beaker/large/B1 = new(src)
+	var/obj/item/reagent_containers/glass/beaker/large/B2 = new(src)
 
-		B1.reagents.add_reagent("phosphorus", 25)
-		B2.reagents.add_reagent("plasma", 25)
-		B2.reagents.add_reagent("sacid", 25)
+	B1.reagents.add_reagent("phosphorus", 25)
+	B2.reagents.add_reagent("plasma", 25)
+	B2.reagents.add_reagent("sacid", 25)
 
 
-		beakers += B1
-		beakers += B2
-		update_icon()
+	beakers += B1
+	beakers += B2
+	update_icon()
 
 
 /obj/item/grenade/chem_grenade/antiweed
@@ -471,20 +498,20 @@
 	desc = "Used for purging large areas of invasive plant species. Contents under pressure. Do not directly inhale contents."
 	stage = READY
 
-	New()
-		..()
-		var/obj/item/reagent_containers/glass/beaker/B1 = new(src)
-		var/obj/item/reagent_containers/glass/beaker/B2 = new(src)
+/obj/item/grenade/chem_grenade/antiweed/New()
+	..()
+	var/obj/item/reagent_containers/glass/beaker/B1 = new(src)
+	var/obj/item/reagent_containers/glass/beaker/B2 = new(src)
 
-		B1.reagents.add_reagent("atrazine", 30)
-		B1.reagents.add_reagent("potassium", 20)
-		B2.reagents.add_reagent("phosphorus", 20)
-		B2.reagents.add_reagent("sugar", 20)
-		B2.reagents.add_reagent("atrazine", 10)
+	B1.reagents.add_reagent("atrazine", 30)
+	B1.reagents.add_reagent("potassium", 20)
+	B2.reagents.add_reagent("phosphorus", 20)
+	B2.reagents.add_reagent("sugar", 20)
+	B2.reagents.add_reagent("atrazine", 10)
 
-		beakers += B1
-		beakers += B2
-		update_icon()
+	beakers += B1
+	beakers += B2
+	update_icon()
 
 
 /obj/item/grenade/chem_grenade/cleaner
@@ -492,18 +519,18 @@
 	desc = "BLAM!-brand foaming space cleaner. In a special applicator for rapid cleaning of wide areas."
 	stage = READY
 
-	New()
-		..()
-		var/obj/item/reagent_containers/glass/beaker/B1 = new(src)
-		var/obj/item/reagent_containers/glass/beaker/B2 = new(src)
+/obj/item/grenade/chem_grenade/cleaner/New()
+	..()
+	var/obj/item/reagent_containers/glass/beaker/B1 = new(src)
+	var/obj/item/reagent_containers/glass/beaker/B2 = new(src)
 
-		B1.reagents.add_reagent("fluorosurfactant", 40)
-		B2.reagents.add_reagent("cleaner", 10)
-		B2.reagents.add_reagent("water", 40) //when you make pre-designed foam reactions that carry the reagents, always add water last
+	B1.reagents.add_reagent("fluorosurfactant", 40)
+	B2.reagents.add_reagent("cleaner", 10)
+	B2.reagents.add_reagent("water", 40) //when you make pre-designed foam reactions that carry the reagents, always add water last
 
-		beakers += B1
-		beakers += B2
-		update_icon()
+	beakers += B1
+	beakers += B2
+	update_icon()
 
 
 /obj/item/grenade/chem_grenade/teargas
@@ -511,58 +538,58 @@
 	desc = "Used for nonlethal riot control. Contents under pressure. Do not directly inhale contents."
 	stage = READY
 
-	New()
-		..()
-		var/obj/item/reagent_containers/glass/beaker/B1 = new(src)
-		var/obj/item/reagent_containers/glass/beaker/B2 = new(src)
+/obj/item/grenade/chem_grenade/teargas/New()
+	..()
+	var/obj/item/reagent_containers/glass/beaker/B1 = new(src)
+	var/obj/item/reagent_containers/glass/beaker/B2 = new(src)
 
-		B1.reagents.add_reagent("condensedcapsaicin", 25)
-		B1.reagents.add_reagent("potassium", 25)
-		B2.reagents.add_reagent("phosphorus", 25)
-		B2.reagents.add_reagent("sugar", 25)
+	B1.reagents.add_reagent("condensedcapsaicin", 25)
+	B1.reagents.add_reagent("potassium", 25)
+	B2.reagents.add_reagent("phosphorus", 25)
+	B2.reagents.add_reagent("sugar", 25)
 
-		beakers += B1
-		beakers += B2
-		update_icon()
+	beakers += B1
+	beakers += B2
+	update_icon()
 
 /obj/item/grenade/chem_grenade/facid
-	name = "acid grenade"
-	desc = "Used for melting armoured opponents."
+	payload_name = "acid smoke"
+	desc = "Use to chew up opponents from the inside out."
 	stage = READY
 
 /obj/item/grenade/chem_grenade/facid/New()
 	..()
-	var/obj/item/reagent_containers/glass/beaker/bluespace/B1 = new(src)
-	var/obj/item/reagent_containers/glass/beaker/bluespace/B2 = new(src)
+	var/obj/item/reagent_containers/glass/beaker/large/B1 = new(src)
+	var/obj/item/reagent_containers/glass/beaker/large/B2 = new(src)
 
-	B1.reagents.add_reagent("facid", 280)
+	B1.reagents.add_reagent("facid", 80)
 	B1.reagents.add_reagent("potassium", 20)
 	B2.reagents.add_reagent("phosphorus", 20)
 	B2.reagents.add_reagent("sugar", 20)
-	B2.reagents.add_reagent("facid", 260)
+	B2.reagents.add_reagent("facid", 60)
 
 	beakers += B1
 	beakers += B2
 	update_icon()
 
 /obj/item/grenade/chem_grenade/saringas
-	payload_name = "saringas"
+	payload_name = "sarin gas"
 	desc = "Contains sarin gas; extremely deadly and fast acting; use with extreme caution."
 	stage = READY
 
-	New()
-		..()
-		var/obj/item/reagent_containers/glass/beaker/B1 = new(src)
-		var/obj/item/reagent_containers/glass/beaker/B2 = new(src)
+/obj/item/grenade/chem_grenade/saringas/New()
+	..()
+	var/obj/item/reagent_containers/glass/beaker/B1 = new(src)
+	var/obj/item/reagent_containers/glass/beaker/B2 = new(src)
 
-		B1.reagents.add_reagent("sarin", 25)
-		B1.reagents.add_reagent("potassium", 25)
-		B2.reagents.add_reagent("phosphorus", 25)
-		B2.reagents.add_reagent("sugar", 25)
+	B1.reagents.add_reagent("sarin", 25)
+	B1.reagents.add_reagent("potassium", 25)
+	B2.reagents.add_reagent("phosphorus", 25)
+	B2.reagents.add_reagent("sugar", 25)
 
-		beakers += B1
-		beakers += B2
-		update_icon()
+	beakers += B1
+	beakers += B2
+	update_icon()
 
 #undef EMPTY
 #undef WIRED

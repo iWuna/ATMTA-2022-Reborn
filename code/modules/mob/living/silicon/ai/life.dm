@@ -14,12 +14,10 @@
 		reset_perspective(null)
 		unset_machine()
 
-	updatehealth()
+	updatehealth("life")
+	if(stat == DEAD)
+		return
 	update_gravity(mob_has_gravity())
-
-	if(health <= config.health_threshold_dead)
-		death()
-		return 0
 
 	if(!eyeobj || QDELETED(eyeobj) || !eyeobj.loc)
 		view_core()
@@ -39,26 +37,21 @@
 	else
 		adjustOxyLoss(-1)
 
-	handle_stunned()
+	if(stunned)
+		AdjustStunned(-1, updating = 1, force = 1)
 
 	var/area/my_area = get_area(src)
 
 	if(!lacks_power())
-		if(aiRestorePowerRoutine == 2)
-			to_chat(src, "Alert cancelled. Power has been restored without our assistance.")
+		if(aiRestorePowerRoutine > 1)
+			update_blind_effects()
 			aiRestorePowerRoutine = 0
-			clear_fullscreen("blind")
 			update_sight()
-		else if(aiRestorePowerRoutine == 3)
-			to_chat(src, "Alert cancelled. Power has been restored.")
-			aiRestorePowerRoutine = 0
-			clear_fullscreen("blind")
-			update_sight()
+			to_chat(src, "Alert cancelled. Power has been restored[aiRestorePowerRoutine == 2 ? "without our assistance" : ""].")
 	else
-		overlay_fullscreen("blind", /obj/screen/fullscreen/blind)
-
 		if(lacks_power())
 			if(!aiRestorePowerRoutine)
+				update_blind_effects()
 				aiRestorePowerRoutine = 1
 				update_sight()
 				to_chat(src, "<span class='danger'>You have lost power!</span>")
@@ -73,7 +66,7 @@
 					if(!lacks_power())
 						to_chat(src, "Alert cancelled. Power has been restored without our assistance.")
 						aiRestorePowerRoutine = 0
-						clear_fullscreen("blind")
+						update_blind_effects()
 						update_sight()
 						return
 					to_chat(src, "Fault confirmed: missing external power. Shutting down main control system to save power.")
@@ -112,8 +105,10 @@
 						if(!lacks_power())
 							to_chat(src, "Alert cancelled. Power has been restored without our assistance.")
 							aiRestorePowerRoutine = 0
-							clear_fullscreen("blind")
+							update_blind_effects()
 							update_sight()
+							to_chat(src, "Here are your current laws:")
+							show_laws()
 							return
 
 						switch(PRP)
@@ -129,25 +124,20 @@
 								to_chat(src, "Receiving control information from APC.")
 								sleep(2)
 								//bring up APC dialog
-								aiRestorePowerRoutine = 3
+								apc_override = 1
 								theAPC.attack_ai(src)
-								to_chat(src, "Here are your current laws:")
-								src.show_laws() //WHY THE FUCK IS THIS HERE
+								apc_override = 0
+								aiRestorePowerRoutine = 3
 						sleep(50)
 						theAPC = null
 
-	process_queued_alarms()
-
-	if(get_nations_mode())
-		process_nations_ai()
-
-/mob/living/silicon/ai/updatehealth()
+/mob/living/silicon/ai/updatehealth(reason = "none given")
 	if(status_flags & GODMODE)
 		health = 100
 		stat = CONSCIOUS
 	else
 		health = 100 - getOxyLoss() - getToxLoss() - getFireLoss() - getBruteLoss()
-		diag_hud_set_status()
+		update_stat("updatehealth([reason])")
 		diag_hud_set_health()
 
 
@@ -159,22 +149,3 @@
 /mob/living/silicon/ai/rejuvenate()
 	..()
 	add_ai_verbs(src)
-
-/mob/living/silicon/ai/proc/process_nations_ai()
-	if(client)
-		var/client/C = client
-		for(var/mob/living/carbon/human/H in view(eyeobj, 14))
-			C.images += H.hud_list[NATIONS_HUD]
-
-/mob/living/silicon/ai/update_sight()
-	see_invisible = initial(see_invisible)
-	see_in_dark = initial(see_in_dark)
-	sight = initial(sight)
-	if(aiRestorePowerRoutine)
-		sight = sight&~SEE_TURFS
-		sight = sight&~SEE_MOBS
-		sight = sight&~SEE_OBJS
-		see_in_dark = 0
-
-	if(see_override)
-		see_invisible = see_override

@@ -6,7 +6,7 @@
 	reference = "control_box"
 	anchored = 0
 	density = 1
-	use_power = 0
+	use_power = NO_POWER_USE
 	idle_power_usage = 500
 	active_power_usage = 10000
 	construction_state = 0
@@ -19,13 +19,14 @@
 	var/parts = null
 	var/datum/wires/particle_acc/control_box/wires = null
 
-/obj/machinery/particle_accelerator/control_box/New()
+/obj/machinery/particle_accelerator/control_box/Initialize(mapload)
+	. = ..()
 	wires = new(src)
 	connected_parts = list()
 	update_icon()
-	..()
 
 /obj/machinery/particle_accelerator/control_box/Destroy()
+	SStgui.close_uis(wires)
 	if(active)
 		toggle_power()
 	QDEL_NULL(wires)
@@ -40,9 +41,14 @@
 	else if(construction_state == 2) // Wires exposed
 		wires.Interact(user)
 
+/obj/machinery/particle_accelerator/control_box/multitool_act(mob/living/user, obj/item/I)
+	if(construction_state == 2) // Wires exposed
+		wires.Interact(user)
+		return TRUE
+
 /obj/machinery/particle_accelerator/control_box/update_state()
 	if(construction_state < 3)
-		use_power = 0
+		use_power = NO_POWER_USE
 		assembled = 0
 		active = 0
 		for(var/obj/structure/particle_accelerator/part in connected_parts)
@@ -52,7 +58,7 @@
 		connected_parts = list()
 		return
 	if(!part_scan())
-		use_power = 1
+		use_power = IDLE_POWER_USE
 		active = 0
 		connected_parts = list()
 
@@ -92,18 +98,18 @@
 		usr.unset_machine()
 		return
 	if(href_list["togglep"])
-		if(!wires.IsIndexCut(PARTICLE_TOGGLE_WIRE))
+		if(!wires.is_cut(WIRE_PARTICLE_POWER))
 			toggle_power()
 
 	else if(href_list["scan"])
 		part_scan()
 
 	else if(href_list["strengthup"])
-		if(!wires.IsIndexCut(PARTICLE_STRENGTH_WIRE))
+		if(!wires.is_cut(WIRE_PARTICLE_STRENGTH))
 			add_strength()
 
 	else if(href_list["strengthdown"])
-		if(!wires.IsIndexCut(PARTICLE_STRENGTH_WIRE))
+		if(!wires.is_cut(WIRE_PARTICLE_STRENGTH))
 			remove_strength()
 
 	updateDialog()
@@ -116,7 +122,7 @@
 		part.strength = strength
 		part.update_icon()
 
-/obj/machinery/particle_accelerator/control_box/proc/add_strength(var/s)
+/obj/machinery/particle_accelerator/control_box/proc/add_strength(s)
 	if(assembled)
 		strength++
 		if(strength > strength_upper_limit)
@@ -125,12 +131,11 @@
 			message_admins("PA Control Computer increased to [strength] by [key_name_admin(usr)] in ([x],[y],[z] - <A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[x];Y=[y];Z=[z]'>JMP</a>)",0,1)
 			log_game("PA Control Computer increased to [strength] by [key_name(usr)] in ([x],[y],[z])")
 			investigate_log("increased to <font color='red'>[strength]</font> by [key_name(usr)]","singulo")
-			use_log += text("\[[time_stamp()]\] <font color='red'>[usr.name] ([key_name(usr)]) has increased the PA Control Computer to [strength].</font>")
 
 			investigate_log("increased to <font color='red'>[strength]</font> by [usr.key]","singulo")
 		strength_change()
 
-/obj/machinery/particle_accelerator/control_box/proc/remove_strength(var/s)
+/obj/machinery/particle_accelerator/control_box/proc/remove_strength(s)
 	if(assembled)
 		strength--
 		if(strength < 0)
@@ -139,7 +144,6 @@
 			message_admins("PA Control Computer decreased to [strength] by [key_name_admin(usr)] in ([x],[y],[z] - <A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[x];Y=[y];Z=[z]'>JMP</a>)",0,1)
 			log_game("PA Control Computer decreased to [strength] by [key_name(usr)] in ([x],[y],[z])")
 			investigate_log("decreased to <font color='green'>[strength]</font> by [key_name(usr)]","singulo")
-			use_log += text("\[[time_stamp()]\] <font color='orange'>[usr.name] ([key_name(usr)]) has decreased the PA Control Computer to [strength].</font>")
 
 		strength_change()
 
@@ -147,9 +151,9 @@
 	..()
 	if(stat & NOPOWER)
 		active = 0
-		use_power = 0
+		use_power = NO_POWER_USE
 	else if(!stat && construction_state <= 3)
-		use_power = 1
+		use_power = IDLE_POWER_USE
 	update_icon()
 
 	if((stat & NOPOWER) || (!stat && construction_state <= 3)) //Only update the part icons if something's changed (i.e. any of the above condition sets are met).
@@ -211,7 +215,7 @@
 		return 0
 
 
-/obj/machinery/particle_accelerator/control_box/proc/check_part(var/turf/T, var/type)
+/obj/machinery/particle_accelerator/control_box/proc/check_part(turf/T, type)
 	if(!(T)||!(type))
 		return 0
 	var/obj/structure/particle_accelerator/PA = locate(/obj/structure/particle_accelerator) in T
@@ -227,17 +231,17 @@
 	active = !active
 	investigate_log("turned [active?"<font color='red'>ON</font>":"<font color='green'>OFF</font>"] by [usr ? usr.key : "outside forces"]","singulo")
 	if(active)
-		msg_admin_attack("PA Control Computer turned ON by [key_name_admin(usr)]",0,1)
+		msg_admin_attack("PA Control Computer turned ON by [key_name_admin(usr)]", ATKLOG_FEW)
+		usr.create_log(MISC_LOG, "PA Control Computer turned ON", src)
 		log_game("PA Control Computer turned ON by [key_name(usr)] in ([x],[y],[z])")
-		use_log += text("\[[time_stamp()]\] <font color='red'>[key_name(usr)] has turned on the PA Control Computer.</font>")
 	if(active)
-		use_power = 2
+		use_power = ACTIVE_POWER_USE
 		for(var/obj/structure/particle_accelerator/part in connected_parts)
 			part.strength = strength
 			part.powered = 1
 			part.update_icon()
 	else
-		use_power = 1
+		use_power = IDLE_POWER_USE
 		for(var/obj/structure/particle_accelerator/part in connected_parts)
 			part.strength = null
 			part.powered = 0

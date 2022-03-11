@@ -5,7 +5,7 @@
 	desc = "A holographic table allowing the crew to have fun(TM) on boring shifts! One player per board."
 	density = 1
 	anchored = 1
-	use_power = 1
+	use_power = IDLE_POWER_USE
 	var/cooling_down = 0
 	light_color = LIGHT_COLOR_LIGHTBLUE
 
@@ -73,7 +73,7 @@
 			user << browse(null, "window=SpessChess")	// And I will kill you.
 	return
 
-/obj/machinery/gameboard/Topic(var/href, var/list/href_list)
+/obj/machinery/gameboard/Topic(href, list/href_list)
 	. = ..()
 	var/prize = /obj/item/stack/tickets
 	if(.)
@@ -93,8 +93,10 @@
 	if(href_list["close"])
 		close_game()
 
-/obj/machinery/gameboard/attackby(var/obj/item/G as obj, var/mob/user as mob, params)
-	if(istype(G, /obj/item/wrench))
-		default_unfasten_wrench(user, G)
-	else if(istype(G, /obj/item/crowbar))
-		default_deconstruction_crowbar(G, ignore_panel = 1)
+/obj/machinery/gameboard/crowbar_act(mob/user, obj/item/I)
+	if(default_deconstruction_crowbar(user, I, ignore_panel = TRUE))
+		return TRUE
+
+/obj/machinery/gameboard/wrench_act(mob/user, obj/item/I)
+	if(default_unfasten_wrench(user, I))
+		return TRUE

@@ -11,27 +11,28 @@
 /obj/effect/mine/proc/mineEffect(mob/living/victim)
 	to_chat(victim, "<span class='danger'>*click*</span>")
 
-/obj/effect/mine/Crossed(AM as mob|obj)
+/obj/effect/mine/Crossed(AM as mob|obj, oldloc)
 	if(!isliving(AM))
 		return
-	if(isanimal(AM))
-		var/mob/living/simple_animal/SA = AM
-		if(faction && (faction in SA.faction))
-			return
-		if(!SA.flying)
-			triggermine(SA)
-	else
-		triggermine(AM)
+	var/mob/living/M = AM
+	if(faction && (faction in M.faction))
+		return
+	if(M.flying)
+		return
+	triggermine(M)
 
 /obj/effect/mine/proc/triggermine(mob/living/victim)
 	if(triggered)
 		return
 	visible_message("<span class='danger'>[victim] sets off [bicon(src)] [src]!</span>")
-	var/datum/effect_system/spark_spread/s = new /datum/effect_system/spark_spread
-	s.set_up(3, 1, src)
-	s.start()
+	do_sparks(3, 1, src)
 	mineEffect(victim)
 	triggered = 1
+	qdel(src)
+
+/obj/effect/mine/ex_act(severity)
+	// Necessary because, as effects, they have infinite health, and wouldn't be destroyed otherwise.
+	// Also, they're pressure-sensitive mines, it makes sense that an explosion (wave of pressure) triggers/destroys them.
 	qdel(src)
 
 /obj/effect/mine/explosive
@@ -52,34 +53,41 @@
 	if(isliving(victim))
 		victim.Weaken(stun_time)
 
+/obj/effect/mine/depot
+	name = "sentry mine"
+
+/obj/effect/mine/depot/mineEffect(mob/living/victim)
+	var/area/syndicate_depot/core/depotarea = get_area(src)
+	if(istype(depotarea))
+		if(depotarea.mine_triggered(victim))
+			explosion(loc, 1, 0, 0, 1) // devastate the tile you are on, but leave everything else untouched
+
 /obj/effect/mine/dnascramble
 	name = "Radiation Mine"
 	var/radiation_amount
 
 /obj/effect/mine/dnascramble/mineEffect(mob/living/victim)
-	victim.apply_effect(radiation_amount, IRRADIATE, 0)
-	if(ishuman(victim))
-		var/mob/living/carbon/human/V = victim
-		if(NO_DNA in V.species.species_traits)
-			return
+	victim.rad_act(radiation_amount)
+	if(!victim.dna || HAS_TRAIT(victim, TRAIT_GENELESS))
+		return
 	randmutb(victim)
-	domutcheck(victim ,null)
+	domutcheck(victim)
 
 /obj/effect/mine/gas
 	name = "oxygen mine"
 	var/gas_amount = 360
-	var/gas_type = SPAWN_OXYGEN
+	var/gas_type = LINDA_SPAWN_OXYGEN
 
 /obj/effect/mine/gas/mineEffect(mob/living/victim)
 	atmos_spawn_air(gas_type, gas_amount)
 
 /obj/effect/mine/gas/plasma
 	name = "plasma mine"
-	gas_type = SPAWN_HEAT | SPAWN_TOXINS
+	gas_type = LINDA_SPAWN_HEAT | LINDA_SPAWN_TOXINS
 
 /obj/effect/mine/gas/n2o
-	name = "N2O mine"
-	gas_type = SPAWN_N2O
+	name = "\improper N2O mine"
+	gas_type = LINDA_SPAWN_N2O
 
 /obj/effect/mine/sound
 	name = "honkblaster 1000"
@@ -122,16 +130,15 @@
 	if(!istype(victim) || !victim.client)
 		return
 	to_chat(victim, "<span class='reallybig redtext'>RIP AND TEAR</span>")
-	victim << 'sound/misc/e1m1.ogg'
+	SEND_SOUND(victim, sound('sound/misc/e1m1.ogg'))
 	var/old_color = victim.client.color
 	var/red_splash = list(1,0,0,0.8,0.2,0, 0.8,0,0.2,0.1,0,0)
 	var/pure_red = list(0,0,0,0,0,0,0,0,0,1,0,0)
 
-	spawn(0)
-		new /obj/effect/hallucination/delusion(victim.loc, victim, force_kind = "demon", duration = duration, skip_nearby = 0)
+	new /obj/effect/hallucination/delusion(get_turf(victim), victim, 'icons/mob/mob.dmi', "daemon")
 
 	var/obj/item/twohanded/required/chainsaw/doomslayer/chainsaw = new(victim.loc)
-	chainsaw.flags |= NODROP
+	chainsaw.flags |= NODROP | DROPDEL
 	victim.drop_l_hand()
 	victim.drop_r_hand()
 	victim.put_in_hands(chainsaw)
@@ -144,7 +151,7 @@
 	spawn(10)
 		animate(victim.client,color = old_color, time = duration)//, easing = SINE_EASING|EASE_OUT)
 	spawn(duration)
-		to_chat(victim, "<span class='notice'>Your bloodlust seeps back into the bog of your subconscious and you regain self control.<span>")
+		to_chat(victim, "<span class='notice'>Your bloodlust seeps back into the bog of your subconscious and you regain self control.</span>")
 		qdel(chainsaw)
 		qdel(src)
 
@@ -169,7 +176,7 @@
 	if(!victim.client || !istype(victim))
 		return
 	to_chat(victim, "<span class='notice'>You feel fast!</span>")
-	victim.status_flags |= GOTTAGOREALLYFAST
+	ADD_TRAIT(victim, TRAIT_GOTTAGOFAST, "mine")
 	spawn(duration)
-		victim.status_flags &= ~GOTTAGOREALLYFAST
+		REMOVE_TRAIT(victim, TRAIT_GOTTAGOFAST, "mine")
 		to_chat(victim, "<span class='notice'>You slow down.</span>")

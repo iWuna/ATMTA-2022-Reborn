@@ -12,10 +12,6 @@
 	The size of the user's screen is defined by client.view (indirectly by world.view), in our case "15x15".
 	Therefore, the top right corner (except during admin shenanigans) is at "15,15"
 */
-#define PLANE_SPACE_BACKGROUND -10
-#define PLANE_SPACE_PARALLAX (PLANE_SPACE_BACKGROUND + 1)
-#define PLANE_SPACE_DUST (PLANE_SPACE_PARALLAX + 1)
-#define PLANE_BASE 0
 
 //Middle left indicators
 #define ui_alienplasmadisplay "EAST-1:28,CENTER-2:15"
@@ -110,13 +106,19 @@
 #define ui_healthdoll "EAST-1:28,CENTER-1:15"
 #define ui_health "EAST-1:28,CENTER:17"
 #define ui_internal "EAST-1:28,CENTER+1:19"
-									//borgs
+
+//borgs
 #define ui_borg_health "EAST-1:28,CENTER-1:15" //borgs have the health display where humans have the pressure damage indicator.
+
+//aliens
 #define ui_alien_health "EAST-1:28,CENTER-1:15" //aliens have the health display where humans have the pressure damage indicator.
 
-
+//constructs
 #define ui_construct_pull "EAST-1:28,SOUTH+1:10" //above the zone_sel icon
 #define ui_construct_health "EAST,CENTER:15" //same height as humans, hugging the right border
+
+//slimes
+#define ui_slime_health "EAST,CENTER:15"  //same as borgs, constructs and humans
 
 //Pop-up inventory
 #define ui_shoes "WEST+1:8,SOUTH:5"
@@ -154,6 +156,15 @@
 // Bots
 #define ui_bot_radio "EAST-1:28,SOUTH:7"
 #define ui_bot_pull "EAST-2:26,SOUTH:7"
+
+//Ghosts
+#define ui_ghost_jumptomob "SOUTH:6,CENTER-2"
+#define ui_ghost_orbit "SOUTH:6,CENTER-1"
+#define ui_ghost_reenter_corpse "SOUTH:6,CENTER"
+#define ui_ghost_teleport "SOUTH:6,CENTER+1"
+#define ui_ghost_respawn_list "SOUTH:6,CENTER+2"
+#define ui_ghost_respawn_mob "SOUTH:6+1,CENTER+2"
+#define ui_ghost_respawn_pai "SOUTH:6+2,CENTER+2"
 
 //HUD styles. Please ensure HUD_VERSIONS is the same as the maximum index. Index order defines how they are cycled in F12.
 #define HUD_STYLE_STANDARD 1

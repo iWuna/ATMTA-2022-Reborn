@@ -10,31 +10,23 @@
 	min_broken_damage = 35
 	w_class = WEIGHT_CLASS_HUGE
 	body_part = UPPER_TORSO
-	vital = 1
+	vital = TRUE
 	amputation_point = "spine"
 	gendered_icon = 1
 	parent_organ = null
 	encased = "ribcage"
-	var/fat = FALSE
 	convertable_children = list(/obj/item/organ/external/groin)
 
-/obj/item/organ/external/chest/proc/makeFat(update_body_icon = 1)
-	fat = TRUE
-	if(owner)
-		owner.update_body(update_body_icon)
-	else
-		// get_icon updates the sprite icon, update_icon updates the injuries overlay.
-		// Madness.
-		get_icon()
-
-/obj/item/organ/external/chest/proc/makeSlim(update_body_icon = 1)
-	fat = FALSE
-	if(owner)
-		owner.update_body(update_body_icon)
-	else
-		// get_icon updates the sprite icon, update_icon updates the injuries overlay.
-		// Madness.
-		get_icon()
+/obj/item/organ/external/chest/emp_act(severity)
+	..()
+	if(!is_robotic() || emp_proof || !tough) // Augmented chest suffocates the user on EMP.
+		return
+	switch(severity)
+		if(1)
+			owner?.adjustStaminaLoss(20)
+		if(2)
+			owner?.adjustStaminaLoss(10)
+	to_chat(owner, "<span class='userdanger'>Your [name] malfunctions, causing fatigue!</span>")
 
 /obj/item/organ/external/groin
 	name = "lower body"
@@ -44,7 +36,7 @@
 	min_broken_damage = 35
 	w_class = WEIGHT_CLASS_BULKY // if you know what I mean ;)
 	body_part = LOWER_TORSO
-	vital = 1
+	vital = TRUE
 	parent_organ = "chest"
 	amputation_point = "lumbar"
 	gendered_icon = 1
@@ -61,6 +53,16 @@
 	amputation_point = "left shoulder"
 	can_grasp = 1
 	convertable_children = list(/obj/item/organ/external/hand)
+
+/obj/item/organ/external/arm/emp_act(severity)
+	..()
+	if(!owner || !is_robotic() || emp_proof || !tough) // Augmented arms and hands drop whatever they are holding on EMP.
+		return
+	var/hand = (body_part == ARM_LEFT) ? owner.l_hand : owner.r_hand
+	if(hand && owner.canUnEquip(hand))
+		owner.unEquip(hand)
+		to_chat(owner, "<span class='userdanger'>Your [name] malfunctions, dropping what it was holding!</span>")
+		owner.custom_emote(1, "drops what [owner.p_they()] [owner.p_were()] holding, [owner.p_their()] [name] malfunctioning!")
 
 /obj/item/organ/external/arm/right
 	limb_name = "r_arm"
@@ -84,6 +86,22 @@
 	can_stand = 1
 	convertable_children = list(/obj/item/organ/external/foot)
 
+/obj/item/organ/external/leg/emp_act(severity)
+	..()
+	if(!owner || !is_robotic() || emp_proof || !tough) // Augmented legs and feet make the user drop to the floor on EMP.
+		return
+	if(owner.weakened)
+		to_chat(owner, "<span class='userdanger'>Your [name] malfunctions, preventing you from getting back up!</span>")
+		owner.custom_emote(1, "is unable to get back up, [owner.p_their()] [name] malfunctioning!")
+	else
+		to_chat(owner, "<span class='userdanger'>Your [name] malfunctions, dropping you to the ground!</span>")
+		owner.custom_emote(1, "drops to the ground, [owner.p_their()] [name] malfunctioning!")
+	switch(severity)
+		if(1)
+			owner.AdjustWeakened(4)
+		if(2)
+			owner.AdjustWeakened(2)
+
 /obj/item/organ/external/leg/right
 	limb_name = "r_leg"
 	name = "right leg"
@@ -105,6 +123,22 @@
 	parent_organ = "l_leg"
 	amputation_point = "left ankle"
 	can_stand = 1
+
+/obj/item/organ/external/foot/emp_act(severity)
+	..()
+	if(!owner || !is_robotic() || emp_proof || !tough) // Augmented legs and feet make the user drop to the floor on EMP.
+		return
+	if(owner.weakened)
+		to_chat(owner, "<span class='userdanger'>Your [name] malfunctions, preventing you from getting back up!</span>")
+		owner.custom_emote(1, "is unable to get back up, [owner.p_their()] [name] malfunctioning!")
+	else
+		to_chat(owner, "<span class='userdanger'>Your [name] malfunctions, dropping you to the ground!</span>")
+		owner.custom_emote(1, "drops to the ground, [owner.p_their()] [name] malfunctioning!")
+	switch(severity)
+		if(1)
+			owner.AdjustWeakened(4)
+		if(2)
+			owner.AdjustWeakened(2)
 
 /obj/item/organ/external/foot/remove()
 	if(owner && owner.shoes) owner.unEquip(owner.shoes)
@@ -131,14 +165,24 @@
 	amputation_point = "left wrist"
 	can_grasp = 1
 
+/obj/item/organ/external/hand/emp_act(severity)
+	..()
+	if(!owner || !is_robotic() || emp_proof || !tough) // Augmented arms and hands drop whatever they are holding on EMP.
+		return
+	var/hand = (body_part == HAND_LEFT) ? owner.l_hand : owner.r_hand
+	if(hand && owner.canUnEquip(hand))
+		owner.unEquip(hand)
+		to_chat(owner, "<span class='userdanger'>Your [name] malfunctions, dropping what it was holding!</span>")
+		owner.custom_emote(1, "drops what [owner.p_they()] [owner.p_were()] holding, [owner.p_their()] [name] malfunctioning!")
+
 /obj/item/organ/external/hand/remove()
 	if(owner)
 		if(owner.gloves)
 			owner.unEquip(owner.gloves)
 		if(owner.l_hand)
-			owner.unEquip(owner.l_hand,1)
+			owner.unEquip(owner.l_hand, TRUE)
 		if(owner.r_hand)
-			owner.unEquip(owner.r_hand,1)
+			owner.unEquip(owner.r_hand, TRUE)
 
 	. = ..()
 
@@ -158,7 +202,6 @@
 	min_broken_damage = 35
 	w_class = WEIGHT_CLASS_NORMAL
 	body_part = HEAD
-	vital = 1
 	parent_organ = "chest"
 	amputation_point = "neck"
 	gendered_icon = 1
@@ -170,6 +213,11 @@
 	var/hair_colour = "#000000"
 	var/sec_hair_colour = "#000000"
 	var/h_style = "Bald"
+	var/h_grad_style = "None"
+	var/h_grad_offset_x = 0
+	var/h_grad_offset_y = 0
+	var/h_grad_colour = "#000000"
+	var/h_grad_alpha = 255
 
 	//Head accessory colour and style
 	var/headacc_colour = "#000000"
@@ -182,8 +230,6 @@
 
 /obj/item/organ/external/head/remove()
 	if(owner)
-		if(owner.buckled && owner.noosed)
-			owner.buckled.unbuckle_mob(owner,force=1)
 		if(!istype(dna))
 			dna = owner.dna.Clone()
 		name = "[dna.real_name]'s head"
@@ -197,31 +243,24 @@
 			owner.unEquip(owner.r_ear)
 		if(owner.wear_mask)
 			owner.unEquip(owner.wear_mask)
-		spawn(1)
-			if(owner)//runtimer no runtiming
-				owner.update_hair()
-				owner.update_fhair()
-				owner.update_head_accessory()
-				owner.update_markings()
+		owner.update_hair()
+		owner.update_fhair()
+		owner.update_head_accessory()
+		owner.update_markings()
 	. = ..()
 
 /obj/item/organ/external/head/replaced()
 	name = limb_name
-
 	..()
 
-/obj/item/organ/external/head/receive_damage(brute, burn, sharp, used_weapon = null, list/forbidden_limbs = list(), ignore_resists = FALSE)
-	..(brute, burn, sharp, used_weapon, forbidden_limbs, ignore_resists)
-	if(!disfigured)
-		if(brute_dam > 40)
-			if(prob(50))
-				disfigure("brute")
-		if(burn_dam > 40)
-			disfigure("burn")
+/obj/item/organ/external/head/receive_damage(brute, burn, sharp, used_weapon = null, list/forbidden_limbs = list(), ignore_resists = FALSE, updating_health = TRUE)
+	..()
+	if(brute_dam + burn_dam > 50 && !(status & ORGAN_DISFIGURED))
+		disfigure()
 
 /obj/item/organ/external/head/proc/handle_alt_icon()
-	if(alt_head && alt_heads_list[alt_head])
-		var/datum/sprite_accessory/alt_heads/alternate_head = alt_heads_list[alt_head]
+	if(alt_head && GLOB.alt_heads_list[alt_head])
+		var/datum/sprite_accessory/alt_heads/alternate_head = GLOB.alt_heads_list[alt_head]
 		if(alternate_head.icon_state)
 			icon_name = alternate_head.icon_state
 		else //If alternate_head.icon_state doesn't exist, that means alternate_head is "None", so default icon_name back to "head".
@@ -230,6 +269,22 @@
 		alt_head = initial(alt_head)
 		icon_name = initial(icon_name)
 
+/obj/item/organ/external/head/robotize(company, make_tough = 0, convert_all = 1) //Undoes alt_head business to avoid getting in the way of robotization. Make sure we pass all args down the line...
+	alt_head = initial(alt_head)
+	icon_name = initial(icon_name)
+	..()
+
 /obj/item/organ/external/head/set_dna(datum/dna/new_dna)
 	..()
 	new_dna.write_head_attributes(src)
+
+/obj/item/organ/external/head/emp_act(severity)
+	..()
+	if(!is_robotic() || emp_proof || !tough) // Augmented head confuses the user on EMP.
+		return
+	switch(severity)
+		if(1)
+			owner?.AdjustConfused(30)
+		if(2)
+			owner?.AdjustConfused(20)
+	to_chat(owner, "<span class='userdanger'>Your [name] malfunctions, overloading your motor control!</span>")

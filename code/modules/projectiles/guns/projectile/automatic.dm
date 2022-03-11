@@ -2,13 +2,11 @@
 	w_class = WEIGHT_CLASS_NORMAL
 	var/alarmed = 0
 	var/select = 1
+	can_tactical = TRUE
 	can_suppress = 1
 	burst_size = 3
 	fire_delay = 2
 	actions_types = list(/datum/action/item_action/toggle_firemode)
-
-/obj/item/gun/projectile/automatic/isHandgun()
-	return 0
 
 /obj/item/gun/projectile/automatic/update_icon()
 	..()
@@ -18,10 +16,14 @@
 	if(select == 1)
 		overlays += "[initial(icon_state)]burst"
 	icon_state = "[initial(icon_state)][magazine ? "-[magazine.max_ammo]" : ""][chambered ? "" : "-e"][suppressed ? "-suppressed" : ""]"
+	if(bayonet && can_bayonet)
+		overlays += knife_overlay
 
-/obj/item/gun/projectile/automatic/attackby(var/obj/item/A as obj, mob/user as mob, params)
+/obj/item/gun/projectile/automatic/attackby(obj/item/A as obj, mob/user as mob, params)
 	. = ..()
 	if(.)
+		if(alarmed) // Did the empty clip alarm go off already?
+			alarmed = 0 // Reset the alarm once a magazine is loaded
 		return
 	if(istype(A, /obj/item/ammo_box/magazine))
 		var/obj/item/ammo_box/magazine/AM = A
@@ -33,6 +35,8 @@
 				magazine = null
 			else
 				to_chat(user, "<span class='notice'>You insert the magazine into \the [src].</span>")
+			if(alarmed)
+				alarmed = 0
 			user.remove_from_mob(AM)
 			magazine = AM
 			magazine.loc = src
@@ -56,7 +60,7 @@
 		fire_delay = initial(fire_delay)
 		to_chat(user, "<span class='notice'>You switch to [burst_size] round burst.</span>")
 
-	playsound(user, 'sound/weapons/empty.ogg', 100, 1)
+	playsound(user, 'sound/weapons/gun_interactions/selector.ogg', 100, 1)
 	update_icon()
 	for(var/X in actions)
 		var/datum/action/A = X
@@ -71,13 +75,16 @@
 		update_icon()
 		alarmed = 1
 
+//Saber SMG//
 /obj/item/gun/projectile/automatic/proto
 	name = "\improper Nanotrasen Saber SMG"
-	desc = "A prototype three-round burst 9mm submachine gun, designated 'SABR'. Has a threaded barrel for suppressors."
+	desc = "A rejected prototype three-round burst 9mm submachine gun, designated 'SABR'. Surplus of this model are bouncing around armories of Nanotrasen Space Stations. Has a threaded barrel for suppressors."
 	icon_state = "saber"
 	mag_type = /obj/item/ammo_box/magazine/smgm9mm
 	origin_tech = "combat=4;materials=2"
+	fire_sound = 'sound/weapons/gunshots/gunshot_pistol.ogg'
 
+//C-20r SMG//
 /obj/item/gun/projectile/automatic/c20r
 	name = "\improper C-20r SMG"
 	desc = "A two-round burst .45 SMG, designated 'C-20r'. Has a 'Scarborough Arms - Per falcis, per pravitas' buttstamp."
@@ -85,9 +92,12 @@
 	item_state = "c20r"
 	origin_tech = "combat=5;materials=2;syndicate=6"
 	mag_type = /obj/item/ammo_box/magazine/smgm45
-	fire_sound = 'sound/weapons/Gunshot_smg.ogg'
+	fire_sound = 'sound/weapons/gunshots/gunshot_smg.ogg'
 	fire_delay = 2
 	burst_size = 2
+	can_bayonet = TRUE
+	knife_x_offset = 26
+	knife_y_offset = 12
 
 /obj/item/gun/projectile/automatic/c20r/New()
 	..()
@@ -99,31 +109,42 @@
 
 /obj/item/gun/projectile/automatic/c20r/update_icon()
 	..()
-	icon_state = "c20r[magazine ? "-[Ceiling(get_ammo(0)/4)*4]" : ""][chambered ? "" : "-e"][suppressed ? "-suppressed" : ""]"
+	icon_state = "c20r[magazine ? "-[CEILING(get_ammo(0)/4, 1)*4]" : ""][chambered ? "" : "-e"][suppressed ? "-suppressed" : ""]"
 
+//WT550//
 /obj/item/gun/projectile/automatic/wt550
 	name = "security auto rifle"
 	desc = "An outdated personal defense weapon utilized by law enforcement. The WT-550 Automatic Rifle fires 4.6x30mm rounds."
 	icon_state = "wt550"
 	item_state = "arg"
 	mag_type = /obj/item/ammo_box/magazine/wt550m9
+	fire_sound = 'sound/weapons/gunshots/gunshot_rifle.ogg'
+	magin_sound = 'sound/weapons/gun_interactions/batrifle_magin.ogg'
+	magout_sound = 'sound/weapons/gun_interactions/batrifle_magout.ogg'
 	fire_delay = 2
 	can_suppress = 0
 	burst_size = 1
 	actions_types = list()
+	can_bayonet = TRUE
+	knife_x_offset = 25
+	knife_y_offset = 12
 
 /obj/item/gun/projectile/automatic/wt550/update_icon()
 	..()
-	icon_state = "wt550[magazine ? "-[Ceiling(get_ammo(0)/4)*4]" : ""]"
+	icon_state = "wt550[magazine ? "-[CEILING(get_ammo(0)/4, 1)*4]" : ""]"
 
+//Type-U3 Uzi//
 /obj/item/gun/projectile/automatic/mini_uzi
 	name = "\improper 'Type U3' Uzi"
 	desc = "A lightweight, burst-fire submachine gun, for when you really want someone dead. Uses 9mm rounds."
 	icon_state = "mini-uzi"
 	origin_tech = "combat=4;materials=2;syndicate=4"
 	mag_type = /obj/item/ammo_box/magazine/uzim9mm
+	fire_sound = 'sound/weapons/gunshots/gunshot_pistol.ogg'
 	burst_size = 2
+	can_holster = TRUE // it's a mini-uzi after all
 
+//M-90gl Carbine//
 /obj/item/gun/projectile/automatic/m90
 	name = "\improper M-90gl Carbine"
 	desc = "A three-round burst 5.56 toploading carbine, designated 'M-90gl'. Has an attached underbarrel grenade launcher which can be toggled on and off."
@@ -131,7 +152,9 @@
 	item_state = "m90-4"
 	origin_tech = "combat=5;materials=2;syndicate=6"
 	mag_type = /obj/item/ammo_box/magazine/m556
-	fire_sound = 'sound/weapons/Gunshot_smg.ogg'
+	fire_sound = 'sound/weapons/gunshots/gunshot_rifle.ogg'
+	magin_sound = 'sound/weapons/gun_interactions/batrifle_magin.ogg'
+	magout_sound = 'sound/weapons/gun_interactions/batrifle_magout.ogg'
 	can_suppress = 0
 	var/obj/item/gun/projectile/revolver/grenadelauncher/underbarrel
 	burst_size = 3
@@ -142,20 +165,20 @@
 	underbarrel = new /obj/item/gun/projectile/revolver/grenadelauncher(src)
 	update_icon()
 
-/obj/item/gun/projectile/automatic/m90/afterattack(var/atom/target, var/mob/living/user, flag, params)
+/obj/item/gun/projectile/automatic/m90/afterattack(atom/target, mob/living/user, flag, params)
 	if(select == 2)
 		underbarrel.afterattack(target, user, flag, params)
 	else
 		..()
 		return
 
-/obj/item/gun/projectile/automatic/m90/attackby(var/obj/item/A, mob/user, params)
+/obj/item/gun/projectile/automatic/m90/attackby(obj/item/A, mob/user, params)
 	if(istype(A, /obj/item/ammo_casing))
 		if(istype(A, underbarrel.magazine.ammo_type))
-			underbarrel.attack_self()
+			underbarrel.attack_self(user)
 			underbarrel.attackby(A, user, params)
 	else
-		..()
+		return ..()
 
 /obj/item/gun/projectile/automatic/m90/update_icon()
 	..()
@@ -169,8 +192,8 @@
 			overlays += "[initial(icon_state)]gren"
 	icon_state = "[initial(icon_state)][magazine ? "" : "-e"]"
 	if(magazine)
-		overlays += image(icon = icon, icon_state = "m90-[Ceiling(get_ammo(0)/6)*6]")
-		item_state = "m90-[Ceiling(get_ammo(0)/7.5)]"
+		overlays += image(icon = icon, icon_state = "m90-[CEILING(get_ammo(0)/6, 1)*6]")
+		item_state = "m90-[CEILING(get_ammo(0)/7.5, 1)]"
 	else
 		item_state = "m90-0"
 	return
@@ -191,9 +214,10 @@
 			burst_size = 1
 			fire_delay = 0
 			to_chat(user, "<span class='notice'>You switch to semi-auto.</span>")
-	playsound(user, 'sound/weapons/empty.ogg', 100, 1)
+	playsound(user, 'sound/weapons/gun_interactions/selector.ogg', 100, 1)
 	update_icon()
 
+//Tommy Gun//
 /obj/item/gun/projectile/automatic/tommygun
 	name = "\improper Thompson SMG"
 	desc = "A genuine 'Chicago Typewriter'."
@@ -203,20 +227,23 @@
 	slot_flags = 0
 	origin_tech = "combat=5;materials=1;syndicate=3"
 	mag_type = /obj/item/ammo_box/magazine/tommygunm45
-	fire_sound = 'sound/weapons/Gunshot_smg.ogg'
+	fire_sound = 'sound/weapons/gunshots/gunshot_smg.ogg'
 	can_suppress = 0
 	burst_size = 4
 	fire_delay = 1
 
+//ARG Assault Rifle//
 /obj/item/gun/projectile/automatic/ar
-	name = "ARG"
-	desc = "A robust assault rile used by Nanotrasen fighting forces."
+	name = "\improper ARG"
+	desc = "A robust assault rifle used by Nanotrasen fighting forces."
 	icon_state = "arg"
 	item_state = "arg"
 	slot_flags = 0
 	origin_tech = "combat=6;engineering=4"
-	mag_type = /obj/item/ammo_box/magazine/m556
-	fire_sound = 'sound/weapons/Gunshot_smg.ogg'
+	mag_type = /obj/item/ammo_box/magazine/m556/arg
+	fire_sound = 'sound/weapons/gunshots/gunshot_mg.ogg'
+	magin_sound = 'sound/weapons/gun_interactions/batrifle_magin.ogg'
+	magout_sound = 'sound/weapons/gun_interactions/batrifle_magout.ogg'
 	can_suppress = 0
 	burst_size = 3
 	fire_delay = 1
@@ -230,7 +257,9 @@
 	w_class = WEIGHT_CLASS_NORMAL
 	origin_tech = "combat=6;materials=4;syndicate=6"
 	mag_type = /obj/item/ammo_box/magazine/m12g
-	fire_sound = 'sound/weapons/Gunshot4.ogg'
+	fire_sound = 'sound/weapons/gunshots/gunshot_shotgun.ogg'
+	magin_sound = 'sound/weapons/gun_interactions/batrifle_magin.ogg'
+	magout_sound = 'sound/weapons/gun_interactions/batrifle_magout.ogg'
 	can_suppress = 0
 	burst_size = 1
 	fire_delay = 0
@@ -244,29 +273,46 @@
 	if(magazine)
 		overlays.Cut()
 		overlays += "[magazine.icon_state]"
-		return
+		if(istype(magazine, /obj/item/ammo_box/magazine/m12g/XtrLrg))
+			w_class = WEIGHT_CLASS_BULKY
+		else
+			w_class = WEIGHT_CLASS_NORMAL
+	else
+		w_class = WEIGHT_CLASS_NORMAL
 
 /obj/item/gun/projectile/automatic/shotgun/bulldog/update_icon()
 	overlays.Cut()
 	update_magazine()
 	icon_state = "bulldog[chambered ? "" : "-e"]"
 
+/obj/item/gun/projectile/automatic/shotgun/bulldog/attackby(obj/item/A as obj, mob/user as mob, params)
+	if(istype(A, /obj/item/ammo_box/magazine/m12g/XtrLrg))
+		if(istype(loc, /obj/item/storage))	// To prevent inventory exploits
+			var/obj/item/storage/Strg = loc
+			if(Strg.max_w_class < WEIGHT_CLASS_BULKY)
+				to_chat(user, "<span class='warning'>You can't reload [src], with a XL mag, while it's in a normal bag.</span>")
+				return
+	return ..()
+
 /obj/item/gun/projectile/automatic/shotgun/bulldog/afterattack(atom/target as mob|obj|turf|area, mob/living/user as mob|obj, flag)
 	..()
 	empty_alarm()
 
+//Laser carbine//
 /obj/item/gun/projectile/automatic/lasercarbine
 	name = "\improper IK-60 Laser Carbine"
-	desc = "An experimental carbine. Uses encased laser projectors as ammunition."//we need to uncouple the toroidal resistance dejammers
+	desc = "A short, compact carbine like rifle, relying more on battery cartridges rather than a built in power cell. Utilized by the Nanotrasen Navy for combat operations."
 	icon_state = "lasercarbine"
 	item_state = "laser"
 	w_class = WEIGHT_CLASS_NORMAL
 	origin_tech = "combat=4;materials=2"
 	mag_type = /obj/item/ammo_box/magazine/laser
-	fire_sound = 'sound/weapons/emitter2.ogg'
+	fire_sound = 'sound/weapons/gunshots/gunshot_lascarbine.ogg'
+	magin_sound = 'sound/weapons/gun_interactions/batrifle_magin.ogg'
+	magout_sound = 'sound/weapons/gun_interactions/batrifle_magout.ogg'
 	can_suppress = 0
 	burst_size = 2
 
 /obj/item/gun/projectile/automatic/lasercarbine/update_icon()
 	..()
-	icon_state = "lasercarbine[magazine ? "-[Ceiling(get_ammo(0)/5)*5]" : ""]"
+	icon_state = "lasercarbine[magazine ? "-[CEILING(get_ammo(0)/5, 1)*5]" : ""]"

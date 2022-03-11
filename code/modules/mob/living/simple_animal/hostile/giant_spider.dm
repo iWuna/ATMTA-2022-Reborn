@@ -4,22 +4,6 @@
 #define MOVING_TO_TARGET 3
 #define SPINNING_COCOON 4
 
-/mob/living/simple_animal/hostile/poison
-	var/poison_per_bite = 5
-	var/poison_type = "spidertoxin"
-
-/mob/living/simple_animal/hostile/poison/AttackingTarget()
-	..()
-	if(isliving(target))
-		var/mob/living/L = target
-		if(L.reagents)
-			L.reagents.add_reagent("spidertoxin", poison_per_bite)
-			if(prob(poison_per_bite))
-				to_chat(L, "<span class='danger'>You feel a tiny prick.</span>")
-				L.reagents.add_reagent(poison_type, poison_per_bite)
-
-
-
 //basic spider mob, these generally guard nests
 /mob/living/simple_animal/hostile/poison/giant_spider
 	name = "giant spider"
@@ -28,12 +12,15 @@
 	var/butcher_state = 8 // Icon state for dead spider icons
 	icon_living = "guard"
 	icon_dead = "guard_dead"
+	mob_biotypes = MOB_ORGANIC | MOB_BUG
 	speak_emote = list("chitters")
 	emote_hear = list("chitters")
 	speak_chance = 5
 	turns_per_move = 5
-	see_in_dark = 10
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/spidermeat = 2, /obj/item/reagent_containers/food/snacks/spiderleg = 8)
+	see_in_dark = 8
+	lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_VISIBLE
+	footstep_type = FOOTSTEP_MOB_CLAW
+	butcher_results = list(/obj/item/reagent_containers/food/snacks/monstermeat/spidermeat= 2, /obj/item/reagent_containers/food/snacks/monstermeat/spiderleg= 8)
 	response_help  = "pets"
 	response_disarm = "gently pushes aside"
 	response_harm   = "hits"
@@ -45,12 +32,29 @@
 	heat_damage_per_tick = 20	//amount of damage applied if animal's body temperature is higher than maxbodytemp
 	cold_damage_per_tick = 20	//same as heat_damage_per_tick, only if the bodytemperature it's lower than minbodytemp
 	faction = list("spiders")
-	var/busy = 0
 	pass_flags = PASSTABLE
 	move_to_delay = 6
 	attacktext = "bites"
 	attack_sound = 'sound/weapons/bite.ogg'
-	gold_core_spawnable = CHEM_MOB_SPAWN_HOSTILE
+	gold_core_spawnable = HOSTILE_SPAWN
+	var/venom_per_bite = 0 // While the /poison/ type path remains as-is for consistency reasons, we're really talking about venom, not poison.
+	var/busy = 0
+
+/mob/living/simple_animal/hostile/poison/giant_spider/AttackingTarget()
+	// This is placed here, NOT on /poison, because the other subtypes of /poison/ already override AttackingTarget() completely, and as such it would do nothing but confuse people there.
+	. = ..()
+	if(. && venom_per_bite > 0 && iscarbon(target) && (!client || a_intent == INTENT_HARM))
+		var/mob/living/carbon/C = target
+		var/inject_target = pick("chest", "head")
+		if(C.can_inject(null, FALSE, inject_target, FALSE))
+			C.reagents.add_reagent("spidertoxin", venom_per_bite)
+
+/mob/living/simple_animal/hostile/poison/giant_spider/get_spacemove_backup()
+	. = ..()
+	// If we don't find any normal thing to use, attempt to use any nearby spider structure instead.
+	if(!.)
+		for(var/obj/structure/spider/S in range(1, get_turf(src)))
+			return S
 
 //nursemaids - these create webs and eggs
 /mob/living/simple_animal/hostile/poison/giant_spider/nurse
@@ -58,15 +62,14 @@
 	icon_state = "nurse"
 	icon_living = "nurse"
 	icon_dead = "nurse_dead"
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/spidermeat = 2, /obj/item/reagent_containers/food/snacks/spiderleg = 8, /obj/item/reagent_containers/food/snacks/spidereggs = 4)
+	butcher_results = list(/obj/item/reagent_containers/food/snacks/monstermeat/spidermeat= 2, /obj/item/reagent_containers/food/snacks/monstermeat/spiderleg= 8, /obj/item/reagent_containers/food/snacks/monstermeat/spidereggs= 4)
 
 	maxHealth = 40
 	health = 40
 	melee_damage_lower = 5
 	melee_damage_upper = 10
-	poison_per_bite = 10
+	venom_per_bite = 30
 	var/atom/cocoon_target
-	poison_type = "ether"
 	var/fed = 0
 
 //hunters have the most poison and move the fastest, so they can find prey
@@ -79,62 +82,22 @@
 	health = 120
 	melee_damage_lower = 10
 	melee_damage_upper = 20
-	poison_per_bite = 5
+	venom_per_bite = 10
 	move_to_delay = 5
 
-//vipers are the rare variant of the hunter, no IMMEDIATE damage but so much poison medical care will be needed fast.
-/mob/living/simple_animal/hostile/poison/giant_spider/hunter/viper
-	name = "viper"
-	desc = "Furry and black, it makes you shudder to look at it. This one has effervescent purple eyes."
-	icon_state = "viper"
-	icon_living = "viper"
-	icon_dead = "viper_dead"
-	maxHealth = 40
-	health = 40
-	melee_damage_lower = 1
-	melee_damage_upper = 1
-	poison_per_bite = 12
-	move_to_delay = 4
-	poison_type = "venom" //all in venom, glass cannon. you bite 5 times and they are DEFINITELY dead, but 40 health and you are extremely obvious. Ambush, maybe?
-
-//tarantulas are really tanky, regenerating (maybe), hulky monster but are also extremely slow, so.
-/mob/living/simple_animal/hostile/poison/giant_spider/tarantula
-	name = "tarantula"
-	desc = "Furry and black, it makes you shudder to look at it. This one has abyssal red eyes."
-	icon_state = "tarantula"
-	icon_living = "tarantula"
-	icon_dead = "tarantula_dead"
-	maxHealth = 300 // woah nelly
-	health = 300
-	melee_damage_lower = 35
-	melee_damage_upper = 40
-	poison_per_bite = 0
-	move_to_delay = 8
-
-//midwives are the queen of the spiders, can send messages to all them and web faster. That rare round where you get a queen spider and turn your 'for honor' players into 'r6siege' players will be a fun one.
-/mob/living/simple_animal/hostile/poison/giant_spider/nurse/midwife
-	name = "midwife"
-	desc = "Furry and black, it makes you shudder to look at it. This one has scintillating green eyes."
-	icon_state = "midwife"
-	icon_living = "midwife"
-	icon_dead = "midwife_dead"
-	maxHealth = 80
-	health = 80
-
-/mob/living/simple_animal/hostile/poison/giant_spider/hunter/handle_automated_action()
-	if(!..()) //AIStatus is off
-		return
+/mob/living/simple_animal/hostile/poison/giant_spider/handle_automated_movement() //Hacky and ugly.
+	. = ..()
 	if(AIStatus == AI_IDLE)
 		//1% chance to skitter madly away
 		if(!busy && prob(1))
 			stop_automated_movement = 1
-			Goto(pick(orange(20, src)), move_to_delay)
+			Goto(pick(urange(20, src, 1)), move_to_delay)
 			spawn(50)
 				stop_automated_movement = 0
 				walk(src,0)
 		return 1
 
-/mob/living/simple_animal/hostile/poison/giant_spider/nurse/proc/GiveUp(var/C)
+/mob/living/simple_animal/hostile/poison/giant_spider/nurse/proc/GiveUp(C)
 	spawn(100)
 		if(busy == MOVING_TO_TARGET)
 			if(cocoon_target == C && get_dist(src,cocoon_target) > 1)
@@ -142,13 +105,13 @@
 			busy = 0
 			stop_automated_movement = 0
 
-/mob/living/simple_animal/hostile/poison/giant_spider/nurse/handle_automated_action()
+/mob/living/simple_animal/hostile/poison/giant_spider/nurse/handle_automated_movement() //Hacky and ugly.
 	if(..())
 		var/list/can_see = view(src, 10)
 		if(!busy && prob(30))	//30% chance to stop wandering and do something
-		//first, check for potential food nearby to cocoon
+			//first, check for potential food nearby to cocoon
 			for(var/mob/living/C in can_see)
-				if(C.stat && !istype(C,/mob/living/simple_animal/hostile/poison/giant_spider))
+				if(C.stat && !istype(C, /mob/living/simple_animal/hostile/poison/giant_spider) && !C.anchored)
 					cocoon_target = C
 					busy = MOVING_TO_TARGET
 					Goto(C, move_to_delay)
@@ -168,13 +131,14 @@
 					for(var/obj/O in can_see)
 						if(O.anchored)
 							continue
-							if(istype(O, /obj/item) || istype(O, /obj/structure) || istype(O, /obj/machinery))
-								cocoon_target = O
-								busy = MOVING_TO_TARGET
-								stop_automated_movement = 1
-								Goto(O, move_to_delay)
-								//give up if we can't reach them after 10 seconds
-								GiveUp(O)
+
+						if(isitem(O) || isstructure(O) || ismachinery(O))
+							cocoon_target = O
+							busy = MOVING_TO_TARGET
+							stop_automated_movement = 1
+							Goto(O, move_to_delay)
+							//give up if we can't reach them after 10 seconds
+							GiveUp(O)
 
 		else if(busy == MOVING_TO_TARGET && cocoon_target)
 			if(get_dist(src, cocoon_target) <= 1)
@@ -209,15 +173,27 @@
 
 	if(!cocoon_target)
 		var/list/choices = list()
-		for(var/mob/living/L in view(1,src))
+		for(var/mob/living/L in view(1, src))
 			if(L == src)
+				continue
+			if(L.stat != DEAD)
+				continue
+			if(istype(L, /mob/living/simple_animal/hostile/poison/giant_spider))
 				continue
 			if(Adjacent(L))
 				choices += L
-		for(var/obj/O in src.loc)
+		for(var/obj/O in get_turf(src))
+			if(O.anchored)
+				continue
+			if(!(isitem(O) || isstructure(O) || ismachinery(O)))
+				continue
 			if(Adjacent(O))
 				choices += O
-		cocoon_target = input(src,"What do you wish to cocoon?") in null|choices
+		if(length(choices))
+			cocoon_target = input(src,"What do you wish to cocoon?") in null|choices
+		else
+			to_chat(src, "<span class='warning'>No suitable dead prey or wrappable objects found nearby.")
+			return
 
 	if(cocoon_target && busy != SPINNING_COCOON)
 		busy = SPINNING_COCOON
@@ -243,6 +219,8 @@
 							large_cocoon = 1
 					for(var/mob/living/L in C.loc)
 						if(istype(L, /mob/living/simple_animal/hostile/poison/giant_spider))
+							continue
+						if(L.stat != DEAD)
 							continue
 						large_cocoon = 1
 						L.loc = C
@@ -279,6 +257,7 @@
 					var/obj/structure/spider/eggcluster/C = new /obj/structure/spider/eggcluster(src.loc)
 					C.faction = faction.Copy()
 					C.master_commander = master_commander
+					C.xenobiology_spawned = xenobiology_spawned
 					if(ckey)
 						C.player_spiders = 1
 					fed--

@@ -29,7 +29,8 @@
 	if(istype(W,/obj/item/reagent_containers/syringe))
 		if(!contains_sample)
 			for(var/datum/reagent/blood/bloodSample in W.reagents.reagent_list)
-				if(bloodSample.data["mind"] && bloodSample.data["cloneable"] == 1)
+				var/datum/dna/dna = bloodSample.data["dna"]
+				if(bloodSample.data["mind"] && bloodSample.data["cloneable"] && !(NO_CLONESCAN in dna.species.species_traits))
 					mind = bloodSample.data["mind"]
 					ckey = bloodSample.data["ckey"]
 					realName = bloodSample.data["real_name"]
@@ -57,9 +58,9 @@
 	var/obj/machinery/hydroponics/parent = loc
 	var/make_podman = 0
 	var/ckey_holder = null
-	if(config.revival_pod_plants)
+	if(GLOB.configuration.general.enable_revival_pod_plants)
 		if(ckey)
-			for(var/mob/M in player_list)
+			for(var/mob/M in GLOB.player_list)
 				if(isobserver(M))
 					var/mob/dead/observer/O = M
 					if(O.ckey == ckey && O.can_reenter_corpse)
@@ -70,7 +71,7 @@
 						make_podman = 1
 						break
 		else //If the player has ghosted from his corpse before blood was drawn, his ckey is no longer attached to the mob, so we need to match up the cloned player through the mind key
-			for(var/mob/M in player_list)
+			for(var/mob/M in GLOB.player_list)
 				if(mind && M.mind && ckey(M.mind.key) == ckey(mind.key) && M.ckey && M.client && M.stat == DEAD && !M.suiciding)
 					if(isobserver(M))
 						var/mob/dead/observer/O = M
@@ -81,7 +82,7 @@
 					break
 
 	if(make_podman)	//all conditions met!
-		var/mob/living/carbon/human/diona/podman = new /mob/living/carbon/human/diona(parent.loc)
+		var/mob/living/carbon/human/pod_diona/podman = new /mob/living/carbon/human/pod_diona(parent.loc)
 		if(realName)
 			podman.real_name = realName
 		mind.transfer_to(podman)
@@ -91,8 +92,6 @@
 			podman.ckey = ckey_holder
 		podman.gender = blood_gender
 		podman.faction |= factions
-		podman.faction |= "plants"
-		podman.faction |= "vines"   //Pod grown Diona are allied with plants and vines alike.
 
 	else //else, one packet of seeds. maybe two
 		var/seed_count = 1

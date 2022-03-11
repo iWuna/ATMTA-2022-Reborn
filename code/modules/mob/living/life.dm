@@ -1,75 +1,105 @@
-/mob/living/Life(seconds, times_fired)
+/mob/living/proc/Life(seconds, times_fired)
+	set waitfor = FALSE
 	set invisibility = 0
-	set background = BACKGROUND_ENABLED
 
-	if(in_stasis && stat)
-		handle_stasis()
-		return
+	if(flying && !floating) //TODO: Better floating
+		float(TRUE)
+
+	if(client || registered_z) // This is a temporary error tracker to make sure we've caught everything
+		var/turf/T = get_turf(src)
+		if(client && registered_z != T.z)
+			message_admins("[src] [ADMIN_FLW(src, "FLW")] has somehow ended up in Z-level [T.z] despite being registered in Z-level [registered_z]. If you could ask them how that happened and notify the coders, it would be appreciated.")
+			log_game("Z-TRACKING: [src] has somehow ended up in Z-level [T.z] despite being registered in Z-level [registered_z].")
+			update_z(T.z)
+		else if (!client && registered_z)
+			log_game("Z-TRACKING: [src] of type [src.type] has a Z-registration despite not having a client.")
+			update_z(null)
+
 	if(notransform)
-		return
+		return FALSE
 	if(!loc)
-		return
-	var/datum/gas_mixture/environment = loc.return_air()
-
-	//Apparently, the person who wrote this code designed it so that
-	//blinded get reset each cycle and then get activated later in the
-	//code. Very ugly. I dont care. Moving this stuff here so its easy
-	//to find it.
-	blinded = null
+		return FALSE
 
 	if(stat != DEAD)
 		//Chemicals in the body
-		handle_chemicals_in_body()
+		if(reagents)
+			handle_chemicals_in_body()
 
+	if(QDELETED(src)) // some chems can gib mobs
+		return
+
+	if(stat != DEAD)
 		//Mutations and radiation
 		handle_mutations_and_radiation()
 
+	if(stat != DEAD)
 		//Breathing, if applicable
 		handle_breathing(times_fired)
 
+	if(stat != DEAD)
 		//Random events (vomiting etc)
 		handle_random_events()
 
-		. = 1
+	if(LAZYLEN(viruses))
+		handle_diseases()
 
-	handle_diseases()
+	if(QDELETED(src)) // diseases can qdel the mob via transformations
+		return
+
+	//Heart Attack, if applicable
+	if(stat != DEAD)
+		handle_heartattack()
 
 	//Handle temperature/pressure differences between body and environment
+	var/datum/gas_mixture/environment = loc.return_air()
 	if(environment)
 		handle_environment(environment)
 
 	handle_fire()
 
-	//stuff in the stomach
-	handle_stomach(times_fired)
-
 	update_gravity(mob_has_gravity())
 
-	update_pulling()
+	if(pulling)
+		update_pulling()
 
 	for(var/obj/item/grab/G in src)
 		G.process()
 
-	if(handle_regular_status_updates()) // Status & health update, are we dead or alive etc.
+	if(stat != DEAD)
+		handle_critical_condition()
+
+	if(stat != DEAD) // Status & health update, are we dead or alive etc.
 		handle_disabilities() // eye, ear, brain damages
+
+	if(stat != DEAD)
 		handle_status_effects() //all special effects, stunned, weakened, jitteryness, hallucination, sleeping, etc
 
-	update_canmove(1) // set to 1 to not update icon action buttons; rip this argument out if Life is ever refactored to be non-stupid. -Fox
+	if(stat != DEAD)
+		if(forced_look)
+			if(!isnum(forced_look))
+				var/atom/A = locateUID(forced_look)
+				if(istype(A))
+					var/view = client ? client.view : world.view
+					if(get_dist(src, A) > view || !(src in viewers(view, A)))
+						forced_look = null
+						to_chat(src, "<span class='notice'>Your direction target has left your view, you are no longer facing anything.</span>")
+						return
+			setDir()
 
-	if(client)
-		//regular_hud_updates() //THIS DOESN'T FUCKING UPDATE SHIT
-		handle_regular_hud_updates() //IT JUST REMOVES FUCKING HUD IMAGES
-	if(get_nations_mode())
-		process_nations()
+	if(machine)
+		machine.check_eye(src)
 
-	..()
+	if(stat != DEAD)
+		return TRUE
 
 /mob/living/proc/handle_breathing(times_fired)
 	return
 
+/mob/living/proc/handle_heartattack()
+	return
+
 /mob/living/proc/handle_mutations_and_radiation()
 	radiation = 0 //so radiation don't accumulate in simple animals
-	return
 
 /mob/living/proc/handle_chemicals_in_body()
 	return
@@ -83,212 +113,98 @@
 /mob/living/proc/handle_environment(datum/gas_mixture/environment)
 	return
 
-/mob/living/proc/handle_stomach(times_fired)
-	return
-
 /mob/living/proc/update_pulling()
-	if(pulling)
-		if(incapacitated())
-			stop_pulling()
-
-//This updates the health and status of the mob (conscious, unconscious, dead)
-/mob/living/proc/handle_regular_status_updates()
-
-	updatehealth()
-
-	if(stat != DEAD)
-
-		if(paralysis)
-			stat = UNCONSCIOUS
-
-		else if(status_flags & FAKEDEATH)
-			stat = UNCONSCIOUS
-
-		else
-			stat = CONSCIOUS
-
-		return 1
+	if(incapacitated())
+		stop_pulling()
 
 //this updates all special effects: stunned, sleeping, weakened, druggy, stuttering, etc..
-/mob/living/proc/handle_status_effects()
-	handle_stunned()
-	handle_weakened()
-	handle_stuttering()
-	handle_silent()
-	handle_drugged()
-	handle_slurring()
-	handle_paralysed()
-	handle_sleeping()
-	handle_slowed()
-	handle_drunk()
-	handle_cultslurring()
-
-
-/mob/living/proc/handle_stunned()
+/mob/living/proc/handle_status_effects() // We check for the status effect in this proc as opposed to the procs below to avoid excessive proc call overhead
 	if(stunned)
 		AdjustStunned(-1, updating = 1, force = 1)
-		if(!stunned)
-			update_icons()
-	return stunned
-
-/mob/living/proc/handle_weakened()
 	if(weakened)
 		AdjustWeakened(-1, updating = 1, force = 1)
-		if(!weakened)
-			update_icons()
-	return weakened
-
-/mob/living/proc/handle_stuttering()
 	if(stuttering)
-		stuttering = max(stuttering-1, 0)
-	return stuttering
-
-/mob/living/proc/handle_silent()
+		stuttering = max(stuttering - 1, 0)
 	if(silent)
 		AdjustSilence(-1)
-	return silent
-
-/mob/living/proc/handle_drugged()
 	if(druggy)
 		AdjustDruggy(-1)
-	return druggy
-
-/mob/living/proc/handle_slurring()
 	if(slurring)
 		AdjustSlur(-1)
-	return slurring
-
-/mob/living/proc/handle_cultslurring()
-	if(cultslurring)
-		AdjustCultSlur(-1)
-	return cultslurring
-
-/mob/living/proc/handle_paralysed()
 	if(paralysis)
 		AdjustParalysis(-1, updating = 1, force = 1)
-	return paralysis
-
-/mob/living/proc/handle_sleeping()
 	if(sleeping)
-		AdjustSleeping(-1)
-		throw_alert("asleep", /obj/screen/alert/asleep)
-	else
-		clear_alert("asleep")
-	return sleeping
-
-/mob/living/proc/handle_slowed()
+		handle_sleeping()
 	if(slowed)
 		AdjustSlowed(-1)
-	return slowed
+	if(drunk)
+		handle_drunk()
+	if(cultslurring)
+		AdjustCultSlur(-1)
+	if(confused)
+		AdjustConfused(-1)
+
+/mob/living/proc/update_damage_hud()
+	return
+
+/mob/living/proc/handle_sleeping()
+	AdjustSleeping(-1)
+	return sleeping
 
 /mob/living/proc/handle_drunk()
-	if(drunk)
-		AdjustDrunk(-1)
+	AdjustDrunk(-1)
 	return drunk
 
 /mob/living/proc/handle_disabilities()
 	//Eyes
-	if(disabilities & BLIND || stat)	//blindness from disability or unconsciousness doesn't get better on its own
+	if(HAS_TRAIT(src, TRAIT_BLIND) || stat)	//blindness from disability or unconsciousness doesn't get better on its own
 		EyeBlind(1)
 	else if(eye_blind)			//blindness, heals slowly over time
 		AdjustEyeBlind(-1)
 	else if(eye_blurry)			//blurry eyes heal slowly
 		AdjustEyeBlurry(-1)
 
-	//Ears
-	if(disabilities & DEAF)		//disabled-deaf, doesn't get better on its own
-		EarDeaf(1)
-	else
-		// deafness heals slowly over time, unless ear_damage is over 100
-		if(ear_damage < 100)
-			AdjustEarDamage(-0.05)
-			AdjustEarDeaf(-1)
-
-/mob/living/proc/handle_stasis()
-	// Handle side effects from stasis
-	if(in_stasis)
-		// First off, there's no oxygen supply, so the mob will slowly take brain damage
-		adjustBrainLoss(0.1)
-
-		// Next, the method to induce stasis has some adverse side-effects, manifesting
-		// as cloneloss
-		adjustCloneLoss(0.1)
-
-//this handles hud updates. Calls update_vision() and handle_hud_icons()
-/mob/living/proc/handle_regular_hud_updates()
-	if(!client)	return 0
-
-	handle_vision()
-	handle_hud_icons()
-
-	return 1
-
-/mob/living/proc/handle_vision()
-	update_sight()
-
-	if(stat == DEAD)
-		return
-	if(blinded || eye_blind)
-		overlay_fullscreen("blind", /obj/screen/fullscreen/blind)
-		throw_alert("blind", /obj/screen/alert/blind)
-	else
-		clear_fullscreen("blind")
-		clear_alert("blind")
-
-		if(disabilities & NEARSIGHTED)
-			overlay_fullscreen("nearsighted", /obj/screen/fullscreen/impaired, 1)
-		else
-			clear_fullscreen("nearsighted")
-
-		if(eye_blurry)
-			overlay_fullscreen("blurry", /obj/screen/fullscreen/blurry)
-		else
-			clear_fullscreen("blurry")
-
-		if(druggy)
-			overlay_fullscreen("high", /obj/screen/fullscreen/high)
-			throw_alert("high", /obj/screen/alert/high)
-		else
-			clear_fullscreen("high")
-			clear_alert("high")
-
-	if(machine)
-		if(!machine.check_eye(src))
-			reset_perspective(null)
-	else
-		if(!remote_view && !client.adminobs)
-			reset_perspective(null)
-
-/mob/living/proc/update_sight()
-	return
-
 // Gives a mob the vision of being dead
 /mob/living/proc/grant_death_vision()
 	sight |= SEE_TURFS
 	sight |= SEE_MOBS
 	sight |= SEE_OBJS
+	lighting_alpha = LIGHTING_PLANE_ALPHA_INVISIBLE
 	see_in_dark = 8
 	see_invisible = SEE_INVISIBLE_OBSERVER
+	sync_lighting_plane_alpha()
 
-// See through walls, dark, etc.
-// basically the same as death vision except you can't
-// see ghosts
-/mob/living/proc/grant_xray_vision()
-	sight |= SEE_TURFS
-	sight |= SEE_MOBS
-	sight |= SEE_OBJS
-	see_in_dark = 8
-	see_invisible = SEE_INVISIBLE_LEVEL_TWO
-
-/mob/living/proc/handle_hud_icons()
-	handle_hud_icons_health()
+/mob/living/proc/handle_critical_condition()
 	return
 
-/mob/living/proc/handle_hud_icons_health()
-	return
-
-/mob/living/proc/process_nations()
-	if(client)
-		var/client/C = client
-		for(var/mob/living/carbon/human/H in view(src, world.view))
-			C.images += H.hud_list[NATIONS_HUD]
+/mob/living/update_health_hud()
+	if(!client)
+		return
+	if(healths)
+		var/severity = 0
+		var/healthpercent = (health / maxHealth) * 100
+		switch(healthpercent)
+			if(100 to INFINITY)
+				healths.icon_state = "health0"
+			if(80 to 100)
+				healths.icon_state = "health1"
+				severity = 1
+			if(60 to 80)
+				healths.icon_state = "health2"
+				severity = 2
+			if(40 to 60)
+				healths.icon_state = "health3"
+				severity = 3
+			if(20 to 40)
+				healths.icon_state = "health4"
+				severity = 4
+			if(1 to 20)
+				healths.icon_state = "health5"
+				severity = 5
+			else
+				healths.icon_state = "health7"
+				severity = 6
+		if(severity > 0)
+			overlay_fullscreen("brute", /obj/screen/fullscreen/brute, severity)
+		else
+			clear_fullscreen("brute")

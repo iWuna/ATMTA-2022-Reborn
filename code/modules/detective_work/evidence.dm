@@ -76,6 +76,7 @@
 		"<span class='notice'>You hear someone rustle around in a plastic bag, and remove something.</span>")
 		overlays.Cut()	//remove the overlays
 		user.put_in_hands(I)
+		I.pickup(user)
 		w_class = WEIGHT_CLASS_TINY
 		icon_state = "evidenceobj"
 		desc = "An empty evidence bag."
@@ -83,16 +84,3 @@
 	else
 		to_chat(user, "[src] is empty.")
 		icon_state = "evidenceobj"
-
-/obj/item/storage/box/evidence
-	name = "evidence bag box"
-	desc = "A box claiming to contain evidence bags."
-
-/obj/item/storage/box/evidence/New()
-	new /obj/item/evidencebag(src)
-	new /obj/item/evidencebag(src)
-	new /obj/item/evidencebag(src)
-	new /obj/item/evidencebag(src)
-	new /obj/item/evidencebag(src)
-	new /obj/item/evidencebag(src)
-	..()

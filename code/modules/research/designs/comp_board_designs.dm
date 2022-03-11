@@ -162,6 +162,16 @@
 	build_path = /obj/item/circuitboard/med_data
 	category = list("Computer Boards")
 
+/datum/design/mining_shuttle
+	name = "Console Board (Mining Shuttle)"
+	desc = "Allows for the construction of circuit boards used to build a mining shuttle control console."
+	id = "mining_shuttle"
+	req_tech = list("programming" = 3)
+	build_type = IMPRINTER
+	materials = list(MAT_GLASS = 1000)
+	build_path = /obj/item/circuitboard/mining_shuttle
+	category = list("Computer Boards")
+
 /datum/design/message_monitor
 	name = "Console Board (Messaging Monitor Console)"
 	desc = "Allows for the construction of circuit boards used to build a messaging monitor console."
@@ -210,6 +220,16 @@
 	build_type = IMPRINTER
 	materials = list(MAT_GLASS = 1000)
 	build_path = /obj/item/circuitboard/prisoner
+	category = list("Computer Boards")
+
+/datum/design/brigcells
+	name = "Console Board (Brig Cell Management Console)"
+	desc = "Allows for the construction of circuit boards used to build a brig cell management console."
+	id = "brigcells"
+	req_tech = list("programming" = 2)
+	build_type = IMPRINTER
+	materials = list(MAT_GLASS = 1000)
+	build_path = /obj/item/circuitboard/brigcells
 	category = list("Computer Boards")
 
 /datum/design/rdconsole
@@ -262,14 +282,14 @@
 	build_path = /obj/item/circuitboard/solar_control
 	category = list("Computer Boards")
 
-/datum/design/spacepodlocator
-	name = "Console Board (Spacepod Locator)"
-	desc = "Allows for the construction of circuit boards used to build a space-pod locating console"
-	id = "spacepodc"
-	req_tech = list("programming" = 4)
+/datum/design/sm_monitor
+	name = "Console Board (Supermatter Monitoring)"
+	desc = "Allows for the construction of circuit boards used to build a supermatter monitoring console"
+	id = "sm_monitor"
+	req_tech = list("programming" = 2, "powerstorage" = 2)
 	build_type = IMPRINTER
 	materials = list(MAT_GLASS = 1000)
-	build_path = /obj/item/circuitboard/pod_locater
+	build_path = /obj/item/circuitboard/sm_monitor
 	category = list("Computer Boards")
 
 /datum/design/ordercomp
@@ -290,46 +310,6 @@
 	build_type = IMPRINTER
 	materials = list(MAT_GLASS = 1000)
 	build_path = /obj/item/circuitboard/supplycomp
-	category = list("Computer Boards")
-
-/datum/design/comm_monitor
-	name = "Console Board (Telecommunications Monitoring Console)"
-	desc = "Allows for the construction of circuit boards used to build a telecommunications monitor."
-	id = "comm_monitor"
-	req_tech = list("programming" = 3, "magnets" = 3, "bluespace" = 2)
-	build_type = IMPRINTER
-	materials = list(MAT_GLASS = 1000)
-	build_path = /obj/item/circuitboard/comm_monitor
-	category = list("Computer Boards")
-
-/datum/design/comm_server
-	name = "Console Board (Telecommunications Server Monitoring Console)"
-	desc = "Allows for the construction of circuit boards used to build a telecommunication server browser and monitor."
-	id = "comm_server"
-	req_tech = list("programming" = 3, "magnets" = 3, "bluespace" = 2)
-	build_type = IMPRINTER
-	materials = list(MAT_GLASS = 1000)
-	build_path = /obj/item/circuitboard/comm_server
-	category = list("Computer Boards")
-
-/datum/design/comm_traffic
-	name = "Console Board (Telecommunications Traffic Control Console)"
-	desc = "Allows for the construction of circuit boards used to build a telecommunications traffic control console."
-	id = "comm_traffic"
-	req_tech = list("programming" = 3, "magnets" = 3, "bluespace" = 2)
-	build_type = IMPRINTER
-	materials = list(MAT_GLASS = 1000)
-	build_path = /obj/item/circuitboard/comm_traffic
-	category = list("Computer Boards")
-
-/datum/design/telesci_console
-	name = "Console Board (Telepad Control Console)"
-	desc = "Allows for the construction of circuit boards used to build a telescience console."
-	id = "telesci_console"
-	req_tech = list("programming" = 3, "bluespace" = 3, "plasmatech" = 4)
-	build_type = IMPRINTER
-	materials = list(MAT_GLASS = 1000)
-	build_path = /obj/item/circuitboard/telesci_console
 	category = list("Computer Boards")
 
 /datum/design/teleconsole
@@ -360,16 +340,6 @@
 	build_type = IMPRINTER
 	materials = list(MAT_GLASS = 1000)
 	build_path = /obj/item/circuitboard/large_tank_control
-	category = list("Computer Boards")
-
-/datum/design/AAC
-	name = "Console Board (Atmospheric Automations Console)"
-	desc = "Allows for the construction of circuit boards used to build an Atmospheric Automations Console."
-	id = "AAC"
-	req_tech = list("programming" = 4, "magnets" = 2)
-	build_type = IMPRINTER
-	materials = list(MAT_GLASS = 1000)
-	build_path = /obj/item/circuitboard/atmos_automation
 	category = list("Computer Boards")
 
 /datum/design/xenobiocamera

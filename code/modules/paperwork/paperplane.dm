@@ -8,8 +8,8 @@
 	throw_speed = 1
 	throwforce = 0
 	w_class = WEIGHT_CLASS_TINY
-	burn_state = FLAMMABLE
-	burntime = 5
+	resistance_flags = FLAMMABLE
+	max_integrity = 50
 	no_spin = TRUE
 
 	var/obj/item/paper/internal_paper
@@ -33,7 +33,7 @@
 
 /obj/item/paperplane/suicide_act(mob/living/user)
 	user.Stun(10)
-	user.visible_message("<span class='suicide'>[user] jams [name] in \his nose. It looks like \he's trying to commit suicide!</span>")
+	user.visible_message("<span class='suicide'>[user] jams [name] in [user.p_their()] nose. It looks like [user.p_theyre()] trying to commit suicide!</span>")
 	user.EyeBlurry(6)
 	var/obj/item/organ/internal/eyes/E = user.get_int_organ(/obj/item/organ/internal/eyes)
 	if(E)
@@ -72,8 +72,8 @@
 		update_icon()
 
 	else if(is_hot(P))
-		if(user.disabilities & CLUMSY && prob(10))
-			user.visible_message("<span class='warning'>[user] accidentally ignites themselves!</span>", \
+		if(HAS_TRAIT(user, TRAIT_CLUMSY) && prob(10))
+			user.visible_message("<span class='warning'>[user] accidentally ignites [user.p_them()]self!</span>", \
 				"<span class='userdanger'>You miss [src] and accidentally light yourself on fire!</span>")
 			user.unEquip(P)
 			user.adjust_fire_stacks(1)
@@ -110,10 +110,11 @@
 		H.emote("scream")
 
 /obj/item/paper/AltClick(mob/user, obj/item/I)
-	var/mob/living/carbon/human/H = user
-	I = H.is_in_hands(/obj/item/paper)
-	if(I)
-		ProcFoldPlane(H, I)
+	if(ishuman(user))
+		var/mob/living/carbon/human/H = user
+		I = H.is_in_hands(/obj/item/paper)
+		if(I)
+			ProcFoldPlane(H, I)
 	else
 		..()
 

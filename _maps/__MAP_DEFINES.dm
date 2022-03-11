@@ -25,16 +25,18 @@
 	#define ORE_LEVEL "Mining"
 	// Levels the AI can control bots on
 	#define AI_OK "AI Allowed"
+	/// Ruins will spawn on this z-level
+	#define SPAWN_RUINS "Spawn Ruins"
 
 // Level names
 	#define MAIN_STATION "Main Station"
 	#define CENTCOMM "CentComm"
 	#define TELECOMMS "Telecomms Satellite"
 	#define DERELICT "Derelicted Station"
-	#define MINING "Mining Asteroid"
-	#define CONSTRUCTION "Construction Area"
+	#define MINING "Lavaland"
 	#define EMPTY_AREA "Empty Area"
 	#define EMPTY_AREA_2 "Empty Area 2"
+	#define EMPTY_AREA_3 "Empty Area 3"
 	#define AWAY_MISSION "Away Mission"
 
 // Convenience define

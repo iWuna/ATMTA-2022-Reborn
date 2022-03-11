@@ -1,13 +1,13 @@
 //STRIKE TEAMS
 
-var/const/commandos_possible = 6 //if more Commandos are needed in the future
-var/global/sent_strike_team = 0
+#define COMMANDOS_POSSIBLE 6 //if more Commandos are needed in the future
+GLOBAL_VAR_INIT(sent_strike_team, 0)
 
 /client/proc/strike_team()
-	if(!ticker)
+	if(!SSticker)
 		to_chat(usr, "<span class='userdanger'>The game hasn't started yet!</span>")
 		return
-	if(sent_strike_team == 1)
+	if(GLOB.sent_strike_team == 1)
 		to_chat(usr, "<span class='userdanger'>CentComm is already sending a team.</span>")
 		return
 	if(alert("Do you want to send in the CentComm death squad? Once enabled, this is irreversible.",,"Yes","No")!="Yes")
@@ -18,88 +18,101 @@ var/global/sent_strike_team = 0
 
 	var/input = null
 	while(!input)
-		input = sanitize_local(copytext(input(src, "Please specify which mission the death commando squad shall undertake.", "Specify Mission", ""),1,MAX_MESSAGE_LEN))
+		input = sanitize(copytext(input(src, "Please specify which mission the death commando squad shall undertake.", "Specify Mission", ""),1,MAX_MESSAGE_LEN))
 		if(!input)
 			if(alert("Error, no mission set. Do you want to exit the setup process?",,"Yes","No")=="Yes")
 				return
 
-	if(sent_strike_team)
+	if(GLOB.sent_strike_team)
 		to_chat(usr, "Looks like someone beat you to it.")
 		return
 
 	// Find the nuclear auth code
 	var/nuke_code
 	var/temp_code
-	for(var/obj/machinery/nuclearbomb/N in world)
+	for(var/obj/machinery/nuclearbomb/N in GLOB.machines)
 		temp_code = text2num(N.r_code)
 		if(temp_code)//if it's actually a number. It won't convert any non-numericals.
 			nuke_code = N.r_code
 			break
 
 	// Find ghosts willing to be DS
-	var/list/commando_ckeys = pollCandidatesByKeyWithVeto(src, usr, commandos_possible, "Join the DeathSquad?",, 21, 600, 1, role_playtime_requirements[ROLE_DEATHSQUAD], TRUE, FALSE)
-	if(!commando_ckeys.len)
+	var/image/source = image('icons/obj/cardboard_cutout.dmi', "cutout_deathsquad")
+	var/list/commando_ghosts = pollCandidatesWithVeto(src, usr, COMMANDOS_POSSIBLE, "Join the DeathSquad?",, 21, 60 SECONDS, TRUE, GLOB.role_playtime_requirements[ROLE_DEATHSQUAD], TRUE, FALSE, source = source)
+	if(!commando_ghosts.len)
 		to_chat(usr, "<span class='userdanger'>Nobody volunteered to join the DeathSquad.</span>")
 		return
 
-	sent_strike_team = 1
+	GLOB.sent_strike_team = 1
 
 	// Spawns commandos and equips them.
-	var/commando_number = commandos_possible //for selecting a leader
+	var/commando_number = COMMANDOS_POSSIBLE //for selecting a leader
 	var/is_leader = TRUE // set to FALSE after leader is spawned
-	for(var/obj/effect/landmark/L in landmarks_list)
-		if(commando_number<=0)	break
+
+	for(var/thing in GLOB.landmarks_list)
+		var/obj/effect/landmark/L = thing
+
+		if(commando_number <= 0)
+			break
+
 		if(L.name == "Commando")
 
-			spawn(0)
-				var/use_ds_borg = FALSE
-				var/ghost_key // Ghost ckey that we intend to put into the commando. Can remain undefined if we don't have one.
-				if(commando_ckeys.len)
-					ghost_key = pick(commando_ckeys)
-					commando_ckeys -= ghost_key
-					if(!is_leader)
-						var/new_gender = alert(src, "Select Deathsquad Type.", "DS Character Generation", "Organic", "Cyborg")
-						if(new_gender == "Cyborg")
-							use_ds_borg = TRUE
+			if(!commando_ghosts.len)
+				break
 
-				if(use_ds_borg)
-					var/mob/living/silicon/robot/deathsquad/R = new()
-					R.forceMove(get_turf(L))
-					var/rnum = rand(1,1000)
-					var/borgname = "Epsilon [rnum]"
-					R.name = borgname
-					R.custom_name = borgname
-					R.real_name = R.name
-					R.mind = new
-					R.mind.current = R
-					R.mind.original = R
-					R.mind.assigned_role = SPECIAL_ROLE_DEATHSQUAD
-					R.mind.special_role = SPECIAL_ROLE_DEATHSQUAD
-					if(!(R.mind in ticker.minds))
-						ticker.minds += R.mind
-					ticker.mode.traitors += R.mind
-					if(ghost_key)
-						R.key = ghost_key
-					if(nuke_code)
-						R.mind.store_memory("<B>Nuke Code:</B> <span class='warning'>[nuke_code].</span>")
-					R.mind.store_memory("<B>Mission:</B> <span class='warning'>[input].</span>")
-					to_chat(R, "<span class='userdanger'>You are a Special Operations cyborg, in the service of Central Command. \nYour current mission is: <span class='danger'>[input]</span></span>")
-				else
-					var/mob/living/carbon/human/new_commando = create_death_commando(L, is_leader)
-					if(ghost_key)
-						new_commando.key = ghost_key
-						new_commando.internal = new_commando.s_store
-						new_commando.update_action_buttons_icon()
-					if(nuke_code)
-						new_commando.mind.store_memory("<B>Nuke Code:</B> <span class='warning'>[nuke_code].</span>")
-					new_commando.mind.store_memory("<B>Mission:</B> <span class='warning'>[input].</span>")
-					to_chat(new_commando, "<span class='userdanger'>You are a Special Ops [is_leader ? "<B>TEAM LEADER</B>" : "commando"] in the service of Central Command. Check the table ahead for detailed instructions.\nYour current mission is: <span class='danger'>[input]</span></span>")
+			var/use_ds_borg = FALSE
+			var/mob/ghost_mob = pick(commando_ghosts)
+			commando_ghosts -= ghost_mob
+			if(!ghost_mob || !ghost_mob.key || !ghost_mob.client)
+				continue
+
+			if(!is_leader)
+				var/new_dstype = alert(ghost_mob.client, "Select Deathsquad Type.", "DS Character Generation", "Organic", "Cyborg")
+				if(new_dstype == "Cyborg")
+					use_ds_borg = TRUE
+
+			if(!ghost_mob || !ghost_mob.key || !ghost_mob.client) // Have to re-check this due to the above alert() call
+				continue
+
+			if(use_ds_borg)
+				var/mob/living/silicon/robot/deathsquad/R = new()
+				R.forceMove(get_turf(L))
+				var/rnum = rand(1,1000)
+				var/borgname = "Epsilon [rnum]"
+				R.name = borgname
+				R.custom_name = borgname
+				R.real_name = R.name
+				R.mind = new
+				R.mind.current = R
+				R.mind.set_original_mob(R)
+				R.mind.assigned_role = SPECIAL_ROLE_DEATHSQUAD
+				R.mind.special_role = SPECIAL_ROLE_DEATHSQUAD
+				R.mind.offstation_role = TRUE
+				if(!(R.mind in SSticker.minds))
+					SSticker.minds += R.mind
+				SSticker.mode.traitors += R.mind
+				R.key = ghost_mob.key
+				if(nuke_code)
+					R.mind.store_memory("<B>Nuke Code:</B> <span class='warning'>[nuke_code].</span>")
+				R.mind.store_memory("<B>Mission:</B> <span class='warning'>[input].</span>")
+				to_chat(R, "<span class='userdanger'>You are a Special Operations cyborg, in the service of Central Command. \nYour current mission is: <span class='danger'>[input]</span></span>")
+			else
+				var/mob/living/carbon/human/new_commando = create_death_commando(L, is_leader)
+				new_commando.mind.key = ghost_mob.key
+				new_commando.key = ghost_mob.key
+				new_commando.internal = new_commando.s_store
+				new_commando.update_action_buttons_icon()
+				if(nuke_code)
+					new_commando.mind.store_memory("<B>Nuke Code:</B> <span class='warning'>[nuke_code].</span>")
+				new_commando.mind.store_memory("<B>Mission:</B> <span class='warning'>[input].</span>")
+				to_chat(new_commando, "<span class='userdanger'>You are a Special Ops [is_leader ? "<B>TEAM LEADER</B>" : "commando"] in the service of Central Command. Check the table ahead for detailed instructions.\nYour current mission is: <span class='danger'>[input]</span></span>")
 
 			is_leader = FALSE
 			commando_number--
 
 	//Spawns the rest of the commando gear.
-	for(var/obj/effect/landmark/L in landmarks_list)
+	for(var/thing in GLOB.landmarks_list)
+		var/obj/effect/landmark/L = thing
 		if(L.name == "Commando_Manual")
 			//new /obj/item/gun/energy/pulse_rifle(L.loc)
 			var/obj/item/paper/P = new(L.loc)
@@ -110,7 +123,8 @@ var/global/sent_strike_team = 0
 			P.stamp(stamp)
 			qdel(stamp)
 
-	for(var/obj/effect/landmark/L in landmarks_list)
+	for(var/thing in GLOB.landmarks_list)
+		var/obj/effect/landmark/L = thing
 		if(L.name == "Commando-Bomb")
 			new /obj/effect/spawner/newbomb/timer/syndicate(L.loc)
 			qdel(L)
@@ -122,16 +136,17 @@ var/global/sent_strike_team = 0
 /client/proc/create_death_commando(obj/spawn_location, is_leader = FALSE)
 	var/mob/living/carbon/human/new_commando = new(spawn_location.loc)
 	var/commando_leader_rank = pick("Lieutenant", "Captain", "Major")
-	var/commando_rank = pick("Corporal", "Sergeant", "Staff Sergeant", "Sergeant 1st Class", "Master Sergeant", "Sergeant Major")
-	var/commando_name = pick(last_names)
+	var/commando_name = pick(GLOB.commando_names)
 
-	var/datum/preferences/A = new()//Randomize appearance for the commando.
+	var/datum/character_save/S = new //Randomize appearance for the commando.
+	S.randomise()
 	if(is_leader)
-		A.age = rand(35,45)
-		A.real_name = "[commando_leader_rank] [commando_name]"
+		S.age = rand(35, 45)
+		S.real_name = "[commando_leader_rank] [commando_name]"
 	else
-		A.real_name = "[commando_rank] [commando_name]"
-	A.copy_to(new_commando)
+		S.real_name = "[commando_name]"
+	S.copy_to(new_commando)
+
 
 	new_commando.dna.ready_dna(new_commando)//Creates DNA.
 
@@ -139,7 +154,7 @@ var/global/sent_strike_team = 0
 	new_commando.mind_initialize()
 	new_commando.mind.assigned_role = SPECIAL_ROLE_DEATHSQUAD
 	new_commando.mind.special_role = SPECIAL_ROLE_DEATHSQUAD
-	ticker.mode.traitors |= new_commando.mind//Adds them to current traitor list. Which is really the extra antagonist list.
+	SSticker.mode.traitors |= new_commando.mind//Adds them to current traitor list. Which is really the extra antagonist list.
 	new_commando.equip_death_commando(is_leader)
 	return new_commando
 
@@ -147,6 +162,9 @@ var/global/sent_strike_team = 0
 
 	var/obj/item/radio/R = new /obj/item/radio/headset/alt(src)
 	R.set_frequency(DTH_FREQ)
+	R.requires_tcomms = FALSE
+	R.instant = TRUE
+	R.freqlock = TRUE
 	equip_to_slot_or_del(R, slot_l_ear)
 	if(is_leader)
 		equip_to_slot_or_del(new /obj/item/clothing/under/rank/centcom_officer(src), slot_w_uniform)
@@ -168,14 +186,14 @@ var/global/sent_strike_team = 0
 	equip_to_slot_or_del(new /obj/item/flashlight(src), slot_in_backpack)
 	equip_to_slot_or_del(new /obj/item/pinpointer(src), slot_in_backpack)
 	if(is_leader)
-		equip_to_slot_or_del(new /obj/item/disk/nuclear(src), slot_in_backpack)
+		equip_to_slot_or_del(new /obj/item/disk/nuclear/unrestricted(src), slot_in_backpack)
 	else
-		equip_to_slot_or_del(new /obj/item/grenade/plastic/x4(src), slot_in_backpack)
+		equip_to_slot_or_del(new /obj/item/grenade/plastic/c4/x4(src), slot_in_backpack)
 
 
 	equip_to_slot_or_del(new /obj/item/melee/energy/sword/saber(src), slot_l_store)
 	equip_to_slot_or_del(new /obj/item/shield/energy(src), slot_r_store)
-	equip_to_slot_or_del(new /obj/item/tank/emergency_oxygen/double/full(src), slot_s_store)
+	equip_to_slot_or_del(new /obj/item/tank/internals/emergency_oxygen/double(src), slot_s_store)
 	equip_to_slot_or_del(new /obj/item/gun/projectile/revolver/mateba(src), slot_belt)
 	equip_to_slot_or_del(new /obj/item/gun/energy/pulse(src), slot_r_hand)
 

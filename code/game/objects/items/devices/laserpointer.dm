@@ -52,38 +52,37 @@
 			user.drop_item()
 			W.loc = src
 			diode = W
-			to_chat(user, "<span class='notice'>You install a [diode.name] in [src].</span>")
+			to_chat(user, "<span class='notice'>You install [diode] in [src].</span>")
 		else
 			to_chat(user, "<span class='notice'>[src] already has a cell.</span>")
 
 	else if(istype(W, /obj/item/screwdriver))
 		if(diode)
-			to_chat(user, "<span class='notice'>You remove the [diode.name] from the [src].</span>")
+			to_chat(user, "<span class='notice'>You remove [diode] from [src].</span>")
 			diode.loc = get_turf(src.loc)
 			diode = null
 			return
 		..()
 	return
 
-/obj/item/laser_pointer/afterattack(var/atom/target, var/mob/living/user, flag, params)
+/obj/item/laser_pointer/afterattack(atom/target, mob/living/user, flag, params)
 	if(flag)	//we're placing the object on a table or in backpack
 		return
 	laser_act(target, user, params)
 
-/obj/item/laser_pointer/proc/laser_act(var/atom/target, var/mob/living/user, var/params)
-	if( !(user in (viewers(7,target))) )
-		return
+/obj/item/laser_pointer/proc/laser_act(atom/target, mob/living/user, params)
 	if(!diode)
 		to_chat(user, "<span class='notice'>You point [src] at [target], but nothing happens!</span>")
 		return
 	if(!user.IsAdvancedToolUser())
 		to_chat(user, "<span class='warning'>You don't have the dexterity to do this!</span>")
 		return
-	if(ishuman(user))
-		var/mob/living/carbon/human/H = user
-		if((HULK in H.mutations) || (NOGUNS in H.species.species_traits))
-			user << "<span class='warning'>Your fingers can't press the button!</span>"
-			return
+	if(HAS_TRAIT(user, TRAIT_CHUNKYFINGERS))
+		to_chat(user, "<span class='warning'>Your fingers can't press the button!</span>")
+		return
+	if(!(target in view(7, get_turf(src)))) // Use the turf as center so it won't use the potential xray of the user
+		to_chat(user, "<span class='warning'>There is something in the way!</span>")
+		return
 
 	add_fingerprint(user)
 
@@ -98,7 +97,7 @@
 	//human/alien mobs
 	if(iscarbon(target))
 		var/mob/living/carbon/C = target
-		if(user.zone_sel.selecting == "eyes")
+		if(user.zone_selected == "eyes")
 			add_attack_logs(user, C, "Shone a laser in the eyes with [src]")
 
 			var/severity = 1
@@ -109,11 +108,9 @@
 
 			//20% chance to actually hit the eyes
 			if(prob(effectchance * diode.rating) && C.flash_eyes(severity))
-				outmsg = "<span class='notice'>You blind [C] by shining [src] in their eyes.</span>"
-				if(C.weakeyes)
-					C.Stun(1)
+				outmsg = "<span class='notice'>You blind [C] by shining [src] in [C.p_their()] eyes.</span>"
 			else
-				outmsg = "<span class='warning'>You fail to blind [C] by shining [src] at their eyes!</span>"
+				outmsg = "<span class='warning'>You fail to blind [C] by shining [src] at [C.p_their()] eyes!</span>"
 
 	//robots and AI
 	else if(issilicon(target))
@@ -123,11 +120,11 @@
 			S.flash_eyes(affect_silicon = 1)
 			S.Weaken(rand(5,10))
 			to_chat(S, "<span class='warning'>Your sensors were overloaded by a laser!</span>")
-			outmsg = "<span class='notice'>You overload [S] by shining [src] at their sensors.</span>"
+			outmsg = "<span class='notice'>You overload [S] by shining [src] at [S.p_their()] sensors.</span>"
 
 			add_attack_logs(user, S, "shone [src] in their eyes")
 		else
-			outmsg = "<span class='notice'>You fail to overload [S] by shining [src] at their sensors.</span>"
+			outmsg = "<span class='notice'>You fail to overload [S] by shining [src] at [S.p_their()] sensors.</span>"
 
 	//cameras
 	else if(istype(target, /obj/machinery/camera))
@@ -138,6 +135,7 @@
 
 			log_admin("[key_name(user)] EMPd a camera with a laser pointer")
 			user.create_attack_log("[key_name(user)] EMPd a camera with a laser pointer")
+			add_attack_logs(user, C, "EMPd with [src]", ATKLOG_ALL)
 		else
 			outmsg = "<span class='info'>You missed the lens of [C] with [src].</span>"
 
@@ -167,7 +165,7 @@
 	if(energy <= max_energy)
 		if(!recharging)
 			recharging = 1
-			processing_objects.Add(src)
+			START_PROCESSING(SSobj, src)
 		if(energy <= 0)
 			to_chat(user, "<span class='warning'>You've overused the battery of [src], now it needs time to recharge!</span>")
 			recharge_locked = 1

@@ -64,7 +64,7 @@
 /obj/screen/ai/alerts/Click()
 	if(isAI(usr))
 		var/mob/living/silicon/ai/AI = usr
-		AI.subsystem_alarm_monitor()
+		AI.ai_alerts()
 
 /obj/screen/ai/announcement
 	name = "Make Announcement"
@@ -139,7 +139,6 @@
 	else if(isrobot(usr))
 		var/mob/living/silicon/robot/borg = usr
 		borg.sensor_mode()
-
 
 /mob/living/silicon/ai/create_mob_hud()
 	if(client && !hud_used)
@@ -228,3 +227,9 @@
 	using = new /obj/screen/ai/sensors()
 	using.screen_loc = ui_ai_sensor
 	static_inventory += using
+
+//Intent
+	using = new /obj/screen/act_intent/robot/AI()
+	using.icon_state = mymob.a_intent
+	static_inventory += using
+	action_intent = using

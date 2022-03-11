@@ -28,7 +28,7 @@
 	if(zone_override)
 		BB.def_zone = zone_override
 	else
-		BB.def_zone = user.zone_sel.selecting
+		BB.def_zone = user.zone_selected
 	BB.suppressed = quiet
 
 	if(reagents && BB.reagents)
@@ -40,8 +40,16 @@
 	if(!istype(targloc) || !istype(curloc) || !BB)
 		return 0
 	BB.ammo_casing = src
+
+	if(target && get_dist(user, target) <= 1) //Point blank shot must always hit
+		BB.prehit(target)
+		target.bullet_act(BB, BB.def_zone)
+		QDEL_NULL(BB)
+		return 1
+
 	if(targloc == curloc)
 		if(target) //if the target is right on our location we go straight to bullet_act()
+			BB.prehit(target)
 			target.bullet_act(BB, BB.def_zone)
 		QDEL_NULL(BB)
 		return 1
@@ -57,7 +65,7 @@
 	var/dy = abs(target.y - current.y)
 	return locate(target.x + round(gaussian(0, distro) * (dy+2)/8, 1), target.y + round(gaussian(0, distro) * (dx+2)/8, 1), target.z)
 
-/obj/item/projectile/proc/preparePixelProjectile(atom/target, var/turf/targloc, mob/living/user, params, spread)
+/obj/item/projectile/proc/preparePixelProjectile(atom/target, turf/targloc, mob/living/user, params, spread)
 	var/turf/curloc = get_turf(user)
 	loc = get_turf(user)
 	starting = get_turf(user)
@@ -88,7 +96,7 @@
 
 			var/ox = round(screenview/2) //"origin" x
 			var/oy = round(screenview/2) //"origin" y
-			var/angle = Atan2(y - oy, x - ox)
+			var/angle = ATAN2(y - oy, x - ox)
 			Angle = angle
 	if(spread)
 		Angle += spread

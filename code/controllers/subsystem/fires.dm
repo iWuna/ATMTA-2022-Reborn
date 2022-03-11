@@ -1,8 +1,9 @@
 SUBSYSTEM_DEF(fires)
 	name = "Fires"
-	priority = FIRE_PRIOTITY_BURNING
+	priority = FIRE_PRIORITY_BURNING
 	flags = SS_NO_INIT|SS_BACKGROUND
 	runlevels = RUNLEVEL_GAME | RUNLEVEL_POSTGAME
+	offline_implications = "Objects will no longer react to fires. No immediate action is needed."
 
 	var/list/currentrun = list()
 	var/list/processing = list()
@@ -10,6 +11,12 @@ SUBSYSTEM_DEF(fires)
 /datum/controller/subsystem/fires/stat_entry()
 	..("P:[processing.len]")
 
+
+/datum/controller/subsystem/fires/get_metrics()
+	. = ..()
+	var/list/cust = list()
+	cust["processing"] = length(processing)
+	.["custom"] = cust
 
 /datum/controller/subsystem/fires/fire(resumed = 0)
 	if(!resumed)
@@ -27,11 +34,11 @@ SUBSYSTEM_DEF(fires)
 				return
 			continue
 
-		if(O.burn_state == ON_FIRE)
-			if(O.burn_world_time < world.time)
-				O.burn()
-		else
-			processing -= O
+		if(O.resistance_flags & ON_FIRE) //in case an object is extinguished while still in currentrun
+			if(!(O.resistance_flags & FIRE_PROOF))
+				O.take_damage(20, BURN, FIRE, 0)
+			else
+				O.extinguish()
 
 		if(MC_TICK_CHECK)
 			return

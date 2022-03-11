@@ -12,8 +12,8 @@
 	clipped = 1
 
 /obj/item/clothing/gloves/cyborg
-	desc = "beep boop borp"
 	name = "cyborg gloves"
+	desc = "beep boop borp"
 	icon_state = "black"
 	item_state = "r_hands"
 
@@ -25,8 +25,8 @@
 	can_leave_fibers = FALSE
 
 /obj/item/clothing/gloves/combat
-	desc = "These tactical gloves are somewhat fire and impact resistant."
 	name = "combat gloves"
+	desc = "These tactical gloves are both insulated and offer protection from heat sources."
 	icon_state = "combat"
 	item_state = "swat_gl"
 	siemens_coefficient = 0
@@ -36,11 +36,27 @@
 	min_cold_protection_temperature = GLOVES_MIN_TEMP_PROTECT
 	heat_protection = HANDS
 	max_heat_protection_temperature = GLOVES_MAX_TEMP_PROTECT
-	burn_state = FIRE_PROOF
+	resistance_flags = NONE
+	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, RAD = 0, FIRE = 80, ACID = 50)
+
+/obj/item/clothing/gloves/bracer
+	name = "bone bracers"
+	desc = "For when you're expecting to get slapped on the wrist. Offers modest protection to your arms."
+	icon_state = "bracers"
+	item_state = "bracers"
+	item_color = null	//So they don't wash.
+	transfer_prints = TRUE
+	strip_delay = 40
+	body_parts_covered = ARMS
+	cold_protection = ARMS
+	min_cold_protection_temperature = GLOVES_MIN_TEMP_PROTECT
+	max_heat_protection_temperature = GLOVES_MAX_TEMP_PROTECT
+	resistance_flags = NONE
+	armor = list(MELEE = 15, BULLET = 25, LASER = 15, ENERGY = 15, BOMB = 20, BIO = 10, RAD = 0, FIRE = 0, ACID = 0)
 
 /obj/item/clothing/gloves/botanic_leather
-	desc = "These leather gloves protect against thorns, barbs, prickles, spikes and other harmful objects of floral origin."
 	name = "botanist's leather gloves"
+	desc = "These leather gloves protect against thorns, barbs, prickles, spikes and other harmful objects of floral origin."
 	icon_state = "leather"
 	item_state = "ggloves"
 	permeability_coefficient = 0.9
@@ -48,11 +64,12 @@
 	min_cold_protection_temperature = GLOVES_MIN_TEMP_PROTECT
 	heat_protection = HANDS
 	max_heat_protection_temperature = GLOVES_MAX_TEMP_PROTECT
-	burn_state = FIRE_PROOF
+	resistance_flags = NONE
+	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, RAD = 0, FIRE = 70, ACID = 30)
 
 /obj/item/clothing/gloves/batmangloves
-	desc = "Used for handling all things bat related."
 	name = "batgloves"
+	desc = "Used for handling all things bat related."
 	icon_state = "bmgloves"
 	item_state = "bmgloves"
 	item_color="bmgloves"
@@ -64,13 +81,15 @@
 	item_state = "lgloves"
 	flags = NODROP
 
-
 /obj/item/clothing/gloves/color/yellow/stun
 	name = "stun gloves"
 	desc = "Horrendous and awful. It smells like cancer. The fact it has wires attached to it is incidental."
 	var/obj/item/stock_parts/cell/cell = null
 	var/stun_strength = 5
 	var/stun_cost = 2000
+
+/obj/item/clothing/gloves/color/yellow/stun/get_cell()
+	return cell
 
 /obj/item/clothing/gloves/color/yellow/stun/New()
 	..()
@@ -92,12 +111,11 @@
 		if(H.a_intent == INTENT_HARM)
 			var/mob/living/carbon/C = A
 			if(cell.use(stun_cost))
-				var/datum/effect_system/spark_spread/s = new /datum/effect_system/spark_spread
-				s.set_up(5, 0, loc)
-				s.start()
+				do_sparks(5, 0, loc)
 				playsound(loc, 'sound/weapons/Egloves.ogg', 50, 1, -1)
 				H.do_attack_animation(C)
 				visible_message("<span class='danger'>[C] has been touched with [src] by [H]!</span>")
+				add_attack_logs(H, C, "Touched with stun gloves")
 				C.Stun(stun_strength)
 				C.Weaken(stun_strength)
 				C.apply_effect(STUTTER, stun_strength)
@@ -125,10 +143,41 @@
 			update_icon()
 		else
 			to_chat(user, "<span class='notice'>[src] already has a cell.</span>")
+	else
+		return ..()
 
-	else if(iswirecutter(W))
-		if(cell)
-			to_chat(user, "<span class='notice'>You cut [cell] away from [src].</span>")
-			cell.forceMove(get_turf(loc))
-			cell = null
-			update_icon()
+/obj/item/clothing/gloves/color/yellow/stun/wirecutter_act(mob/user, obj/item/I)
+	. = TRUE
+	if(!I.use_tool(src, user, 0, volume = I.tool_volume))
+		return
+	if(cell)
+		to_chat(user, "<span class='notice'>You cut [cell] away from [src].</span>")
+		cell.forceMove(get_turf(loc))
+		cell = null
+		update_icon()
+
+/obj/item/clothing/gloves/fingerless/rapid
+	name = "gloves of the North Star"
+	desc = "Just looking at these fills you with an urge to beat the shit out of people."
+	var/accepted_intents = list(INTENT_HARM)
+	var/click_speed_modifier = CLICK_CD_RAPID
+
+/obj/item/clothing/gloves/fingerless/rapid/Touch(mob/living/target, proximity = TRUE)
+	var/mob/living/M = loc
+
+	if((M.a_intent in accepted_intents) && !M.mind.martial_art?.can_use(M) && !HAS_TRAIT(M, TRAIT_HULK))
+		M.changeNext_move(click_speed_modifier)
+
+	return FALSE
+
+/obj/item/clothing/gloves/fingerless/rapid/admin
+	name = "advanced interactive gloves"
+	desc = "The gloves are covered in indecipherable buttons and dials, your mind warps by merely looking at them."
+	accepted_intents = list(INTENT_HELP, INTENT_DISARM, INTENT_GRAB, INTENT_HARM)
+	click_speed_modifier = 0
+	siemens_coefficient = 0
+
+/obj/item/clothing/gloves/fingerless/rapid/headpat
+	name = "gloves of headpats"
+	desc = "You feel the irresistable urge to give headpats by merely glimpsing these."
+	accepted_intents = list(INTENT_HELP)

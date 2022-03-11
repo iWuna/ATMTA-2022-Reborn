@@ -5,6 +5,7 @@
 	desc = "It's so sour, your face will twist."
 	icon_state = "lime"
 	bitesize_mod = 2
+	wine_power = 0.3
 
 // Lime
 /obj/item/seeds/lime
@@ -29,6 +30,7 @@
 	desc = "It's so sour, your face will twist."
 	icon_state = "lime"
 	filling_color = "#00FF00"
+	tastes = list("lime" = 1)
 
 // Orange
 /obj/item/seeds/orange
@@ -53,8 +55,10 @@
 	seed = /obj/item/seeds/orange
 	name = "orange"
 	desc = "It's an tangy fruit."
-	icon_state = "orange"
+	icon_state = "orange" // Sprite created by https://github.com/binarysudoku for Goonstation, They have relicensed it for our use.
+	tastes = list("orange" = 1)
 	filling_color = "#FFA500"
+	distill_reagent = "tequilasunrise"
 
 // Lemon
 /obj/item/seeds/lemon
@@ -79,6 +83,7 @@
 	name = "lemon"
 	desc = "When life gives you lemons, make lemonade."
 	icon_state = "lemon"
+	tastes = list("lemonade" = 1)
 	filling_color = "#FFD700"
 
 // Combustible lemon
@@ -100,17 +105,19 @@
 
 /obj/item/reagent_containers/food/snacks/grown/firelemon
 	seed = /obj/item/seeds/firelemon
-	name = "Combustible Lemon"
+	name = "combustible lemon"
 	desc = "Made for burning houses down."
 	icon_state = "firelemon"
 	bitesize_mod = 2
+	wine_power = 0.7
+	tastes = list("burning lemon" = 1)
+	wine_flavor = "fire"
 
 /obj/item/reagent_containers/food/snacks/grown/firelemon/attack_self(mob/living/user)
 	var/area/A = get_area(user)
-	user.visible_message("<span class='warning'>[user] primes the [src]!</span>", "<span class='userdanger'>You prime the [src]!</span>")
-	var/message = "[ADMIN_LOOKUPFLW(user)] primed a combustible lemon for detonation at [A] [ADMIN_COORDJMP(user)]"
-	bombers += message
-	message_admins(message)
+	user.visible_message("<span class='warning'>[user] primes [src]!</span>", "<span class='userdanger'>You prime [src]!</span>")
+	investigate_log("[key_name(user)] primed a combustible lemon for detonation at [A] [COORD(user)].", INVESTIGATE_BOMB)
+	add_attack_logs(user, src, "primed a combustible lemon for detonation", ATKLOG_FEW)
 	log_game("[key_name(user)] primed a combustible lemon for detonation at [A] [COORD(user)].")
 	if(iscarbon(user))
 		var/mob/living/carbon/C = user

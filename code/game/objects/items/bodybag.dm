@@ -7,26 +7,10 @@
 	icon_state = "bodybag_folded"
 	w_class = WEIGHT_CLASS_SMALL
 
-	attack_self(mob/user)
-		var/obj/structure/closet/body_bag/R = new /obj/structure/closet/body_bag(user.loc)
-		R.add_fingerprint(user)
-		qdel(src)
-
-
-/obj/item/storage/box/bodybags
-	name = "body bags"
-	desc = "This box contains body bags."
-	icon_state = "bodybags"
-	New()
-		..()
-		new /obj/item/bodybag(src)
-		new /obj/item/bodybag(src)
-		new /obj/item/bodybag(src)
-		new /obj/item/bodybag(src)
-		new /obj/item/bodybag(src)
-		new /obj/item/bodybag(src)
-		new /obj/item/bodybag(src)
-
+/obj/item/bodybag/attack_self(mob/user)
+	var/obj/structure/closet/body_bag/R = new /obj/structure/closet/body_bag(user.loc)
+	R.add_fingerprint(user)
+	qdel(src)
 
 /obj/structure/closet/body_bag
 	name = "body bag"
@@ -35,54 +19,55 @@
 	icon_state = "bodybag_closed"
 	icon_closed = "bodybag_closed"
 	icon_opened = "bodybag_open"
-	sound = 'sound/items/zip.ogg'
+	density = FALSE
+	integrity_failure = 0
+	open_sound = 'sound/items/zip.ogg'
+	close_sound = 'sound/items/zip.ogg'
+	open_sound_volume = 15
+	close_sound_volume = 15
 	var/item_path = /obj/item/bodybag
-	density = 0
 
 
-	attackby(W as obj, mob/user as mob, params)
-		if(istype(W, /obj/item/pen))
-			var/t = input(user, "What would you like the label to be?", text("[]", src.name), null)  as text
-			if(user.get_active_hand() != W)
-				return
-			if(!in_range(src, user) && src.loc != user)
-				return
-			t = sanitize_local(copytext(t,1,MAX_MESSAGE_LEN))
-			if(t)
-				src.name = "body bag - "
-				src.name += t
-				src.overlays += image(src.icon, "bodybag_label")
-			else
-				src.name = "body bag"
-		//..() //Doesn't need to run the parent. Since when can fucking bodybags be welded shut? -Agouri
+/obj/structure/closet/body_bag/attackby(obj/item/I, mob/user, params)
+	if(istype(I, /obj/item/pen))
+		var/t = rename_interactive(user, I)
+		if(isnull(t))
 			return
-		else if(istype(W, /obj/item/wirecutters))
-			to_chat(user, "You cut the tag off the bodybag")
-			src.name = "body bag"
-			src.overlays.Cut()
-			return
+		cut_overlays()
+		if(t)
+			add_overlay("bodybag_label")
+		return
+	if(istype(I, /obj/item/wirecutters))
+		to_chat(user, "<span class='notice'>You cut the tag off the bodybag.</span>")
+		name = initial(name)
+		cut_overlays()
+		return
+	return ..()
 
+/obj/structure/closet/body_bag/welder_act(mob/user, obj/item/I)
+	return // Can't weld a body bag shut
 
-	close()
-		if(..())
-			density = 0
-			return 1
-		return 0
+/obj/structure/closet/body_bag/close()
+	if(..())
+		density = 0
+		return TRUE
+	return FALSE
 
+/obj/structure/closet/body_bag/update_overlays()
+	..()
+	if(name != initial(name))
+		add_overlay("bodybag_label")
 
-	MouseDrop(over_object, src_location, over_location)
-		..()
-		if((over_object == usr && (in_range(src, usr) || usr.contents.Find(src))))
-			if(!ishuman(usr))	return
-			if(opened)	return 0
-			if(contents.len)	return 0
-			visible_message("[usr] folds up the [src.name]")
-			new item_path(get_turf(src))
-			spawn(0)
-				qdel(src)
-			return
+/obj/structure/closet/body_bag/MouseDrop(over_object, src_location, over_location)
+	. = ..()
+	if(over_object == usr && (in_range(src, usr) || usr.contents.Find(src)))
+		if(!ishuman(usr) || opened || length(contents))
+			return FALSE
+		visible_message("<span class='notice'>[usr] folds up [src].</span>")
+		new item_path(get_turf(src))
+		qdel(src)
 
-/obj/structure/closet/body_bag/relaymove(mob/user as mob)
+/obj/structure/closet/body_bag/relaymove(mob/user)
 	if(user.stat)
 		return
 

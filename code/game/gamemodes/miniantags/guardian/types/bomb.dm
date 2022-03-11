@@ -8,6 +8,13 @@
 	tech_fluff_string = "Boot sequence complete. Explosive modules active. Holoparasite swarm online."
 	bio_fluff_string = "Your scarab swarm finishes mutating and stirs to life, capable of stealthily booby trapping items."
 	var/bomb_cooldown = 0
+	var/default_bomb_cooldown = 20 SECONDS
+
+/mob/living/simple_animal/hostile/guardian/bomb/Stat()
+	..()
+	if(statpanel("Status"))
+		if(bomb_cooldown >= world.time)
+			stat(null, "Bomb Cooldown Remaining: [max(round((bomb_cooldown - world.time)*0.1, 0.1), 0)] seconds")
 
 /mob/living/simple_animal/hostile/guardian/bomb/AltClickOn(atom/movable/A)
 	if(!istype(A))
@@ -18,14 +25,15 @@
 	if(istype(A, /obj/))
 		if(bomb_cooldown <= world.time && !stat)
 			var/obj/item/guardian_bomb/B = new /obj/item/guardian_bomb(get_turf(A))
+			add_attack_logs(src, A, "booby trapped (summoner: [summoner])")
 			to_chat(src, "<span class='danger'>Success! Bomb on [A] armed!</span>")
 			if(summoner)
 				to_chat(summoner, "<span class='warning'>Your guardian has primed [A] to explode!</span>")
-			bomb_cooldown = world.time + 200
+			bomb_cooldown = world.time + default_bomb_cooldown
 			B.spawner = src
 			B.disguise (A)
 		else
-			to_chat(src, "<span class='danger'>Your powers are on cooldown! You must wait 20 seconds between bombs.</span>")
+			to_chat(src, "<span class='danger'>Your power is on cooldown! You must wait another [max(round((bomb_cooldown - world.time)*0.1, 0.1), 0)] seconds before you can place next bomb.</span>")
 
 /obj/item/guardian_bomb
 	name = "bomb"
@@ -34,43 +42,50 @@
 	var/mob/living/spawner
 
 
-/obj/item/guardian_bomb/proc/disguise(var/obj/A)
+/obj/item/guardian_bomb/proc/disguise(obj/A)
 	A.forceMove(src)
 	stored_obj = A
+	opacity = A.opacity
 	anchored = A.anchored
 	density = A.density
 	appearance = A.appearance
-	spawn(600)
-		if(src)
-			stored_obj.loc = get_turf(loc)
-			if(spawner)
-				to_chat(spawner, "<span class='danger'>Failure! Your trap on [stored_obj] didn't catch anyone this time.</span>")
-			qdel(src)
+	dir = A.dir
+	move_resist = A.move_resist
+	addtimer(CALLBACK(src, .proc/disable), 600)
 
-/obj/item/guardian_bomb/proc/detonate(var/mob/living/user)
-	to_chat(user, "<span class='danger'>The [src] was boobytrapped!</span>")
+/obj/item/guardian_bomb/proc/disable()
+	add_attack_logs(null, stored_obj, "booby trap expired")
+	stored_obj.forceMove(get_turf(src))
+	if(spawner)
+		to_chat(spawner, "<span class='danger'>Failure! Your trap on [stored_obj] didn't catch anyone this time.</span>")
+	qdel(src)
+
+/obj/item/guardian_bomb/proc/detonate(mob/living/user)
+	if(!istype(user))
+		return
+	to_chat(user, "<span class='danger'>[src] was boobytrapped!</span>")
 	if(istype(spawner, /mob/living/simple_animal/hostile/guardian))
 		var/mob/living/simple_animal/hostile/guardian/G = spawner
 		if(user == G.summoner)
+			add_attack_logs(user, stored_obj, "booby trap defused")
 			to_chat(user, "<span class='danger'>You knew this because of your link with your guardian, so you smartly defuse the bomb.</span>")
-			stored_obj.loc = get_turf(loc)
+			stored_obj.forceMove(get_turf(loc))
 			qdel(src)
 			return
+	add_attack_logs(user, stored_obj, "booby trap TRIGGERED (spawner: [spawner])")
 	to_chat(spawner, "<span class='danger'>Success! Your trap on [src] caught [user]!</span>")
-	stored_obj.loc = get_turf(loc)
-	playsound(get_turf(src),'sound/effects/Explosion2.ogg', 200, 1)
+	stored_obj.forceMove(get_turf(loc))
+	playsound(get_turf(src),'sound/effects/explosion2.ogg', 200, 1)
 	user.ex_act(2)
 	qdel(src)
 
-/obj/item/guardian_bomb/attackby(mob/living/user)
+/obj/item/guardian_bomb/attackby(obj/item/W, mob/living/user)
 	detonate(user)
-	return
 
-/obj/item/guardian_bomb/pickup(mob/living/user)
+/obj/item/guardian_bomb/attack_hand(mob/user)
 	detonate(user)
-	return
 
 /obj/item/guardian_bomb/examine(mob/user)
-	stored_obj.examine(user)
-	if(get_dist(user,src) <= 2)
-		to_chat(user, "<span class='notice'>Looks odd!</span>")
+	. = stored_obj.examine(user)
+	if(get_dist(user, src) <= 2)
+		. += "<span class='notice'>Looks odd!</span>"

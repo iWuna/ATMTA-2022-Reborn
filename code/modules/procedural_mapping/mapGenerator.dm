@@ -32,7 +32,7 @@
 
 //Defines the region the map represents, sets map
 //Returns the map
-/datum/mapGenerator/proc/defineRegion(var/turf/Start, var/turf/End, var/replace = 0)
+/datum/mapGenerator/proc/defineRegion(turf/Start, turf/End, replace = 0)
 	if(!checkRegion(Start, End))
 		return 0
 
@@ -45,7 +45,7 @@
 
 //Defines the region the map represents, as a CIRCLE!, sets map
 //Returns the map
-/datum/mapGenerator/proc/defineCircularRegion(var/turf/Start, var/turf/End, var/replace = 0)
+/datum/mapGenerator/proc/defineCircularRegion(turf/Start, turf/End, replace = 0)
 	if(!checkRegion(Start, End))
 		return 0
 
@@ -86,7 +86,7 @@
 
 //Checks for and Rejects bad region coordinates
 //Returns 1/0
-/datum/mapGenerator/proc/checkRegion(var/turf/Start, var/turf/End)
+/datum/mapGenerator/proc/checkRegion(turf/Start, turf/End)
 	. = 1
 
 	if(!Start || !End)
@@ -102,8 +102,6 @@
 
 //Requests the mapGeneratorModule(s) to (re)generate
 /datum/mapGenerator/proc/generate()
-	set background = 1 //this can get beefy
-
 	syncModules()
 	if(!modules || !modules.len)
 		return
@@ -113,7 +111,7 @@
 
 
 //Requests the mapGeneratorModule(s) to (re)generate this one turf
-/datum/mapGenerator/proc/generateOneTurf(var/turf/T)
+/datum/mapGenerator/proc/generateOneTurf(turf/T)
 	if(!T)
 		return
 	syncModules()
@@ -149,8 +147,8 @@
 	set category = "Debug"
 
 	var/datum/mapGenerator/nature/N = new()
-	var/startInput = input(usr,"Start turf of Map, (X;Y;Z)", "Map Gen Settings", "1;1;1") as text
-	var/endInput = input(usr,"End turf of Map (X;Y;Z)", "Map Gen Settings", "[world.maxx];[world.maxy];[mob ? mob.z : 1]") as text
+	var/startInput = clean_input("Start turf of Map, (X;Y;Z)", "Map Gen Settings", "1;1;1")
+	var/endInput = clean_input("End turf of Map (X;Y;Z)", "Map Gen Settings", "[world.maxx];[world.maxy];[mob ? mob.z : 1]")
 	//maxx maxy and current z so that if you fuck up, you only fuck up one entire z level instead of the entire universe
 	if(!startInput || !endInput)
 		to_chat(src, "Missing Input")

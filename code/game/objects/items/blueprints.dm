@@ -28,10 +28,10 @@
 				<small>[fluffnotice]</small><hr>"
 	switch(get_area_type())
 		if(AREA_SPACE)
-			text += "<p>According to the [src.name], you are now in <b>outer space</b>.  Hold your breath.</p> \
+			text += "<p>According to [src], you are now in <b>outer space</b>. Hold your breath.</p> \
 			<p><a href='?src=[UID()];create_area=1'>Mark this place as new area.</a></p>"
 		if(AREA_SPECIAL)
-			text += "<p>This place is not noted on the [src.name].</p>"
+			text += "<p>This place is not noted on [src].</p>"
 	return text
 
 
@@ -57,7 +57,7 @@
 	. = ..()
 	var/area/A = get_area()
 	if(get_area_type() == AREA_STATION)
-		. += "<p>According to the [src], you are now in <b>\"[sanitize_local(A.name)]\"</b>.</p>"
+		. += "<p>According to [src], you are now in <b>\"[sanitize(A.name)]\"</b>.</p>"
 	var/datum/browser/popup = new(user, "blueprints", "[src]", 700, 500)
 	popup.set_content(.)
 	popup.open()
@@ -65,9 +65,25 @@
 
 
 /obj/item/areaeditor/permit/create_area()
-	..()
-	qdel(src)
+	if(..())
+		qdel(src)
 
+//free golem blueprints, like permit but can claim as much as needed
+
+/obj/item/areaeditor/golem
+	name = "Golem Land Claim"
+	desc = "Used to define new areas in space."
+	fluffnotice = "Praise the Liberator!"
+
+/obj/item/areaeditor/golem/attack_self(mob/user)
+	. = ..()
+	var/area/A = get_area()
+	if(get_area_type() == AREA_STATION)
+		. += "<p>According to [src], you are now in <b>\"[sanitize(A.name)]\"</b>.</p>"
+	var/datum/browser/popup = new(user, "blueprints", "[src]", 700, 500)
+	popup.set_content(.)
+	popup.open()
+	onclose(usr, "blueprints")
 
 //Station blueprints!!!
 /obj/item/areaeditor/blueprints
@@ -76,6 +92,7 @@
 	icon = 'icons/obj/items.dmi'
 	icon_state = "blueprints"
 	fluffnotice = "Property of Nanotrasen. For heads of staff only. Store in high-secure storage."
+	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | ACID_PROOF
 	w_class = WEIGHT_CLASS_NORMAL
 	var/list/showing = list()
 	var/client/viewing
@@ -89,7 +106,7 @@
 	. = ..()
 	var/area/A = get_area()
 	if(get_area_type() == AREA_STATION)
-		. += "<p>According to the [src], you are now in <b>\"[sanitize_local(A.name)]\"</b>.</p>"
+		. += "<p>According to [src], you are now in <b>\"[sanitize(A.name)]\"</b>.</p>"
 		. += "<p>You may <a href='?src=[UID()];edit_area=1'> move an amendment</a> to the drawing.</p>"
 	if(!viewing)
 		. += "<p><a href='?src=[UID()];view_blueprints=1'>View structural data</a></p>"
@@ -152,20 +169,16 @@
 	return A
 
 
-/obj/item/areaeditor/proc/get_area_type(var/area/A = get_area())
+/obj/item/areaeditor/proc/get_area_type(area/A = get_area())
 	if(A.outdoors)
 		return AREA_SPACE
 	var/list/SPECIALS = list(
 		/area/shuttle,
 		/area/admin,
-		/area/arrival,
 		/area/centcom,
 		/area/asteroid,
 		/area/tdome,
-		/area/syndicate_station,
-		/area/wizard_station,
-		/area/prison
-		// /area/derelict //commented out, all hail derelict-rebuilders!
+		/area/wizard_station
 	)
 	for(var/type in SPECIALS)
 		if( istype(A,type) )
@@ -174,47 +187,55 @@
 
 
 /obj/item/areaeditor/proc/create_area()
+	var/area_created = FALSE
 	var/res = detect_room(get_turf(usr))
 	if(!istype(res,/list))
 		switch(res)
 			if(ROOM_ERR_SPACE)
 				to_chat(usr, "<span class='warning'>The new area must be completely airtight.</span>")
-				return
+				return area_created
 			if(ROOM_ERR_TOOLARGE)
 				to_chat(usr, "<span class='warning'>The new area is too large.</span>")
-				return
+				return area_created
 			else
 				to_chat(usr, "<span class='warning'>Error! Please notify administration.</span>")
-				return
+				return area_created
 	var/list/turf/turfs = res
 	var/str = trim(stripped_input(usr,"New area name:", "Blueprint Editing", "", MAX_NAME_LEN))
 	if(!str || !length(str)) //cancel
-		return
+		return area_created
 	if(length(str) > 50)
 		to_chat(usr, "<span class='warning'>The given name is too long.  The area remains undefined.</span>")
-		return
+		return area_created
 	var/area/A = new
 	A.name = str
-	//var/ma
-	//ma = A.master ? "[A.master]" : "(null)"
-//	to_chat(world, "DEBUG: create_area: <br>A.name=[A.name]<br>A.tag=[A.tag]<br>A.master=[ma]")
-	A.power_equip = 0
-	A.power_light = 0
-	A.power_environ = 0
-	A.always_unpowered = 0
-	move_turfs_to_area(turfs, A)
+	A.power_equip = FALSE
+	A.power_light = FALSE
+	A.power_environ = FALSE
+	A.always_unpowered = FALSE
+	A.set_dynamic_lighting()
+
+	for(var/i in 1 to turfs.len)
+		var/turf/thing = turfs[i]
+		var/area/old_area = thing.loc
+		A.contents += thing
+		thing.change_area(old_area, A)
+
+	var/area/oldA = get_area(get_turf(usr))
+	var/list/firedoors = oldA.firedoors
+	for(var/door in firedoors)
+		var/obj/machinery/door/firedoor/FD = door
+		FD.CalculateAffectingAreas()
 
 	interact()
-	return
-
-
-/obj/item/areaeditor/proc/move_turfs_to_area(var/list/turf/turfs, var/area/A)
-	A.contents.Add(turfs)
-
+	message_admins("A new room was made by [key_name_admin(usr)] at [ADMIN_VERBOSEJMP(usr)] with the name [str]")
+	log_game("A new room was made by [key_name(usr)] at [AREACOORD(usr)] with the name [str]")
+	area_created = TRUE
+	return area_created
 
 /obj/item/areaeditor/proc/edit_area()
 	var/area/A = get_area()
-	var/prevname = "[sanitize_local(A.name)]"
+	var/prevname = "[sanitize(A.name)]"
 	var/str = trim(stripped_input(usr,"New area name:", "Blueprint Editing", prevname, MAX_NAME_LEN))
 	if(!str || !length(str) || str==prevname) //cancel
 		return
@@ -223,12 +244,18 @@
 		return
 	set_area_machinery_title(A,str,prevname)
 	A.name = str
+	if(A.firedoors)
+		for(var/D in A.firedoors)
+			var/obj/machinery/door/firedoor/FD = D
+			FD.CalculateAffectingAreas()
 	to_chat(usr, "<span class='notice'>You rename the '[prevname]' to '[str]'.</span>")
 	interact()
+	message_admins("A room was renamed by [key_name_admin(usr)] at [ADMIN_VERBOSEJMP(usr)] changing the name from [prevname] to [str]")
+	log_game("A room was renamed by [key_name(usr)] at [AREACOORD(usr)] changing the name from [prevname] to [str] ")
 	return 1
 
 
-/obj/item/areaeditor/proc/set_area_machinery_title(var/area/A,var/title,var/oldtitle)
+/obj/item/areaeditor/proc/set_area_machinery_title(area/A, title, oldtitle)
 	if(!oldtitle) // or replacetext goes to infinite loop
 		return
 	for(var/obj/machinery/alarm/M in A)
@@ -243,14 +270,14 @@
 		M.name = replacetext(M.name,oldtitle,title)
 	//TODO: much much more. Unnamed airlocks, cameras, etc.
 
-/obj/item/areaeditor/proc/check_tile_is_border(var/turf/T2,var/dir)
+/obj/item/areaeditor/proc/check_tile_is_border(turf/T2, dir)
 	if(istype(T2, /turf/space))
 		return BORDER_SPACE //omg hull breach we all going to die here
-	if(istype(T2, /turf/simulated/shuttle))
-		return BORDER_SPACE
 	if(get_area_type(T2.loc)!=AREA_SPACE)
 		return BORDER_BETWEEN
 	if(istype(T2, /turf/simulated/wall))
+		return BORDER_2NDTILE
+	if(istype(T2, /turf/simulated/mineral))
 		return BORDER_2NDTILE
 	if(!istype(T2, /turf/simulated))
 		return BORDER_BETWEEN
@@ -271,7 +298,7 @@
 	return BORDER_NONE
 
 
-/obj/item/areaeditor/proc/detect_room(var/turf/first)
+/obj/item/areaeditor/proc/detect_room(turf/first)
 	var/list/turf/found = new
 	var/list/turf/pending = list(first)
 	while(pending.len)
@@ -279,7 +306,7 @@
 			return ROOM_ERR_TOOLARGE
 		var/turf/T = pending[1] //why byond havent list::pop()?
 		pending -= T
-		for(var/dir in cardinal)
+		for(var/dir in GLOB.cardinal)
 			var/skip = 0
 			for(var/obj/structure/window/W in T)
 				if(dir == W.dir || (W.dir in list(NORTHEAST,SOUTHEAST,NORTHWEST,SOUTHWEST)))
@@ -312,3 +339,5 @@
 	name = "station schematics"
 	desc = "A digital copy of the station blueprints stored in your memory."
 	fluffnotice = "Intellectual Property of Nanotrasen. For use in engineering cyborgs only. Wipe from memory upon departure from the station."
+
+/obj/item/areaeditor/blueprints/ce

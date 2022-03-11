@@ -7,17 +7,17 @@
 #define DELIGHT 2
 
 /mob/living/simple_animal/bot/mulebot
-	name = "MULEbot"
+	name = "\improper MULEbot"
 	desc = "A Multiple Utility Load Effector bot."
 	icon_state = "mulebot0"
 	density = 1
-	anchored = 1
-	animate_movement=1
+	move_resist = MOVE_FORCE_STRONG
+	animate_movement = 1
 	health = 50
 	maxHealth = 50
 	damage_coeff = list(BRUTE = 0.5, BURN = 0.7, TOX = 0, CLONE = 0, STAMINA = 0, OXY = 0)
 	a_intent = INTENT_HARM //No swapping
-	buckle_lying = 0
+	buckle_lying = FALSE
 	mob_size = MOB_SIZE_LARGE
 	radio_channel = "Supply"
 
@@ -50,20 +50,23 @@
 	var/currentBloodColor = "#A10808"
 	var/currentDNA = null
 
+/mob/living/simple_animal/bot/mulebot/get_cell()
+	return cell
+
 /mob/living/simple_animal/bot/mulebot/New()
 	..()
 	wires = new /datum/wires/mulebot(src)
 	var/datum/job/cargo_tech/J = new/datum/job/cargo_tech
 	access_card.access = J.get_access()
 	prev_access = access_card.access
-	cell = new(src)
-	cell.charge = 2000
-	cell.maxcharge = 2000
+	cell = new /obj/item/stock_parts/cell/upgraded(src)
 
 	mulebot_count++
 	set_suffix(suffix ? suffix : "#[mulebot_count]")
+	RegisterSignal(src, COMSIG_CROSSED_MOVABLE, .proc/human_squish_check)
 
 /mob/living/simple_animal/bot/mulebot/Destroy()
+	SStgui.close_uis(wires)
 	unload(0)
 	QDEL_NULL(wires)
 	QDEL_NULL(cell)
@@ -72,9 +75,9 @@
 /mob/living/simple_animal/bot/mulebot/proc/set_suffix(suffix)
 	src.suffix = suffix
 	if(paicard)
-		bot_name = "MULEbot ([suffix])"
+		bot_name = "\improper MULEbot ([suffix])"
 	else
-		name = "MULEbot ([suffix])"
+		name = "\improper MULEbot ([suffix])"
 
 /mob/living/simple_animal/bot/mulebot/bot_reset()
 	..()
@@ -132,7 +135,7 @@
 		emagged = 1
 	if(!open)
 		locked = !locked
-		to_chat(user, "<span class='notice'>You [locked ? "lock" : "unlock"] the [src]'s controls!</span>")
+		to_chat(user, "<span class='notice'>You [locked ? "lock" : "unlock"] [src]'s controls!</span>")
 	flick("mulebot-emagged", src)
 	playsound(loc, 'sound/effects/sparks1.ogg', 100, 0)
 
@@ -140,7 +143,7 @@
 	if(open)
 		icon_state="mulebot-hatch"
 	else
-		icon_state = "mulebot[!wires.MobAvoid()]"
+		icon_state = "mulebot[wires.is_cut(WIRE_MOB_AVOIDANCE)]"
 	overlays.Cut()
 	if(load && !ismob(load))//buckling handles the mob offsets
 		load.pixel_y = initial(load.pixel_y) + 9
@@ -156,9 +159,9 @@
 			qdel(src)
 		if(2)
 			for(var/i = 1; i < 3; i++)
-				wires.RandomCut()
+				wires.cut_random()
 		if(3)
-			wires.RandomCut()
+			wires.cut_random()
 	return
 
 /mob/living/simple_animal/bot/mulebot/bullet_act(obj/item/projectile/Proj)
@@ -167,7 +170,7 @@
 			unload(0)
 		if(prob(25))
 			visible_message("<span class='danger'>Something shorts out inside [src]!</span>")
-			wires.RandomCut()
+			wires.cut_random()
 
 /mob/living/simple_animal/bot/mulebot/Topic(href, list/href_list)
 	if(..())
@@ -214,7 +217,7 @@
 			if(mode == BOT_IDLE || mode == BOT_DELIVER)
 				start_home()
 		if("destination")
-			var/new_dest = input(usr, "Enter Destination:", name, destination) as null|anything in deliverybeacontags
+			var/new_dest = input(usr, "Enter Destination:", name, destination) as null|anything in GLOB.deliverybeacontags
 			if(new_dest)
 				set_destination(new_dest)
 		if("setid")
@@ -222,7 +225,7 @@
 			if(new_id)
 				set_suffix(new_id)
 		if("sethome")
-			var/new_home = input(usr, "Enter Home:", name, home_destination) as null|anything in deliverybeacontags
+			var/new_home = input(usr, "Enter Home:", name, home_destination) as null|anything in GLOB.deliverybeacontags
 			if(new_home)
 				home_destination = new_home
 		if("unload")
@@ -239,7 +242,7 @@
 			report_delivery = !report_delivery
 	update_controls()
 
-/mob/living/simple_animal/bot/mulebot/proc/toggle_lock(var/mob/user)
+/mob/living/simple_animal/bot/mulebot/proc/toggle_lock(mob/user)
 	if(bot_core.allowed(user))
 		locked = !locked
 		update_controls()
@@ -316,18 +319,18 @@
 
 // returns true if the bot has power
 /mob/living/simple_animal/bot/mulebot/proc/has_power()
-	return !open && cell && cell.charge > 0 && wires.HasPower()
+	return !open && cell && cell.charge > 0 && !wires.is_cut(WIRE_MAIN_POWER1) && !wires.is_cut(WIRE_MAIN_POWER2)
 
 /mob/living/simple_animal/bot/mulebot/proc/buzz(type)
 	switch(type)
 		if(SIGH)
-			audible_message("[src] makes a sighing buzz.", "<span class='emote'>You hear an electronic buzzing sound.</span>")
+			audible_message("[src] makes a sighing buzz.")
 			playsound(loc, 'sound/machines/buzz-sigh.ogg', 50, 0)
 		if(ANNOYED)
-			audible_message("[src] makes an annoyed buzzing sound.", "<span class='emote'>You hear an electronic buzzing sound.</span>")
+			audible_message("[src] makes an annoyed buzzing sound.")
 			playsound(loc, 'sound/machines/buzz-two.ogg', 50, 0)
 		if(DELIGHT)
-			audible_message("[src] makes a delighted ping!", "<span class='emote'>You hear a ping.</span>")
+			audible_message("[src] makes a delighted ping!")
 			playsound(loc, 'sound/machines/ping.ogg', 50, 0)
 
 
@@ -360,7 +363,7 @@
 	if(istype(AM,/obj/structure/closet/crate))
 		CRATE = AM
 	else
-		if(wires.LoadCheck())
+		if(!wires.is_cut(WIRE_LOADCHECK))
 			buzz(SIGH)
 			return	// if not hacked, only allow crates to be loaded
 
@@ -369,7 +372,7 @@
 
 	if(isobj(AM))
 		var/obj/O = AM
-		if(O.buckled_mob || (locate(/mob) in AM)) //can't load non crates objects with mobs buckled to it or inside it.
+		if(O.has_buckled_mobs() || (locate(/mob) in AM)) //can't load non crates objects with mobs buckled to it or inside it.
 			buzz(SIGH)
 			return
 
@@ -389,21 +392,18 @@
 		passenger = M
 		load = M
 		can_buckle = FALSE
-		// Not sure why this is done
-		reset_perspective(src)
 		return TRUE
 	return FALSE
 
 /mob/living/simple_animal/bot/mulebot/post_buckle_mob(mob/living/M)
-	if(M == buckled_mob) //post buckling
-		M.pixel_y = initial(M.pixel_y) + 9
-		if(M.layer < layer)
-			M.layer = layer + 0.1
+	M.pixel_y = initial(M.pixel_y) + 9
+	if(M.layer < layer)
+		M.layer = layer + 0.01
 
-	else //post unbuckling
-		load = null
-		M.layer = initial(M.layer)
-		M.pixel_y = initial(M.pixel_y)
+/mob/living/simple_animal/bot/mulebot/post_unbuckle_mob(mob/living/M)
+	load = null
+	M.layer = initial(M.layer)
+	M.pixel_y = initial(M.pixel_y)
 
 // called to unload the bot
 // argument is optional direction to unload
@@ -416,15 +416,13 @@
 
 	overlays.Cut()
 
-	if(ismob(load))
-		var/mob/M = load
-		M.reset_perspective(null)
-	unbuckle_mob()
+	unbuckle_all_mobs()
 
 	if(load)
 		load.forceMove(loc)
 		load.pixel_y = initial(load.pixel_y)
 		load.layer = initial(load.layer)
+		load.plane = initial(load.plane)
 		if(dirn)
 			var/turf/T = loc
 			var/turf/newT = get_step(T,dirn)
@@ -443,9 +441,7 @@
 		AM.forceMove(loc)
 		AM.layer = initial(AM.layer)
 		AM.pixel_y = initial(AM.pixel_y)
-		if(ismob(AM))
-			var/mob/M = AM
-			M.reset_perspective(null)
+		AM.plane = initial(AM.plane)
 
 /mob/living/simple_animal/bot/mulebot/call_bot()
 	..()
@@ -464,8 +460,7 @@
 		on = 0
 		return
 	if(on)
-		var/speed = (wires.Motor1() ? 1 : 0) + (wires.Motor2() ? 2 : 0)
-//		to_chat(world, "speed: [speed]")
+		var/speed = (!wires.is_cut(WIRE_MOTOR1) ? 1 : 0) + (!wires.is_cut(WIRE_MOTOR2) ? 2 : 0)
 		var/num_steps = 0
 		switch(speed)
 			if(0)
@@ -606,7 +601,7 @@
 /mob/living/simple_animal/bot/mulebot/proc/at_target()
 	if(!reached_target)
 		radio_channel = "Supply" //Supply channel
-		audible_message("[src] makes a chiming sound!", "<span class='emote'>You hear a chime.</span>")
+		audible_message("[src] makes a chiming sound!")
 		playsound(loc, 'sound/machines/chime.ogg', 50, 0)
 		reached_target = 1
 
@@ -629,7 +624,7 @@
 			// not loaded
 			if(auto_pickup) // find a crate
 				var/atom/movable/AM
-				if(wires.LoadCheck()) // if hacked, load first unanchored thing we find
+				if(wires.is_cut(WIRE_LOADCHECK)) // if hacked, load first unanchored thing we find
 					for(var/atom/movable/A in get_step(loc, loaddir))
 						if(!A.anchored)
 							AM = A
@@ -677,7 +672,7 @@
 
 // called when bot bumps into anything
 /mob/living/simple_animal/bot/mulebot/Bump(atom/obs)
-	if(!wires.MobAvoid())	// usually just bumps, but if avoidance disabled knock over mobs
+	if(wires.is_cut(WIRE_MOB_AVOIDANCE))	// usually just bumps, but if avoidance disabled knock over mobs
 		var/mob/M = obs
 		if(ismob(M))
 			if(istype(M,/mob/living/silicon/robot))
@@ -692,30 +687,36 @@
 	return ..()
 
 /mob/living/simple_animal/bot/mulebot/proc/RunOver(mob/living/carbon/human/H)
+	if(H.player_logged)//No running over SSD people
+		return
 	add_attack_logs(src, H, "Run over (DAMTYPE: [uppertext(BRUTE)])")
 	H.visible_message("<span class='danger'>[src] drives over [H]!</span>", \
-					"<span class='userdanger'>[src] drives over you!<span>")
+					"<span class='userdanger'>[src] drives over you!</span>")
 	playsound(loc, 'sound/effects/splat.ogg', 50, 1)
 
 	var/damage = rand(5,15)
-	H.apply_damage(2*damage, BRUTE, "head", run_armor_check("head", "melee"))
-	H.apply_damage(2*damage, BRUTE, "chest", run_armor_check("chest", "melee"))
-	H.apply_damage(0.5*damage, BRUTE, "l_leg", run_armor_check("l_leg", "melee"))
-	H.apply_damage(0.5*damage, BRUTE, "r_leg", run_armor_check("r_leg", "melee"))
-	H.apply_damage(0.5*damage, BRUTE, "l_arm", run_armor_check("l_arm", "melee"))
-	H.apply_damage(0.5*damage, BRUTE, "r_arm", run_armor_check("r_arm", "melee"))
+	H.apply_damage(2*damage, BRUTE, "head", run_armor_check("head", MELEE))
+	H.apply_damage(2*damage, BRUTE, "chest", run_armor_check("chest", MELEE))
+	H.apply_damage(0.5*damage, BRUTE, "l_leg", run_armor_check("l_leg", MELEE))
+	H.apply_damage(0.5*damage, BRUTE, "r_leg", run_armor_check("r_leg", MELEE))
+	H.apply_damage(0.5*damage, BRUTE, "l_arm", run_armor_check("l_arm", MELEE))
+	H.apply_damage(0.5*damage, BRUTE, "r_arm", run_armor_check("r_arm", MELEE))
 
 
-	var/turf/T = get_turf(src)
-	H.add_mob_blood(H)
-	H.add_splatter_floor(T)
 
+
+	if(NO_BLOOD in H.dna.species.species_traits)//Does the run over mob have blood?
+		return//If it doesn't it shouldn't bleed (Though a check should be made eventually for things with liquid in them, like slime people, vox armalis, etc.)
+
+	var/turf/T = get_turf(src)//Where are we?
+	H.add_mob_blood(H)//Cover the victim in their own blood.
+	H.add_splatter_floor(T)//Put the blood where we are.
 	bloodiness += 4
 
 	var/list/blood_dna = H.get_blood_dna_list()
 	if(blood_dna)
 		transfer_blood_dna(blood_dna)
-		currentBloodColor = H.species.blood_color
+		currentBloodColor = H.dna.species.blood_color
 		return
 
 /mob/living/simple_animal/bot/mulebot/bot_control_message(command, mob/user, user_turf)
@@ -735,8 +736,8 @@
 			..()
 
 /mob/living/simple_animal/bot/mulebot/receive_signal(datum/signal/signal)
-	if(!wires.RemoteRX() || ..())
-		return 1
+	if(wires.is_cut(WIRE_REMOTE_RX) || ..())
+		return TRUE
 
 	var/recv = signal.data["command"]
 
@@ -770,8 +771,8 @@
 	return 1
 
 // send a radio signal with multiple data key/values
-/mob/living/simple_animal/bot/mulebot/post_signal_multiple(var/freq, var/list/keyval)
-	if(!wires.RemoteTX())
+/mob/living/simple_animal/bot/mulebot/post_signal_multiple(freq, list/keyval)
+	if(wires.is_cut(WIRE_REMOTE_TX))
 		return
 
 	..()
@@ -802,10 +803,10 @@
 
 //Update navigation data. Called when commanded to deliver, return home, or a route update is needed...
 /mob/living/simple_animal/bot/mulebot/proc/get_nav()
-	if(!on || !wires.BeaconRX())
+	if(!on || wires.is_cut(WIRE_BEACON_RX))
 		return
 
-	for(var/obj/machinery/navbeacon/NB in deliverybeacons)
+	for(var/obj/machinery/navbeacon/NB in GLOB.deliverybeacons)
 		if(NB.location == new_destination)	// if the beacon location matches the set destination
 			destination = new_destination	// the we will navigate there
 			target = NB.loc
@@ -836,9 +837,7 @@
 		cell.update_icon()
 		cell = null
 
-	var/datum/effect_system/spark_spread/s = new /datum/effect_system/spark_spread
-	s.set_up(3, 1, src)
-	s.start()
+	do_sparks(3, 1, src)
 
 	new /obj/effect/decal/cleanable/blood/oil(loc)
 	..()
@@ -860,9 +859,14 @@
 	else
 		..()
 
+/mob/living/simple_animal/bot/mulebot/proc/human_squish_check(src, atom/movable/AM)
+	if(!ishuman(AM))
+		return
+	RunOver(AM)
+
 #undef SIGH
 #undef ANNOYED
 #undef DELIGHT
 
 /obj/machinery/bot_core/mulebot
-	req_access = list(access_cargo)
+	req_access = list(ACCESS_CARGO)

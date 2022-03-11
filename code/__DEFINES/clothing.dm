@@ -9,7 +9,7 @@
 #define HIDEEYES	4	//APPLIES ONLY TO HELMETS/MASKS!! (eyes means glasses)
 #define HIDEFACE	8	//APPLIES ONLY TO HELMETS/MASKS!! Dictates whether we appear as unknown.
 
-//slots
+// slots
 #define slot_back 1
 #define slot_wear_mask 2
 #define slot_handcuffed 3
@@ -34,6 +34,11 @@
 #define slot_tie 22
 #define slot_collar 23
 #define slots_amt 23
+
+// accessory slots
+#define ACCESSORY_SLOT_DECOR 1
+#define ACCESSORY_SLOT_UTILITY 2
+#define ACCESSORY_SLOT_ARMBAND 3
 
 //Cant seem to find a mob bitflags area other than the powers one
 
@@ -73,7 +78,7 @@
 
 //flags for covering body parts
 #define GLASSESCOVERSEYES	1
-#define MASKCOVERSEYES		2		// get rid of some of the other retardation in these flags
+#define MASKCOVERSEYES		2		// get rid of some of the other mess in these flags
 #define HEADCOVERSEYES		4		// feel free to realloc these numbers for other purposes
 #define MASKCOVERSMOUTH		8		// on other items, these are just for mask/head
 #define HEADCOVERSMOUTH		16
@@ -87,9 +92,7 @@
 #define BLOCKHEADHAIR 			4		// temporarily removes the user's hair overlay. Leaves facial hair.
 #define BLOCKHAIR				32768	// temporarily removes the user's hair, facial and otherwise.
 
-#define ONESIZEFITSALL 			1		// determines if something can be worn by a fatty or not.
-
 //flags for muzzle speech blocking
-#define MUTE_NONE 0 // Does not mute you.
-#define MUTE_MUFFLE 1 // Muffles everything you say "MHHPHHMMM!!!
-#define MUTE_ALL 2 // Completely mutes you.
+#define MUZZLE_MUTE_NONE 0 // Does not mute you.
+#define MUZZLE_MUTE_MUFFLE 1 // Muffles everything you say "MHHPHHMMM!!!
+#define MUZZLE_MUTE_ALL 2 // Completely mutes you.

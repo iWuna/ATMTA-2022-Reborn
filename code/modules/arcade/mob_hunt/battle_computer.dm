@@ -9,23 +9,20 @@
 	anchored = 1
 	var/obj/item/nanomob_card/card
 	var/datum/mob_hunt/mob_info
+	var/obj/effect/landmark/battle_mob_point/avatar_point
 	var/obj/effect/nanomob/battle/avatar
 	var/ready = 0
 	var/team = "Grey"
-	var/avatar_x_offset = 4
-	var/avatar_y_offset = 0
 
 /obj/machinery/computer/mob_battle_terminal/red
 	pixel_y = 24
 	dir = SOUTH
 	team = "Red"
-	avatar_y_offset = -1
 
 /obj/machinery/computer/mob_battle_terminal/blue
 	pixel_y = -24
 	dir = NORTH
 	team = "Blue"
-	avatar_y_offset = 1
 
 /obj/machinery/computer/mob_battle_terminal/red/Initialize()
 	..()
@@ -44,19 +41,21 @@
 
 /obj/machinery/computer/mob_battle_terminal/Destroy()
 	eject_card(1)
-	if(mob_hunt_server)
-		if(mob_hunt_server.battle_turn)
-			mob_hunt_server.battle_turn = null
-		if(mob_hunt_server.red_terminal == src)
-			mob_hunt_server.red_terminal = null
-		if(mob_hunt_server.blue_terminal == src)
-			mob_hunt_server.blue_terminal = null
+	if(SSmob_hunt)
+		if(SSmob_hunt.battle_turn)
+			SSmob_hunt.battle_turn = null
+		if(SSmob_hunt.red_terminal == src)
+			SSmob_hunt.red_terminal = null
+		if(SSmob_hunt.blue_terminal == src)
+			SSmob_hunt.blue_terminal = null
 	QDEL_NULL(avatar)
 	return ..()
 
 /obj/machinery/computer/mob_battle_terminal/attackby(obj/item/O, mob/user)
 	if(istype(O, /obj/item/nanomob_card))
 		insert_card(O, user)
+		return
+	return ..()
 
 /obj/machinery/computer/mob_battle_terminal/proc/insert_card(obj/item/nanomob_card/new_card, mob/user)
 	if(!new_card)
@@ -80,8 +79,8 @@
 
 /obj/machinery/computer/mob_battle_terminal/proc/eject_card(override = 0)
 	if(!override)
-		if(ready && mob_hunt_server.battle_turn != team)
-			audible_message("You can't recall on your rival's turn!", null, 2)
+		if(ready && SSmob_hunt.battle_turn != team)
+			atom_say("You can't recall on your rival's turn!")
 			return
 	card.mob_data = mob_info
 	mob_info = null
@@ -94,7 +93,11 @@
 /obj/machinery/computer/mob_battle_terminal/proc/update_avatar()
 	//if we don't have avatars yet, spawn them
 	if(!avatar)
-		avatar = new(locate((x + avatar_x_offset), (y + avatar_y_offset), z))
+		if(!avatar_point)
+			log_debug("[src] attempted to spawn a battle mob avatar without a spawn point!")
+			return
+		else
+			avatar = new(get_turf(avatar_point))
 	//update avatar info from card
 	if(mob_info)
 		avatar.mob_info = mob_info
@@ -126,7 +129,7 @@
 		dat += "<h1>No Nano-Mob card loaded.</h1>"
 		dat += "</td>"
 		dat += "</tr>"
-		if(ready && mob_hunt_server.battle_turn)	//offer the surrender option if they are in a battle (ready), but don't have a card loaded
+		if(ready && SSmob_hunt.battle_turn)	//offer the surrender option if they are in a battle (ready), but don't have a card loaded
 			dat += "<tr>"
 			dat += "<td><a href='?src=[UID()];surrender=1'>Surrender!</a></td>"
 			dat += "</tr>"
@@ -170,7 +173,7 @@
 			dat += "<tr>"
 			dat += "<td><a href='?src=[UID()];ready=1'>Battle!</a></td>"
 			dat += "</tr>"
-		if(ready && !mob_hunt_server.battle_turn)
+		if(ready && !SSmob_hunt.battle_turn)
 			dat += "<tr>"
 			dat += "<td><a href='?src=[UID()];ready=2'>Cancel Battle!</a></td>"
 			dat += "</tr>"
@@ -199,29 +202,52 @@
 			start_battle()
 		else if(option == 2)
 			ready = 0
-			audible_message("[team] Player cancels their battle challenge.", null, 5)
+			atom_say("[team] Player cancels their battle challenge.")
 
 	updateUsrDialog()
 
 /obj/machinery/computer/mob_battle_terminal/proc/check_connection()
 	if(team == "Red")
-		if(mob_hunt_server && !mob_hunt_server.red_terminal)
-			mob_hunt_server.red_terminal = src
+		if(SSmob_hunt && !SSmob_hunt.red_terminal)
+			SSmob_hunt.red_terminal = src
 	else if(team == "Blue")
-		if(mob_hunt_server && !mob_hunt_server.blue_terminal)
-			mob_hunt_server.blue_terminal = src
+		if(SSmob_hunt && !SSmob_hunt.blue_terminal)
+			SSmob_hunt.blue_terminal = src
+
+	find_avatar_spawn_point()
+
+/obj/machinery/computer/mob_battle_terminal/proc/find_avatar_spawn_point()
+	if(avatar_point)
+		return
+	var/obj/effect/landmark/battle_mob_point/closest
+	for(var/obj/effect/landmark/battle_mob_point/bmp in GLOB.landmarks_list)
+		if(!istype(bmp, /obj/effect/landmark/battle_mob_point))
+			continue
+		if(bmp.z != z)	//only match with points on the same z-level)
+			continue
+		if(!closest || isnull(closest))
+			closest = bmp
+			continue
+		if(closest == bmp)
+			continue
+		if((abs(x-bmp.x)+abs(y-bmp.y)) < (abs(x-closest.x)+abs(y-closest.y)))	//get_dist would be preferable if it didn't count diagonals as 1 distance, so we have to rely on actual x/y distances in this janky way.
+			closest = bmp
+	if(closest)
+		avatar_point = closest
+	else
+		log_debug("[src] was unable to locate a nearby mob battle landmark! Unable to spawn battle avatars!")
 
 /obj/machinery/computer/mob_battle_terminal/proc/do_attack()
 	if(!ready)		//no attacking if you arent ready to fight (duh)
 		return
-	if(!mob_hunt_server || team != mob_hunt_server.battle_turn)		//don't attack unless it is actually our turn
+	if(!SSmob_hunt || team != SSmob_hunt.battle_turn)		//don't attack unless it is actually our turn
 		return
 	else
 		var/message = "[mob_info.mob_name] attacks!"
 		if(mob_info.nickname)
 			message = "[mob_info.nickname] attacks!"
-		audible_message(message, null, 5)
-		mob_hunt_server.launch_attack(team, mob_info.get_raw_damage(), mob_info.get_attack_type())
+		atom_say(message)
+		SSmob_hunt.launch_attack(team, mob_info.get_raw_damage(), mob_info.get_attack_type())
 
 /obj/machinery/computer/mob_battle_terminal/proc/start_battle()
 	if(ready)	//don't do anything if we are still ready
@@ -229,21 +255,21 @@
 	if(!card)	//don't do anything if there isn't a card inserted
 		return
 	ready = 1
-	audible_message("[team] Player is ready for battle! Waiting for rival...", null, 5)
-	mob_hunt_server.start_check()
+	atom_say("[team] Player is ready for battle! Waiting for rival...")
+	SSmob_hunt.start_check()
 
 /obj/machinery/computer/mob_battle_terminal/proc/receive_attack(raw_damage, datum/mob_type/attack_type)
 	var/message = mob_info.take_damage(raw_damage, attack_type)
 	avatar.audible_message(message, null, 5)
 	if(!mob_info.cur_health)
-		mob_hunt_server.end_battle(team)
+		SSmob_hunt.end_battle(team)
 		eject_card(1)	//force the card out, they were defeated
 	else
-		mob_hunt_server.end_turn()
+		SSmob_hunt.end_turn()
 
 /obj/machinery/computer/mob_battle_terminal/proc/surrender()
-	audible_message("[team] Player surrenders the battle!", null, 5)
-	mob_hunt_server.end_battle(team, 1)
+	atom_say("[team] Player surrenders the battle!")
+	SSmob_hunt.end_battle(team, 1)
 
 //////////////////////////////
 //	Mob Healing Terminal	//
@@ -263,6 +289,8 @@
 /obj/machinery/computer/mob_healer_terminal/attackby(obj/item/O, mob/user)
 	if(istype(O, /obj/item/nanomob_card))
 		heal_card(O, user)
+		return
+	return ..()
 
 /obj/machinery/computer/mob_healer_terminal/proc/heal_card(obj/item/nanomob_card/patient, mob/user)
 	if(!patient)

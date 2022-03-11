@@ -12,17 +12,11 @@
 	var/looking_for_personality = 0
 	var/mob/living/silicon/pai/pai
 	var/list/faction = list("neutral") // The factions the pAI will inherit from the card
+	resistance_flags = FIRE_PROOF | ACID_PROOF | INDESTRUCTIBLE
 
 /obj/item/paicard/syndicate
 	name = "syndicate personal AI device"
 	faction = list("syndicate")
-
-/obj/item/paicard/relaymove(var/mob/user, var/direction)
-	if(user.stat || user.stunned)
-		return
-	var/obj/item/rig/rig = get_rig()
-	if(istype(rig))
-		rig.forced_move(direction, user)
 
 /obj/item/paicard/New()
 	..()
@@ -263,7 +257,7 @@
 			return
 		last_request = world.time / 10
 		looking_for_personality = 1
-		paiController.findPAI(src, usr)
+		GLOB.paiController.findPAI(src, usr)
 	if(href_list["wipe"])
 		var/confirm = input("Are you CERTAIN you wish to delete the current personality? This action cannot be undone.", "Personality Wipe") in list("Yes", "No")
 		if(confirm == "Yes")
@@ -286,7 +280,7 @@
 			if(2)
 				radio.ToggleReception()
 	if(href_list["setlaws"])
-		var/newlaws = sanitize_local(copytext(input("Enter any additional directives you would like your pAI personality to follow. Note that these directives will not override the personality's allegiance to its imprinted master. Conflicting directives will be ignored.", "pAI Directive Configuration", pai.pai_laws) as message,1,MAX_MESSAGE_LEN))
+		var/newlaws = sanitize(copytext(input("Enter any additional directives you would like your pAI personality to follow. Note that these directives will not override the personality's allegiance to its imprinted master. Conflicting directives will be ignored.", "pAI Directive Configuration", pai.pai_laws) as message,1,MAX_MESSAGE_LEN))
 		if(newlaws)
 			pai.pai_laws = newlaws
 			to_chat(pai, "Your supplemental directives have been updated. Your new directives are:")
@@ -309,7 +303,7 @@
 
 /obj/item/paicard
 	var/current_emotion = 1
-/obj/item/paicard/proc/setEmotion(var/emotion)
+/obj/item/paicard/proc/setEmotion(emotion)
 	if(pai)
 		overlays.Cut()
 		switch(emotion)
@@ -334,8 +328,7 @@
 		M.emp_act(severity)
 	..()
 
-/obj/item/paicard/ex_act(severity)
+/obj/item/paicard/extinguish_light()
 	if(pai)
-		pai.ex_act(severity)
-	else
-		qdel(src)
+		pai.extinguish_light()
+		set_light(0)

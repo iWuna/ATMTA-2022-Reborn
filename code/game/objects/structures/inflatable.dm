@@ -5,6 +5,9 @@
 	icon_state = "folded_wall"
 	w_class = WEIGHT_CLASS_NORMAL
 
+/obj/item/inflatable/detailed_examine()
+	return "Inflate by using it in your hand. The inflatable barrier will inflate on your tile. To deflate it, use the 'deflate' verb."
+
 /obj/item/inflatable/attack_self(mob/user)
 	playsound(loc, 'sound/items/zip.ogg', 75, 1)
 	to_chat(user, "<span class='notice'>You inflate [src].</span>")
@@ -19,19 +22,23 @@
 	density = 1
 	anchored = 1
 	opacity = 0
-
+	max_integrity = 50
 	icon = 'icons/obj/inflatable.dmi'
 	icon_state = "wall"
+	var/torn = /obj/item/inflatable/torn
+	var/intact = /obj/item/inflatable
 
-	var/health = 50.0
+/obj/structure/inflatable/detailed_examine()
+	return "To remove these safely, use the 'deflate' verb. Hitting these with any objects will probably puncture and break it forever."
 
 /obj/structure/inflatable/Initialize(location)
 	..()
-	air_update_turf(1)
+	air_update_turf(TRUE)
 
 /obj/structure/inflatable/Destroy()
-	air_update_turf(1)
-	return ..()
+	var/turf/T = get_turf(src)
+	. = ..()
+	T.air_update_turf(TRUE)
 
 /obj/structure/inflatable/CanPass(atom/movable/mover, turf/target, height=0)
 	return 0
@@ -39,98 +46,38 @@
 /obj/structure/inflatable/CanAtmosPass(turf/T)
 	return !density
 
-/obj/structure/inflatable/bullet_act(var/obj/item/projectile/Proj)
-	health -= Proj.damage
-	..()
-	if(health <= 0)
-		deflate(1)
-	return
-
-/obj/structure/inflatable/ex_act(severity)
-	switch(severity)
-		if(1.0)
-			qdel(src)
-			return
-		if(2.0)
-			deflate(1)
-			return
-		if(3.0)
-			if(prob(50))
-				deflate(1)
-				return
-
-/obj/structure/inflatable/blob_act()
-	deflate(1)
-
-/obj/structure/inflatable/attack_hand(mob/user as mob)
+/obj/structure/inflatable/attack_hand(mob/user)
 	add_fingerprint(user)
-	return
 
-/obj/structure/inflatable/attack_generic(mob/user, damage = 0)	//used by attack_alien, attack_animal, and attack_slime
-	health -= damage
-	if(health <= 0)
-		user.visible_message("<span class='danger'>[user] tears open [src]!</span>")
-		deflate(1)
-	else	//for nicer text~
-		user.visible_message("<span class='danger'>[user] tears at [src]!</span>")
-
-/obj/structure/inflatable/attack_alien(mob/user as mob)
-	if(islarva(user))
-		return
-	attack_generic(user, 15)
-
-/obj/structure/inflatable/attack_animal(mob/user as mob)
-	if(!isanimal(user))
-		return
-	var/mob/living/simple_animal/M = user
-	if(M.melee_damage_upper <= 0)
-		return
-	attack_generic(M, M.melee_damage_upper)
-
-/obj/structure/inflatable/attack_slime(mob/user as mob)
-	var/mob/living/carbon/slime/S = user
-	if(!S.is_adult)
-		return
-	attack_generic(user, rand(10, 15))
-
-/obj/structure/inflatable/attackby(obj/item/W as obj, mob/user as mob, params)
-	if(!istype(W))
-		return
-	if(is_pointed(W))
-		visible_message("<span class='danger'>[user] pierces [src] with [W]!</span>")
-		deflate(1)
-	if(W.damtype == BRUTE || W.damtype == BURN)
-		hit(W.force)
-		..()
-	return
-
-/obj/structure/inflatable/proc/hit(var/damage, var/sound_effect = 1)
-	health = max(0, health - damage)
-	if(sound_effect)
-		playsound(loc, 'sound/effects/Glasshit.ogg', 75, 1)
-	if(health <= 0)
-		deflate(1)
+/obj/structure/inflatable/attackby(obj/item/I, mob/living/user, params)
+	if(I.sharp || is_type_in_typecache(I, GLOB.pointed_types))
+		user.do_attack_animation(src, used_item = I)
+		deconstruct(FALSE)
+		return FALSE
+	return ..()
 
 /obj/structure/inflatable/AltClick()
 	if(usr.stat || usr.restrained())
 		return
 	if(!Adjacent(usr))
 		return
-	deflate()
+	deconstruct(TRUE)
 
-/obj/structure/inflatable/proc/deflate(var/violent=0)
+/obj/structure/inflatable/deconstruct(disassembled = TRUE)
 	playsound(loc, 'sound/machines/hiss.ogg', 75, 1)
-	if(violent)
+	if(!disassembled)
 		visible_message("[src] rapidly deflates!")
-		var/obj/item/inflatable/torn/R = new /obj/item/inflatable/torn(loc)
-		src.transfer_fingerprints_to(R)
+		var/obj/item/inflatable/torn/R = new torn(loc)
+		transfer_fingerprints_to(R)
 		qdel(src)
 	else
 		visible_message("[src] slowly deflates.")
-		spawn(50)
-			var/obj/item/inflatable/R = new /obj/item/inflatable(loc)
-			src.transfer_fingerprints_to(R)
-			qdel(src)
+		addtimer(CALLBACK(src, .proc/deflate), 5 SECONDS)
+
+/obj/structure/inflatable/proc/deflate()
+	var/obj/item/inflatable/R = new intact(loc)
+	transfer_fingerprints_to(R)
+	qdel(src)
 
 /obj/structure/inflatable/verb/hand_deflate()
 	set name = "Deflate"
@@ -140,7 +87,7 @@
 	if(usr.stat || usr.restrained())
 		return
 
-	deflate()
+	deconstruct(TRUE)
 
 /obj/item/inflatable/door
 	name = "inflatable door"
@@ -164,9 +111,15 @@
 
 	icon = 'icons/obj/inflatable.dmi'
 	icon_state = "door_closed"
+	torn = /obj/item/inflatable/door/torn
+	intact = /obj/item/inflatable/door
 
 	var/state = 0 //closed, 1 == open
 	var/isSwitchingStates = 0
+
+/obj/structure/inflatable/door/detailed_examine()
+	return "Click the door to open or close it. It only stops air while closed.<br>\
+			To remove these safely, use the 'deflate' verb. Hitting these with any objects will probably puncture and break it forever."
 
 /obj/structure/inflatable/door/attack_ai(mob/user as mob) //those aren't machinery, they're just big fucking slabs of a mineral
 	if(isAI(user)) //so the AI can't open it
@@ -238,21 +191,6 @@
 	else
 		icon_state = "door_closed"
 
-/obj/structure/inflatable/door/deflate(var/violent=0)
-	playsound(loc, 'sound/machines/hiss.ogg', 75, 1)
-	if(violent)
-		visible_message("[src] rapidly deflates!")
-		var/obj/item/inflatable/door/torn/R = new /obj/item/inflatable/door/torn(loc)
-		src.transfer_fingerprints_to(R)
-		qdel(src)
-	else
-		visible_message("[src] slowly deflates.")
-		spawn(50)
-			var/obj/item/inflatable/door/R = new /obj/item/inflatable/door(loc)
-			src.transfer_fingerprints_to(R)
-			qdel(src)
-	air_update_turf(1)
-
 /obj/item/inflatable/torn
 	name = "torn inflatable wall"
 	desc = "A folded membrane which rapidly expands into a large cubical shape on activation. It is too torn to be usable."
@@ -278,8 +216,8 @@
 	desc = "Contains inflatable walls and doors."
 	icon_state = "inf_box"
 	item_state = "syringe_kit"
-	max_combined_w_class = 21
 	w_class = WEIGHT_CLASS_NORMAL
+	can_hold = list(/obj/item/inflatable)
 
 /obj/item/storage/briefcase/inflatable/New()
 	..()

@@ -13,8 +13,10 @@
 	materials = list(MAT_METAL=500)
 	origin_tech = "engineering=3;combat=3"
 	breakouttime = 600 //Deciseconds = 60s = 1 minutes
+	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, RAD = 0, FIRE = 50, ACID = 50)
 	var/cuffsound = 'sound/weapons/handcuffs.ogg'
 	var/trashtype = null //For disposable cuffs
+	var/ignoresClumsy = FALSE
 
 /obj/item/restraints/handcuffs/attack(mob/living/carbon/C, mob/user)
 	if(!user.IsAdvancedToolUser())
@@ -23,13 +25,24 @@
 	if(!istype(C))
 		return
 
-	if(CLUMSY in user.mutations && prob(50))
+	if(flags & NODROP)
+		to_chat(user, "<span class='warning'>[src] is stuck to your hand!</span>")
+		return
+
+	if(HAS_TRAIT(user, TRAIT_CLUMSY) && prob(50) && (!ignoresClumsy))
 		to_chat(user, "<span class='warning'>Uh... how do those things work?!</span>")
-		apply_cuffs(user,user)
+		apply_cuffs(user, user)
+		return
+
+	cuff(C, user)
+
+/obj/item/restraints/handcuffs/proc/cuff(mob/living/carbon/C, mob/user, remove_src = TRUE)
+	if(!istype(C)) // Shouldn't be able to cuff anything but carbons.
+		return
 
 	if(ishuman(C))
 		var/mob/living/carbon/human/H = C
-		if(!H.has_left_hand() || !H.has_right_hand())
+		if(!(H.has_left_hand() || H.has_right_hand()))
 			to_chat(user, "<span class='warning'>How do you suggest handcuffing someone with no hands?</span>")
 			return
 
@@ -39,26 +52,28 @@
 
 		playsound(loc, cuffsound, 30, 1, -2)
 		if(do_mob(user, C, 30))
-			apply_cuffs(C,user)
+			apply_cuffs(C, user, remove_src)
 			to_chat(user, "<span class='notice'>You handcuff [C].</span>")
-			if(istype(src, /obj/item/restraints/handcuffs/cable))
-				feedback_add_details("handcuffs","C")
-			else
-				feedback_add_details("handcuffs","H")
+			SSblackbox.record_feedback("tally", "handcuffs", 1, type)
 
 			add_attack_logs(user, C, "Handcuffed ([src])")
 		else
 			to_chat(user, "<span class='warning'>You fail to handcuff [C].</span>")
 
-/obj/item/restraints/handcuffs/proc/apply_cuffs(mob/living/carbon/target, mob/user)
+/obj/item/restraints/handcuffs/proc/apply_cuffs(mob/living/carbon/target, mob/user, remove_src = TRUE)
 	if(!target.handcuffed)
-		user.drop_item()
+		if(remove_src)
+			user.drop_item()
 		if(trashtype)
 			target.handcuffed = new trashtype(target)
-			qdel(src)
+			if(remove_src)
+				qdel(src)
 		else
-			loc = target
-			target.handcuffed = src
+			if(remove_src)
+				loc = target
+				target.handcuffed =  src
+			else
+				target.handcuffed = new type(loc)
 		target.update_handcuffed()
 		return
 
@@ -108,13 +123,15 @@
 	color = pick(COLOR_RED, COLOR_BLUE, COLOR_GREEN, COLOR_WHITE, COLOR_PINK, COLOR_YELLOW, COLOR_CYAN)
 	..()
 
-/obj/item/restraints/handcuffs/cable/proc/cable_color(var/colorC)
-	if(colorC)
-		if(colorC == "rainbow")
-			colorC = color_rainbow()
-		color = colorC
-	else
+/obj/item/restraints/handcuffs/cable/proc/cable_color(colorC)
+	if(!colorC)
 		color = COLOR_RED
+	else if(colorC == "rainbow")
+		color = color_rainbow()
+	else if(colorC == "orange") //byond only knows 16 colors by name, and orange isn't one of them
+		color = COLOR_ORANGE
+	else
+		color = colorC
 
 /obj/item/restraints/handcuffs/cable/proc/color_rainbow()
 	color = pick(COLOR_RED, COLOR_BLUE, COLOR_GREEN, COLOR_PINK, COLOR_YELLOW, COLOR_CYAN)
@@ -128,7 +145,7 @@
 	desc = "Use this to keep prisoners in line. Or you know, your significant other."
 	icon_state = "pinkcuffs"
 
-/obj/item/restraints/handcuffs/cable/attackby(var/obj/item/I, mob/user as mob, params)
+/obj/item/restraints/handcuffs/cable/attackby(obj/item/I, mob/user as mob, params)
 	..()
 	if(istype(I, /obj/item/stack/rods))
 		var/obj/item/stack/rods/R = I
@@ -169,27 +186,16 @@
 
 /obj/item/restraints/handcuffs/cable/zipties/cyborg/attack(mob/living/carbon/C, mob/user)
 	if(isrobot(user))
-		if(ishuman(C))
-			var/mob/living/carbon/human/H = C
-			if(!(H.get_organ("l_hand") || H.get_organ("r_hand")))
-				to_chat(user, "<span class='warning'>How do you suggest handcuffing someone with no hands?</span>")
-				return
-		if(!C.handcuffed)
-			playsound(loc, 'sound/weapons/cablecuff.ogg', 30, 1, -2)
-			C.visible_message("<span class='danger'>[user] is trying to put zipties on [C]!</span>", \
-								"<span class='userdanger'>[user] is trying to put zipties on [C]!</span>")
-			if(do_mob(user, C, 30))
-				if(!C.handcuffed)
-					C.handcuffed = new /obj/item/restraints/handcuffs/cable/zipties/used(C)
-					C.update_handcuffed()
-					to_chat(user, "<span class='notice'>You handcuff [C].</span>")
-					add_attack_logs(user, C, "Handcuffed (ziptie-cuffed)")
-			else
-				to_chat(user, "<span class='warning'>You fail to handcuff [C].</span>")
+		cuff(C, user, FALSE)
 
 /obj/item/restraints/handcuffs/cable/zipties/used
 	desc = "A pair of broken zipties."
 	icon_state = "cuff_white_used"
+
+/obj/item/restraints/handcuffs/cable/zipties/used/decompile_act(obj/item/matter_decompiler/C, mob/user)
+	C.stored_comms["glass"] += 1
+	qdel(src)
+	return TRUE
 
 /obj/item/restraints/handcuffs/cable/zipties/used/attack()
 	return

@@ -3,32 +3,29 @@
 	desc = "A bar sign with no writing on it"
 	icon = 'icons/obj/barsigns.dmi'
 	icon_state = "empty"
-	req_access = list(access_bar)
-	armor = list(melee = 20, bullet = 20, laser = 20, energy = 100, bomb = 0, bio = 0, rad = 0)
+	req_access = list(ACCESS_BAR)
+	max_integrity = 500
+	integrity_failure = 250
+	armor = list(MELEE = 20, BULLET = 20, LASER = 20, ENERGY = 100, BOMB = 0, BIO = 0, RAD = 0, FIRE = 50, ACID = 50)
 	var/list/barsigns=list()
 	var/list/hiddensigns
-	var/emagged = 0
 	var/state = 0
 	var/prev_sign = ""
 	var/panel_open = 0
 
-/obj/structure/sign/barsign/New()
-	..()
+/obj/structure/sign/barsign/Initialize(mapload)
+	. = ..()
 
-
-//filling the barsigns list
+	//filling the barsigns list
 	for(var/bartype in subtypesof(/datum/barsign))
 		var/datum/barsign/signinfo = new bartype
 		if(!signinfo.hidden)
 			barsigns += signinfo
 
-
-//randomly assigning a sign
+	//randomly assigning a sign
 	set_sign(pick(barsigns))
 
-
-
-/obj/structure/sign/barsign/proc/set_sign(var/datum/barsign/sign)
+/obj/structure/sign/barsign/proc/set_sign(datum/barsign/sign)
 	if(!istype(sign))
 		return
 	icon_state = sign.icon
@@ -38,7 +35,21 @@
 	else
 		desc = "It displays \"[name]\"."
 
+/obj/structure/sign/barsign/obj_break(damage_flag)
+	if(!broken && !(flags & NODECONSTRUCT))
+		broken = TRUE
 
+/obj/structure/sign/barsign/deconstruct(disassembled = TRUE)
+	new /obj/item/stack/sheet/metal(drop_location(), 2)
+	new /obj/item/stack/cable_coil(drop_location(), 2)
+	qdel(src)
+
+/obj/structure/sign/barsign/play_attack_sound(damage_amount, damage_type = BRUTE, damage_flag = 0)
+	switch(damage_type)
+		if(BRUTE)
+			playsound(src.loc, 'sound/effects/glasshit.ogg', 75, TRUE)
+		if(BURN)
+			playsound(src.loc, 'sound/items/welder.ogg', 100, TRUE)
 
 /obj/structure/sign/barsign/attack_ai(mob/user as mob)
 	return src.attack_hand(user)
@@ -57,10 +68,7 @@
 
 
 
-/obj/structure/sign/barsign/attackby(var/obj/item/I, var/mob/user)
-	if(!allowed(user))
-		to_chat(user, "<span class = 'info'>Access denied.</span>")
-		return
+/obj/structure/sign/barsign/attackby(obj/item/I, mob/user)
 	if( istype(I, /obj/item/screwdriver))
 		if(!panel_open)
 			to_chat(user, "<span class='notice'>You open the maintenance panel.</span>")
@@ -90,6 +98,8 @@
 			broken = 0
 		else
 			to_chat(user, "<span class='warning'>You need at least two lengths of cable!</span>")
+	else
+		return ..()
 
 
 
@@ -112,7 +122,7 @@
 		return
 	set_sign(new /datum/barsign/hiddensigns/syndibarsign)
 	emagged = 1
-	req_access = list(access_syndicate)
+	req_access = list(ACCESS_SYNDICATE)
 
 
 
@@ -373,6 +383,11 @@
 	name = "Space Asshole"
 	icon = "spaceasshole"
 	desc = "Open since 2125, Not much has changed since then; the engineers still release the singulo and the damn miners still are more likely to cave your face in that deliver ores."
+
+/datum/barsign/themaint
+	name = "The Maint"
+	icon = "themaint"
+	desc = "Home to Greytiders, Security and other unholy creations."
 
 /datum/barsign/hiddensigns
 	hidden = 1

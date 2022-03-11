@@ -2,22 +2,22 @@
 	name = "helmet"
 	desc = "Standard Security gear. Protects the head from impacts."
 	icon_state = "helmetmaterials"
+	w_class = WEIGHT_CLASS_NORMAL
 	flags = HEADBANGPROTECT
 	flags_cover = HEADCOVERSEYES
 	item_state = "helmetmaterials"
-	armor = list(melee = 30, bullet = 25, laser = 25, energy = 10, bomb = 25, bio = 0, rad = 0)
+	armor = list(MELEE = 35, BULLET = 30, LASER = 30, ENERGY = 10, BOMB = 25, BIO = 0, RAD = 0, FIRE = 50, ACID = 50)
 	flags_inv = HIDEEARS|HIDEEYES
 	cold_protection = HEAD
 	min_cold_protection_temperature = HELMET_MIN_TEMP_PROTECT
 	heat_protection = HEAD
 	max_heat_protection_temperature = HELMET_MAX_TEMP_PROTECT
 	strip_delay = 60
-	burn_state = FIRE_PROOF
-	species_fit = list("Vox", "Drask", "Grey")
+	dog_fashion = /datum/dog_fashion/head/helmet
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/species/vox/helmet.dmi',
-		"Drask" = 'icons/mob/species/drask/helmet.dmi',
-		"Grey" = 'icons/mob/species/grey/helmet.dmi'
+		"Vox" = 'icons/mob/clothing/species/vox/helmet.dmi',
+		"Drask" = 'icons/mob/clothing/species/drask/helmet.dmi',
+		"Grey" = 'icons/mob/clothing/species/grey/helmet.dmi'
 		)
 
 /obj/item/clothing/head/helmet/attack_self(mob/user)
@@ -50,6 +50,7 @@
 	desc = "A helmet with a built-in thermal scanning visor."
 	icon_state = "helmetthermals"
 	vision_flags = SEE_MOBS
+	lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_VISIBLE
 
 /obj/item/clothing/head/helmet/meson
 	name = "meson visor helmet"
@@ -67,24 +68,26 @@
 	name = "night-vision helmet"
 	desc = "A helmet with a built-in pair of night vision goggles."
 	icon_state = "helmetNVG"
-	helmet_goggles_invis_view = SEE_INVISIBLE_MINIMUM //don't render darkness while wearing these
+	lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE //don't render darkness while wearing these
 
 /obj/item/clothing/head/helmet/alt
 	name = "bulletproof helmet"
 	desc = "A bulletproof helmet that excels in protecting the wearer against traditional projectile weaponry and explosives to a minor extent."
 	icon_state = "swat"
 	item_state = "swat-alt"
-	armor = list(melee = 15, bullet = 40, laser = 10, energy = 10, bomb = 40, bio = 0, rad = 0)
+	armor = list(MELEE = 15, BULLET = 60, LASER = 10, ENERGY = 10, BOMB = 40, BIO = 0, RAD = 0, FIRE = 50, ACID = 50)
+	dog_fashion = null
 
 /obj/item/clothing/head/helmet/riot
 	name = "riot helmet"
 	desc = "It's a helmet specifically designed to protect against close range attacks."
 	icon_state = "riot"
 	item_state = "helmet"
-	armor = list(melee = 41, bullet = 15, laser = 5, energy = 5, bomb = 5, bio = 2, rad = 0)
+	armor = list(MELEE = 50, BULLET = 10, LASER = 10, ENERGY = 10, BOMB = 0, BIO = 0, RAD = 0, FIRE = 80, ACID = 80)
 	flags_inv = HIDEEARS
 	flags_cover = HEADCOVERSEYES | HEADCOVERSMOUTH
 	strip_delay = 80
+	dog_fashion = null
 
 /obj/item/clothing/head/helmet/riot/knight
 	name = "medieval helmet"
@@ -93,6 +96,7 @@
 	item_state = "knight_green"
 	flags = BLOCKHAIR
 	flags_inv = HIDEMASK|HIDEEARS|HIDEEYES|HIDEFACE
+	dog_fashion = null
 
 /obj/item/clothing/head/helmet/justice
 	name = "helmet of justice"
@@ -103,7 +107,8 @@
 	actions_types = list(/datum/action/item_action/toggle_helmet_light)
 	can_toggle = 1
 	toggle_cooldown = 20
-	active_sound = 'sound/items/WEEOO1.ogg'
+	active_sound = 'sound/items/weeoo1.ogg'
+	dog_fashion = null
 
 /obj/item/clothing/head/helmet/justice/escape
 	name = "alarm helmet"
@@ -114,11 +119,11 @@
 
 
 /obj/item/clothing/head/helmet/swat
-	name = "SWAT helmet"
+	name = "\improper SWAT helmet"
 	desc = "They're often used by highly trained Swat Members."
 	icon_state = "swat"
 	item_state = "swat"
-	armor = list(melee = 40, bullet = 30, laser = 30, energy = 30, bomb = 50, bio = 90, rad = 20)
+	armor = list(MELEE = 40, BULLET = 30, LASER = 30, ENERGY = 30, BOMB = 50, BIO = 90, RAD = 20, FIRE = 50, ACID = 50)
 	flags = null
 	flags_inv = HIDEEARS|HIDEEYES
 	cold_protection = HEAD
@@ -126,6 +131,7 @@
 	heat_protection = HEAD
 	max_heat_protection_temperature = SPACE_HELM_MAX_TEMP_PROTECT
 	strip_delay = 80
+	dog_fashion = null
 
 /obj/item/clothing/head/helmet/swat/syndicate
 	name = "blood-red helmet"
@@ -134,32 +140,43 @@
 	item_state = "helmet"
 
 /obj/item/clothing/head/helmet/thunderdome
-	name = "Thunderdome helmet"
+	name = "\improper Thunderdome helmet"
 	desc = "<i>'Let the battle commence!'</i>"
 	icon_state = "thunderdome"
 	flags = null
 	item_state = "thunderdome"
-	armor = list(melee = 40, bullet = 30, laser = 25, energy = 10, bomb = 25, bio = 10, rad = 0)
+	armor = list(MELEE = 80, BULLET = 80, LASER = 50, ENERGY = 50, BOMB = 100, BIO = 100, RAD = 100, FIRE = 90, ACID = 90)
 	cold_protection = HEAD
 	min_cold_protection_temperature = SPACE_HELM_MIN_TEMP_PROTECT
 	heat_protection = HEAD
 	max_heat_protection_temperature = SPACE_HELM_MAX_TEMP_PROTECT
 	strip_delay = 80
+	dog_fashion = null
 
 /obj/item/clothing/head/helmet/roman
 	name = "roman helmet"
 	desc = "An ancient helmet made of bronze and leather."
 	flags = null
-	armor = list(melee = 25, bullet = 0, laser = 25, energy = 10, bomb = 10, bio = 0, rad = 0)
+	armor = list(MELEE = 25, BULLET = 0, LASER = 25, ENERGY = 10, BOMB = 10, BIO = 0, RAD = 0, FIRE = 100, ACID = 50)
+	resistance_flags = FIRE_PROOF
 	icon_state = "roman"
 	item_state = "roman"
 	strip_delay = 100
+	dog_fashion = /datum/dog_fashion/head/roman
+
+/obj/item/clothing/head/helmet/roman/fake
+	desc = "An ancient helmet made of plastic and leather."
+	armor = list(melee = 0, bullet = 0, laser = 0, energy = 0, bomb = 0, bio = 0, rad = 0, fire = 0, acid = 0)
 
 /obj/item/clothing/head/helmet/roman/legionaire
 	name = "roman legionaire helmet"
 	desc = "An ancient helmet made of bronze and leather. Has a red crest on top of it."
 	icon_state = "roman_c"
 	item_state = "roman_c"
+
+/obj/item/clothing/head/helmet/roman/legionaire/fake
+	desc = "An ancient helmet made of plastic and leather. Has a red crest on top of it."
+	armor = list(melee = 0, bullet = 0, laser = 0, energy = 0, bomb = 0, bio = 0, rad = 0, fire = 0, acid = 0)
 
 /obj/item/clothing/head/helmet/gladiator
 	name = "gladiator helmet"
@@ -173,38 +190,41 @@
 	actions_types = list(/datum/action/item_action/toggle_helmet_mode)
 	can_toggle = 1
 	toggle_cooldown = 20
-	toggle_sound = 'sound/items/ZippoClose.ogg'
+	toggle_sound = 'sound/items/zippoclose.ogg'
+	dog_fashion = null
 
-obj/item/clothing/head/helmet/redtaghelm
+/obj/item/clothing/head/helmet/redtaghelm
 	name = "red laser tag helmet"
 	desc = "They have chosen their own end."
 	icon_state = "redtaghelm"
 	flags = null
 	item_state = "redtaghelm"
-	armor = list(melee = 15, bullet = 10, laser = 20, energy = 10, bomb = 20, bio = 0, rad = 0)
+	armor = list(MELEE = 15, BULLET = 10, LASER = 20, ENERGY = 10, BOMB = 20, BIO = 0, RAD = 0, FIRE = 0, ACID = 50)
 	// Offer about the same protection as a hardhat.
 	flags_inv = HIDEEARS|HIDEEYES
+	dog_fashion = null
 
-obj/item/clothing/head/helmet/bluetaghelm
+/obj/item/clothing/head/helmet/bluetaghelm
 	name = "blue laser tag helmet"
 	desc = "They'll need more men."
 	icon_state = "bluetaghelm"
 	flags = null
 	item_state = "bluetaghelm"
-	armor = list(melee = 15, bullet = 10, laser = 20, energy = 10, bomb = 20, bio = 0, rad = 0)
+	armor = list(MELEE = 15, BULLET = 10, LASER = 20, ENERGY = 10, BOMB = 20, BIO = 0, RAD = 0, FIRE = 0, ACID = 50)
 	// Offer about the same protection as a hardhat.
 	flags_inv = HIDEEARS|HIDEEYES
+	dog_fashion = null
 
-obj/item/clothing/head/blob
+/obj/item/clothing/head/blob
 	name = "blob hat"
 	desc = "A collectible hat handed out at the latest Blob Family Reunion."
 	icon_state = "blobhat"
 	item_state = "blobhat"
 	flags_inv = HIDEMASK|HIDEEARS|HIDEEYES
 	flags_cover = HEADCOVERSEYES | HEADCOVERSMOUTH
-	species_fit = list("Vox")
+
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/species/vox/helmet.dmi'
+		"Vox" = 'icons/mob/clothing/species/vox/helmet.dmi'
 		)
 
 /obj/item/clothing/head/helmet/riot/knight/blue
@@ -224,7 +244,26 @@ obj/item/clothing/head/blob
 	desc = "Deus Vult."
 	icon_state = "knight_templar"
 	item_state = "knight_templar"
-	armor = list(melee = 20, bullet = 7, laser = 2, energy = 2, bomb = 2, bio = 2, rad = 0)
+	armor = list(melee = 20, bullet = 7, laser = 2, energy = 2, bomb = 2, bio = 2, rad = 0, fire = 80, acid = 80)
+
+/obj/item/clothing/head/helmet/skull
+	name = "skull helmet"
+	desc = "An intimidating tribal helmet, it doesn't look very comfortable."
+	flags_inv = HIDEMASK|HIDEEARS|HIDEEYES|HIDEFACE
+	flags_cover = HEADCOVERSEYES
+	armor = list(MELEE = 35, BULLET = 25, LASER = 25, ENERGY = 10, BOMB = 25, BIO = 0, RAD = 0, FIRE = 50, ACID = 50)
+	icon_state = "skull"
+	item_state = "skull"
+	strip_delay = 100
+
+/obj/item/clothing/head/helmet/durathread
+	name = "durathread helmet"
+	desc = "A helmet made from durathread and leather."
+	icon_state = "durathread"
+	item_state = "durathread"
+	resistance_flags = FLAMMABLE
+	armor = list(MELEE = 20, BULLET = 10, LASER = 30, ENERGY = 5, BOMB = 15, BIO = 0, RAD = 0, FIRE = 40, ACID = 50)
+	strip_delay = 60
 
 //Commander
 /obj/item/clothing/head/helmet/ert/command
@@ -237,6 +276,12 @@ obj/item/clothing/head/blob
 	name = "emergency response team security helmet"
 	desc = "An in-atmosphere helmet worn by security members of the Nanotrasen Emergency Response Team. Has red highlights."
 	icon_state = "erthelmet_sec"
+
+/obj/item/clothing/head/helmet/ert/security/paranormal
+	name = "paranormal emergency response team helmet"
+	desc = "An in-atmosphere helmet worn by paranormal members of the Nanotrasen Emergency Response Team. Has crusader sigils."
+	icon_state = "knight_templar"
+	item_state = "knight_templar"
 
 //Engineer
 /obj/item/clothing/head/helmet/ert/engineer

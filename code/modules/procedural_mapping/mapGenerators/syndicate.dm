@@ -1,10 +1,7 @@
 // Modules
 
-/turf/simulated/shuttle/floor/syndicate //TODO: move to proper file/replace syndie shuttle turfs
-	icon_state = "floor4"
-
 /datum/mapGeneratorModule/bottomLayer/syndieFloor
-	spawnableTurfs = list(/turf/simulated/shuttle/floor/syndicate = 100)
+	spawnableTurfs = list(/turf/simulated/floor/mineral/plastitanium/red = 100)
 
 /datum/mapGeneratorModule/border/syndieWalls
 	spawnableAtoms = list()
@@ -14,7 +11,7 @@
 /datum/mapGeneratorModule/syndieFurniture
 	clusterCheckFlags = CLUSTER_CHECK_SAME_ATOMS
 	spawnableTurfs = list()
-	spawnableAtoms = list(/obj/structure/table = 20,/obj/structure/stool/bed/chair = 15,/obj/structure/stool = 10, \
+	spawnableAtoms = list(/obj/structure/table = 20,/obj/structure/chair = 15,/obj/structure/chair/stool = 10, \
 		/obj/structure/computerframe = 15, /obj/item/storage/toolbox/syndicate = 15 ,\
 		/obj/structure/closet/syndicate = 25)
 

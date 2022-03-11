@@ -20,24 +20,36 @@
 	var/stealthmode = FALSE
 	var/list/victims = list()
 
-	use_power = 1
+	use_power = IDLE_POWER_USE
 	idle_power_usage = 2
 	active_power_usage = 500
 
+/obj/machinery/gibber/Initialize(mapload)
+	. = ..()
+	add_overlay("grjam")
+	component_parts = list()
+	component_parts += new /obj/item/circuitboard/gibber(null)
+	component_parts += new /obj/item/stock_parts/matter_bin(null)
+	component_parts += new /obj/item/stock_parts/manipulator(null)
+	RefreshParts()
+
 /obj/machinery/gibber/Destroy()
-	if(contents.len)
-		for(var/atom/movable/A in contents)
-			A.loc = get_turf(src)
-	if(occupant)
-		occupant = null
+	for(var/atom/movable/A in contents)
+		A.forceMove(get_turf(src))
+	occupant = null
 	return ..()
 
-/obj/machinery/gibber/RefreshParts() //If you want to make the machine upgradable, this is where you would change any vars basd on its stock parts.
-	return
-
-/obj/machinery/gibber/New()
-	..()
-	overlays += image('icons/obj/kitchen.dmi', "grjam")
+/obj/machinery/gibber/suicide_act(mob/user)
+	if(occupant || locked)
+		return FALSE
+	user.visible_message("<span class='danger'>[user] climbs into [src] and turns it on!</b></span>")
+	user.Stun(10)
+	user.forceMove(src)
+	occupant = user
+	update_icon()
+	feedinTopanim()
+	addtimer(CALLBACK(src, .proc/startgibbing, user), 33)
+	return OBLITERATION
 
 /obj/machinery/gibber/update_icon()
 	overlays.Cut()
@@ -75,8 +87,7 @@
 		to_chat(user, "<span class='warning'>Wait for [occupant.name] to finish being loaded!</span>")
 		return
 
-	else
-		startgibbing(user)
+	startgibbing(user)
 
 /obj/machinery/gibber/attackby(obj/item/P, mob/user, params)
 	if(istype(P, /obj/item/grab))
@@ -97,7 +108,9 @@
 	if(default_unfasten_wrench(user, P))
 		return
 
-	default_deconstruction_crowbar(P)
+	if(default_deconstruction_crowbar(user, P))
+		return
+	return ..()
 
 /obj/machinery/gibber/MouseDrop_T(mob/target, mob/user)
 	if(user.incapacitated() || !ishuman(user))
@@ -113,27 +126,27 @@
 
 	move_into_gibber(user,target)
 
-/obj/machinery/gibber/proc/move_into_gibber(var/mob/user,var/mob/living/victim)
+/obj/machinery/gibber/proc/move_into_gibber(mob/user, mob/living/victim)
 	if(occupant)
-		to_chat(user, "<span class='danger'>The [src] is full, empty it first!</span>")
+		to_chat(user, "<span class='danger'>[src] is full, empty it first!</span>")
 		return
 
 	if(operating)
-		to_chat(user, "<span class='danger'>The [src] is locked and running, wait for it to finish.</span>")
+		to_chat(user, "<span class='danger'>[src] is locked and running, wait for it to finish.</span>")
 		return
 
-	if(!ishuman(victim) || issmall(victim))
-		to_chat(user, "<span class='danger'>This is not suitable for the [src]!</span>")
+	if(!ishuman(victim))
+		to_chat(user, "<span class='danger'>This is not suitable for [src]!</span>")
 		return
 
-	if(victim.abiotic(1))
-		to_chat(user, "<span class='danger'>Subject may not have abiotic items on.</span>")
+	if(victim.abiotic(TRUE))
+		to_chat(user, "<span class='danger'>Subject may not have anything on their body.</span>")
 		return
 
-	user.visible_message("<span class='danger'>[user] starts to put [victim] into the [src]!</span>")
+	user.visible_message("<span class='danger'>[user] starts to put [victim] into [src]!</span>")
 	add_fingerprint(user)
 	if(do_after(user, 30, target = victim) && user.Adjacent(src) && victim.Adjacent(user) && !occupant)
-		user.visible_message("<span class='danger'>[user] stuffs [victim] into the [src]!</span>")
+		user.visible_message("<span class='danger'>[user] stuffs [victim] into [src]!</span>")
 
 		victim.forceMove(src)
 		occupant = victim
@@ -146,7 +159,7 @@
 	set name = "Empty Gibber"
 	set src in oview(1)
 
-	if(usr.stat != CONSCIOUS)
+	if(usr.incapacitated())
 		return
 
 	go_out()
@@ -215,13 +228,13 @@
 	qdel(holder2) //get rid of holder object
 	locked = 0 //unlock
 
-/obj/machinery/gibber/proc/startgibbing(var/mob/user, var/UserOverride=0)
+/obj/machinery/gibber/proc/startgibbing(mob/user, UserOverride=0)
 	if(!istype(user) && !UserOverride)
 		log_debug("Some shit just went down with the gibber at X[x], Y[y], Z[z] with an invalid user. (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[x];Y=[y];Z=[z]'>JMP</a>)")
 		return
 
 	if(UserOverride)
-		msg_admin_attack("[key_name_admin(occupant)] was gibbed by an autogibber (\the [src]) [ADMIN_JMP(src)]")
+		add_attack_logs(user, occupant, "gibbed by an autogibber ([src])")
 		log_game("[key_name(occupant)] was gibbed by an autogibber ([src]) (X:[x] Y:[y] Z:[z])")
 
 	if(operating)
@@ -249,26 +262,25 @@
 	for(var/i=1 to slab_count)
 		var/obj/item/reagent_containers/food/snacks/meat/new_meat = new slab_type(src)
 		new_meat.name = "[slab_name] [new_meat.name]"
-		new_meat.reagents.add_reagent("nutriment",slab_nutrition)
+		new_meat.reagents.add_reagent("nutriment", slab_nutrition)
 
 
 		if(occupant.reagents)
-			occupant.reagents.trans_to(new_meat, round(occupant.reagents.total_volume/slab_count,1))
+			occupant.reagents.trans_to(new_meat, round(occupant.reagents.total_volume/slab_count, 1))
 
-	if(occupant.get_species() == "Human")
-		new /obj/item/stack/sheet/animalhide/human(src)
+	if(ishuman(occupant))
+		var/mob/living/carbon/human/H = occupant
+		var/skinned = H.dna.species.skinned_type
+		if(skinned)
+			new skinned(src)
 	new /obj/effect/decal/cleanable/blood/gibs(src)
 
 	if(!UserOverride)
-		add_attack_logs(user, occupant, "Gibbed in [src]", !!occupant.ckey)
-
-		if(!iscarbon(user))
-			occupant.LAssailant = null
-		else
-			occupant.LAssailant = user
+		add_attack_logs(user, occupant, "Gibbed in [src]", !!occupant.ckey ? ATKLOG_FEW : ATKLOG_ALL)
 
 	else //this looks ugly but it's better than a copy-pasted startgibbing proc override
 		occupant.create_attack_log("Was gibbed by <b>an autogibber (\the [src])</b>")
+		add_attack_logs(src, occupant, "gibbed")
 
 	occupant.emote("scream")
 	playsound(get_turf(src), 'sound/goonstation/effects/gib.ogg', 50, 1)
@@ -276,11 +288,10 @@
 	occupant.death(1)
 	occupant.ghostize()
 
-	qdel(occupant)
+	QDEL_NULL(occupant)
 
 	spawn(gibtime)
 		playsound(get_turf(src), 'sound/effects/splat.ogg', 50, 1)
-		operating = 0
 
 		if(stealthmode)
 			for(var/atom/movable/AM in contents)
@@ -289,12 +300,12 @@
 		else
 			for(var/obj/item/thing in contents) //Meat is spawned inside the gibber and thrown out afterwards.
 				thing.loc = get_turf(thing) // Drop it onto the turf for throwing.
-				thing.throw_at(get_edge_target_turf(src,gib_throw_dir),rand(1,5),15) // Being pelted with bits of meat and bone would hurt.
+				thing.throw_at(get_edge_target_turf(src, gib_throw_dir), rand(1, 5), 15) // Being pelted with bits of meat and bone would hurt.
 				sleep(1)
 
 			for(var/obj/effect/gibs in contents) //throw out the gibs too
 				gibs.loc = get_turf(gibs) //drop onto turf for throwing
-				gibs.throw_at(get_edge_target_turf(src,gib_throw_dir),rand(1,5),15)
+				gibs.throw_at(get_edge_target_turf(src, gib_throw_dir), rand(1, 5), 15)
 				sleep(1)
 
 		pixel_x = initial(pixel_x) //return to it's spot after shaking
@@ -355,7 +366,7 @@
 			break
 	victim_targets.Cut()
 
-/obj/machinery/gibber/autogibber/proc/force_move_into_gibber(var/mob/living/carbon/human/victim)
+/obj/machinery/gibber/autogibber/proc/force_move_into_gibber(mob/living/carbon/human/victim)
 	if(!istype(victim))	return 0
 	visible_message("<span class='danger'>\The [victim.name] gets sucked into \the [src]!</span>")
 
@@ -376,13 +387,11 @@
 			var/obj/item/implant/I = O
 			if(I.implanted)
 				continue
-		if(istype(O,/obj/item/organ))
-			continue
 		if(O.flags & NODROP || stealthmode)
 			qdel(O) //they are already dead by now
 		H.unEquip(O)
 		O.loc = loc
-		O.throw_at(get_edge_target_turf(src,gib_throw_dir),rand(1,5),15)
+		O.throw_at(get_edge_target_turf(src, gib_throw_dir), rand(1, 5), 15)
 		sleep(1)
 
 	for(var/obj/item/clothing/C in H)
@@ -390,7 +399,7 @@
 			qdel(C)
 		H.unEquip(C)
 		C.loc = loc
-		C.throw_at(get_edge_target_turf(src,gib_throw_dir),rand(1,5),15)
+		C.throw_at(get_edge_target_turf(src, gib_throw_dir), rand(1, 5), 15)
 		sleep(1)
 
 	visible_message("<span class='warning'>\The [src] spits out \the [H.name]'s possessions!")
@@ -402,7 +411,7 @@
 			qdel(O)
 		else if(istype(O))
 			O.loc = loc
-			O.throw_at(get_edge_target_turf(src,gib_throw_dir),rand(1,5),15)
+			O.throw_at(get_edge_target_turf(src, gib_throw_dir), rand(1, 5), 15)
 			spats++
 			sleep(1)
 	if(spats)

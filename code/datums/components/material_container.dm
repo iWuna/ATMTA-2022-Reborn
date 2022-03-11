@@ -15,23 +15,30 @@
 	var/sheet_type
 	var/list/materials
 	var/show_on_examine
+	var/disable_attackby
 	var/list/allowed_typecache
 	var/last_inserted_id
 	var/precise_insertion = FALSE
 	var/datum/callback/precondition
 	var/datum/callback/after_insert
 
-/datum/component/material_container/Initialize(list/mat_list, max_amt = 0, _show_on_examine = FALSE, list/allowed_types, datum/callback/_precondition, datum/callback/_after_insert)
+/datum/component/material_container/Initialize(list/mat_list, max_amt = 0, _show_on_examine = FALSE, list/allowed_types, datum/callback/_precondition, datum/callback/_after_insert, _disable_attackby)
 	materials = list()
 	max_amount = max(0, max_amt)
 	show_on_examine = _show_on_examine
+	disable_attackby = _disable_attackby
+
 	if(allowed_types)
-		allowed_typecache = typecacheof(allowed_types)
+		if(ispath(allowed_types) && allowed_types == /obj/item/stack)
+			allowed_typecache = GLOB.typecache_stack
+		else
+			allowed_typecache = typecacheof(allowed_types)
+
 	precondition = _precondition
 	after_insert = _after_insert
 
-	RegisterSignal(COMSIG_PARENT_ATTACKBY, .proc/OnAttackBy)
-	RegisterSignal(COMSIG_PARENT_EXAMINE, .proc/OnExamine)
+	RegisterSignal(parent, COMSIG_PARENT_ATTACKBY, .proc/OnAttackBy)
+	RegisterSignal(parent, COMSIG_PARENT_EXAMINE, .proc/OnExamine)
 
 	var/list/possible_mats = list()
 	for(var/mat_type in subtypesof(/datum/material))
@@ -42,16 +49,25 @@
 			var/mat_path = possible_mats[id]
 			materials[id] = new mat_path()
 
-/datum/component/material_container/proc/OnExamine(mob/user)
-	for(var/I in materials)
-		var/datum/material/M = materials[I]
-		var/amt = amount(M.id)
-		if(amt)
-			to_chat(user, "<span class='notice'>It has [amt] units of [lowertext(M.name)] stored.</span>")
+/datum/component/material_container/Destroy(force, silent)
+	QDEL_LIST_ASSOC_VAL(materials)
+	return ..()
 
-/datum/component/material_container/proc/OnAttackBy(obj/item/I, mob/living/user)
+/datum/component/material_container/proc/OnExamine(datum/source, mob/user, list/examine_list)
+	if(show_on_examine)
+		for(var/I in materials)
+			var/datum/material/M = materials[I]
+			var/amt = amount(M.id)
+			if(amt)
+				examine_list += "<span class='notice'>It has [amt] units of [lowertext(M.name)] stored.</span>"
+
+/datum/component/material_container/proc/OnAttackBy(datum/source, obj/item/I, mob/living/user)
 	var/list/tc = allowed_typecache
+	if(disable_attackby)
+		return
 	if(user.a_intent != INTENT_HELP)
+		return
+	if(I.flags & ABSTRACT)
 		return
 	if((I.flags_2 & (HOLOGRAM_2 | NO_MAT_REDEMPTION_2)) || (tc && !is_type_in_typecache(I, tc)))
 		to_chat(user, "<span class='warning'>[parent] won't accept [I]!</span>")
@@ -88,10 +104,9 @@
 		if(istype(I, /obj/item/stack))
 			var/obj/item/stack/S = I
 			to_chat(user, "<span class='notice'>You insert [inserted] [S.singular_name][inserted>1 ? "s" : ""] into [parent].</span>")
-			if(!QDELETED(I))
-				if(!user.put_in_hands(I))
-					stack_trace("Warning: User could not put object back in hand during material container insertion, line [__LINE__]! This can lead to issues.")
-					I.forceMove(user.loc)
+			if(!QDELETED(I) && !user.put_in_hands(I))
+				stack_trace("Warning: User could not put object back in hand during material container insertion, line [__LINE__]! This can lead to issues.")
+				I.forceMove(user.drop_location())
 		else
 			to_chat(user, "<span class='notice'>You insert a material total of [inserted] into [parent].</span>")
 			qdel(I)
@@ -119,13 +134,13 @@
 
 /datum/component/material_container/proc/insert_stack(obj/item/stack/S, amt, multiplier = 1)
 	if(isnull(amt))
-		amt = S.amount
+		amt = S.get_amount()
 
 	if(amt <= 0)
 		return FALSE
 
-	if(amt > S.amount)
-		amt = S.amount
+	if(amt > S.get_amount())
+		amt = S.get_amount()
 
 	var/material_amt = get_item_material_amount(S)
 	if(!material_amt)
@@ -194,7 +209,7 @@
 			return amt
 	return FALSE
 
-/datum/component/material_container/proc/transer_amt_to(var/datum/component/material_container/T, amt, id)
+/datum/component/material_container/proc/transer_amt_to(datum/component/material_container/T, amt, id)
 	if((amt==0)||(!T)||(!id))
 		return FALSE
 	if(amt<0)
@@ -235,24 +250,25 @@
 //For spawning mineral sheets; internal use only
 /datum/component/material_container/proc/retrieve(sheet_amt, datum/material/M, target = null)
 	if(!M.sheet_type)
-		return FALSE
-	if(sheet_amt > 0)
-		if(M.amount < (sheet_amt * MINERAL_MATERIAL_AMOUNT))
-			sheet_amt = round(M.amount / MINERAL_MATERIAL_AMOUNT)
-		var/count = 0
-		while(sheet_amt > MAX_STACK_SIZE)
-			new M.sheet_type(get_turf(parent), MAX_STACK_SIZE)
-			count += MAX_STACK_SIZE
-			use_amount_type(sheet_amt * MINERAL_MATERIAL_AMOUNT, M.id)
-			sheet_amt -= MAX_STACK_SIZE
-		if(round((sheet_amt * MINERAL_MATERIAL_AMOUNT) / MINERAL_MATERIAL_AMOUNT))
-			var/obj/item/stack/sheet/s = new M.sheet_type(get_turf(parent), sheet_amt)
-			if(target)
-				s.forceMove(target)
-			count += sheet_amt
-			use_amount_type(sheet_amt * MINERAL_MATERIAL_AMOUNT, M.id)
-		return count
-	return FALSE
+		return 0
+	if(sheet_amt <= 0)
+		return 0
+
+	if(!target)
+		target = get_turf(parent)
+	if(M.amount < (sheet_amt * MINERAL_MATERIAL_AMOUNT))
+		sheet_amt = round(M.amount / MINERAL_MATERIAL_AMOUNT)
+	var/count = 0
+	while(sheet_amt > MAX_STACK_SIZE)
+		new M.sheet_type(target, MAX_STACK_SIZE)
+		count += MAX_STACK_SIZE
+		use_amount_type(sheet_amt * MINERAL_MATERIAL_AMOUNT, M.id)
+		sheet_amt -= MAX_STACK_SIZE
+	if(sheet_amt >= 1)
+		new M.sheet_type(target, sheet_amt)
+		count += sheet_amt
+		use_amount_type(sheet_amt * MINERAL_MATERIAL_AMOUNT, M.id)
+	return count
 
 /datum/component/material_container/proc/retrieve_sheets(sheet_amt, id, target = null)
 	if(materials[id])
@@ -315,69 +331,81 @@
 	var/id = null
 	var/sheet_type = null
 	var/coin_type = null
+	var/ore_type = null
 
 /datum/material/metal
 	name = "Metal"
 	id = MAT_METAL
 	sheet_type = /obj/item/stack/sheet/metal
 	coin_type = /obj/item/coin/iron
+	ore_type = /obj/item/stack/ore/iron
 
 /datum/material/glass
 	name = "Glass"
 	id = MAT_GLASS
 	sheet_type = /obj/item/stack/sheet/glass
+	ore_type = /obj/item/stack/ore/glass
 
 /datum/material/silver
 	name = "Silver"
 	id = MAT_SILVER
 	sheet_type = /obj/item/stack/sheet/mineral/silver
 	coin_type = /obj/item/coin/silver
+	ore_type = /obj/item/stack/ore/silver
 
 /datum/material/gold
 	name = "Gold"
 	id = MAT_GOLD
 	sheet_type = /obj/item/stack/sheet/mineral/gold
 	coin_type = /obj/item/coin/gold
+	ore_type = /obj/item/stack/ore/gold
 
 /datum/material/diamond
 	name = "Diamond"
 	id = MAT_DIAMOND
 	sheet_type = /obj/item/stack/sheet/mineral/diamond
 	coin_type = /obj/item/coin/diamond
+	ore_type = /obj/item/stack/ore/diamond
 
 /datum/material/uranium
 	name = "Uranium"
 	id = MAT_URANIUM
 	sheet_type = /obj/item/stack/sheet/mineral/uranium
 	coin_type = /obj/item/coin/uranium
+	ore_type = /obj/item/stack/ore/uranium
 
 /datum/material/plasma
 	name = "Solid Plasma"
 	id = MAT_PLASMA
 	sheet_type = /obj/item/stack/sheet/mineral/plasma
 	coin_type = /obj/item/coin/plasma
+	ore_type = /obj/item/stack/ore/plasma
 
 /datum/material/bluespace
 	name = "Bluespace Mesh"
 	id = MAT_BLUESPACE
 	sheet_type = /obj/item/stack/sheet/bluespace_crystal
+	ore_type = /obj/item/stack/ore/bluespace_crystal
 
 /datum/material/bananium
 	name = "Bananium"
 	id = MAT_BANANIUM
 	sheet_type = /obj/item/stack/sheet/mineral/bananium
 	coin_type = /obj/item/coin/clown
+	ore_type = /obj/item/stack/ore/bananium
 
 /datum/material/tranquillite
 	name = "Tranquillite"
 	id = MAT_TRANQUILLITE
 	sheet_type = /obj/item/stack/sheet/mineral/tranquillite
 	coin_type = /obj/item/coin/mime
+	ore_type = /obj/item/stack/ore/tranquillite
 
 /datum/material/titanium
 	name = "Titanium"
 	id = MAT_TITANIUM
 	sheet_type = /obj/item/stack/sheet/mineral/titanium
+	ore_type = /obj/item/stack/ore/titanium
 
 /datum/material/biomass
 	name = "Biomass"

@@ -1,6 +1,7 @@
 #define WAND_OPEN "Open Door"
 #define WAND_BOLT "Toggle Bolts"
 #define WAND_EMERGENCY "Toggle Emergency Access"
+#define WAND_SPEED "Change Closing Speed"
 
 /obj/item/door_remote
 	icon_state = "gangtool-white"
@@ -11,13 +12,17 @@
 	w_class = WEIGHT_CLASS_TINY
 	flags = NOBLUDGEON
 	var/mode = WAND_OPEN
-	var/region_access = 1 //See access.dm
+	var/region_access = list()
+	var/additional_access = list()
 	var/obj/item/card/id/ID
 
 /obj/item/door_remote/New()
 	..()
 	ID = new /obj/item/card/id
-	ID.access = get_region_accesses(region_access)
+	for(var/region in region_access)
+		ID.access += get_region_accesses(region)
+	ID.access += additional_access
+	ID.access = uniquelist(ID.access)
 
 /obj/item/door_remote/Destroy()
 	QDEL_NULL(ID)
@@ -30,8 +35,15 @@
 		if(WAND_BOLT)
 			mode = WAND_EMERGENCY
 		if(WAND_EMERGENCY)
+			mode = WAND_SPEED
+		if(WAND_SPEED)
 			mode = WAND_OPEN
-	to_chat(user, "Now in mode: [mode].")
+
+	to_chat(user, "<span class='notice'>Now in mode: [mode].</span>")
+
+/obj/item/door_remote/examine(mob/user)
+	. = ..()
+	. += "<span class='notice'>It's current mode is: [mode]</span>"
 
 /obj/item/door_remote/afterattack(obj/machinery/door/airlock/D, mob/user)
 	if(!istype(D))
@@ -46,6 +58,7 @@
 		to_chat(user, "<span class='danger'>[D]'s ID scan is disabled!</span>")
 		return
 	if(D.check_access(src.ID))
+		D.add_hiddenprint(user)
 		switch(mode)
 			if(WAND_OPEN)
 				if(D.density)
@@ -59,10 +72,13 @@
 					D.lock()
 			if(WAND_EMERGENCY)
 				if(D.emergency)
-					D.emergency = 0
+					D.emergency = FALSE
 				else
-					D.emergency = 1
+					D.emergency = TRUE
 				D.update_icon()
+			if(WAND_SPEED)
+				D.normalspeed = !D.normalspeed
+				to_chat(user, "<span class='notice'>[D] is now in [D.normalspeed ? "normal" : "fast"] mode.</span>")
 	else
 		to_chat(user, "<span class='danger'>[src] does not have access to this door.</span>")
 
@@ -70,49 +86,73 @@
 	name = "omni door remote"
 	desc = "This control wand can access any door on the station."
 	icon_state = "gangtool-yellow"
-	region_access = REGION_ALL
+	region_access = list(REGION_ALL)
 
 /obj/item/door_remote/captain
 	name = "command door remote"
 	icon_state = "gangtool-yellow"
-	region_access = REGION_COMMAND
+	region_access = list(REGION_COMMAND)
 
 /obj/item/door_remote/chief_engineer
 	name = "engineering door remote"
 	icon_state = "gangtool-orange"
-	region_access = REGION_ENGINEERING
+	region_access = list(REGION_ENGINEERING)
 
 /obj/item/door_remote/research_director
 	name = "research door remote"
 	icon_state = "gangtool-purple"
-	region_access = REGION_RESEARCH
+	region_access = list(REGION_RESEARCH)
 
 /obj/item/door_remote/head_of_security
 	name = "security door remote"
 	icon_state = "gangtool-red"
-	region_access = REGION_SECURITY
+	region_access = list(REGION_SECURITY)
 
 /obj/item/door_remote/quartermaster
 	name = "supply door remote"
 	icon_state = "gangtool-green"
-	region_access = REGION_SUPPLY
+	region_access = list(REGION_SUPPLY)
 
 /obj/item/door_remote/chief_medical_officer
 	name = "medical door remote"
 	icon_state = "gangtool-blue"
-	region_access = REGION_MEDBAY
+	region_access = list(REGION_MEDBAY)
 
 /obj/item/door_remote/civillian
 	name = "civillian door remote"
 	icon_state = "gangtool-white"
-	region_access = REGION_GENERAL
+	region_access = list(REGION_GENERAL, REGION_SUPPLY)
+	additional_access = list(ACCESS_HOP)
 
 /obj/item/door_remote/centcomm
 	name = "centcomm door remote"
 	desc = "High-ranking NT officials only."
 	icon_state = "gangtool-blue"
-	region_access = REGION_CENTCOMM
+	region_access = list(REGION_CENTCOMM)
+
+/obj/item/door_remote/omni/access_tuner
+	name = "access tuner"
+	desc = "A device used for illegally interfacing with doors."
+	icon_state = "hacktool"
+	item_state = "hacktool"
+	var/hack_speed = 30
+	var/busy = FALSE
+
+/obj/item/door_remote/omni/access_tuner/afterattack(obj/machinery/door/airlock/D, mob/user)
+	if(!istype(D))
+		return
+	if(busy)
+		to_chat(user, "<span class='warning'>[src] is alreading interfacing with a door!</span>")
+		return
+	icon_state = "hacktool-g"
+	busy = TRUE
+	to_chat(user, "<span class='notice'>[src] is attempting to interface with [D]...</span>")
+	if(do_after(user, hack_speed, target = D))
+		. = ..()
+	busy = FALSE
+	icon_state = "hacktool"
 
 #undef WAND_OPEN
 #undef WAND_BOLT
 #undef WAND_EMERGENCY
+#undef WAND_SPEED

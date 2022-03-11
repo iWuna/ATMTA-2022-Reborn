@@ -5,15 +5,33 @@
 	icon_state = "lipstick"
 	w_class = WEIGHT_CLASS_TINY
 	var/colour = "red"
-	var/open = 0
+	var/open = FALSE
+	var/static/list/lipstick_colors
+
+/obj/item/lipstick/Initialize(mapload)
+	. = ..()
+	if(!lipstick_colors)
+		lipstick_colors = list(
+			"black" = "#000000",
+			"white" = "#FFFFFF",
+			"red" = "#FF0000",
+			"green" = "#00C000",
+			"blue" = "#0000FF",
+			"purple" = "#D55CD0",
+			"jade" = "#216F43",
+			"lime" = "#00FF00",
+		)
 
 /obj/item/lipstick/purple
 	name = "purple lipstick"
 	colour = "purple"
 
 /obj/item/lipstick/jade
-	//It's still called Jade, but theres no HTML color for jade, so we use lime.
 	name = "jade lipstick"
+	colour = "jade"
+
+/obj/item/lipstick/lime
+	name = "lime lipstick"
 	colour = "lime"
 
 /obj/item/lipstick/black
@@ -35,38 +53,37 @@
 /obj/item/lipstick/random
 	name = "lipstick"
 
-/obj/item/lipstick/random/New()
-	colour = pick("red","purple","lime","black","green","blue","white")
+/obj/item/lipstick/random/Initialize(mapload)
+	. = ..()
+	colour = pick(lipstick_colors)
 	name = "[colour] lipstick"
 
-
-/obj/item/lipstick/attack_self(mob/user as mob)
-	overlays.Cut()
+/obj/item/lipstick/attack_self(mob/user)
+	cut_overlays()
 	to_chat(user, "<span class='notice'>You twist \the [src] [open ? "closed" : "open"].</span>")
 	open = !open
 	if(open)
-		var/image/colored = image("icon"='icons/obj/items.dmi', "icon_state"="lipstick_uncap_color")
-		colored.color = colour
+		var/mutable_appearance/colored = mutable_appearance('icons/obj/items.dmi', "lipstick_uncap_color")
+		colored.color = lipstick_colors[colour]
 		icon_state = "lipstick_uncap"
-		overlays += colored
+		add_overlay(colored)
 	else
 		icon_state = "lipstick"
 
-/obj/item/lipstick/attack(mob/M as mob, mob/user as mob)
-	if(!open)	return
-
-	if(!istype(M, /mob))	return
+/obj/item/lipstick/attack(mob/M, mob/user)
+	if(!open || !istype(M))
+		return
 
 	if(ishuman(M))
 		var/mob/living/carbon/human/H = M
-		if(H.lip_style)	//if they already have lipstick on
+		if(H.lip_style)	// If they already have lipstick on
 			to_chat(user, "<span class='notice'>You need to wipe off the old lipstick first!</span>")
 			return
 		if(H == user)
-			user.visible_message("<span class='notice'>[user] does their lips with \the [src].</span>", \
-								 "<span class='notice'>You take a moment to apply \the [src]. Perfect!</span>")
+			user.visible_message("<span class='notice'>[user] does [user.p_their()] lips with [src].</span>", \
+								 "<span class='notice'>You take a moment to apply [src]. Perfect!</span>")
 			H.lip_style = "lipstick"
-			H.lip_color = colour
+			H.lip_color = lipstick_colors[colour]
 			H.update_body()
 		else
 			user.visible_message("<span class='warning'>[user] begins to do [H]'s lips with \the [src].</span>", \
@@ -75,7 +92,7 @@
 				user.visible_message("<span class='notice'>[user] does [H]'s lips with \the [src].</span>", \
 									 "<span class='notice'>You apply \the [src].</span>")
 				H.lip_style = "lipstick"
-				H.lip_color = colour
+				H.lip_color = lipstick_colors[colour]
 				H.update_body()
 	else
 		to_chat(user, "<span class='notice'>Where are the lips on that?</span>")
@@ -87,30 +104,30 @@
 	icon_state = "razor"
 	flags = CONDUCT
 	w_class = WEIGHT_CLASS_TINY
-	usesound = 'sound/items/Welder2.ogg'
+	usesound = 'sound/items/welder2.ogg'
 	toolspeed = 1
 
 /obj/item/razor/attack(mob/living/carbon/M as mob, mob/user as mob)
 	if(ishuman(M))
 		var/mob/living/carbon/human/H = M
 		var/obj/item/organ/external/head/C = H.get_organ("head")
-		var/datum/robolimb/robohead = all_robolimbs[C.model]
-		if(user.zone_sel.selecting == "mouth")
+		var/datum/robolimb/robohead = GLOB.all_robolimbs[C.model]
+		if(user.zone_selected == "mouth")
 			if(!get_location_accessible(H, "mouth"))
 				to_chat(user, "<span class='warning'>The mask is in the way.</span>")
 				return
-			if((C.species.bodyflags & ALL_RPARTS) && robohead.is_monitor) //If the target is of a species that can have prosthetic heads, but the head doesn't support human hair 'wigs'...
+			if((C.dna.species.bodyflags & ALL_RPARTS) && robohead.is_monitor) //If the target is of a species that can have prosthetic heads, but the head doesn't support human hair 'wigs'...
 				to_chat(user, "<span class='warning'>You find yourself disappointed at the appalling lack of facial hair.</span>")
 				return
 			if(C.f_style == "Shaved")
 				to_chat(user, "<span class='notice'>Already clean-shaven.</span>")
 				return
 			if(H == user) //shaving yourself
-				user.visible_message("<span class='notice'>[user] starts to shave their facial hair with \the [src].</span>", \
+				user.visible_message("<span class='notice'>[user] starts to shave [user.p_their()] facial hair with [src].</span>", \
 				"<span class='notice'>You take a moment shave your facial hair with \the [src].</span>")
 				if(do_after(user, 50 * toolspeed, target = H))
-					user.visible_message("<span class='notice'>[user] shaves \his facial hair clean with the [src].</span>", \
-					"<span class='notice'>You finish shaving with the [src]. Fast and clean!</span>")
+					user.visible_message("<span class='notice'>[user] shaves [user.p_their()] facial hair clean with [src].</span>", \
+					"<span class='notice'>You finish shaving with [src]. Fast and clean!</span>")
 					C.f_style = "Shaved"
 					H.update_fhair()
 					playsound(src.loc, usesound, 20, 1)
@@ -126,24 +143,24 @@
 						C.f_style = "Shaved"
 						H.update_fhair()
 						playsound(src.loc, usesound, 20, 1)
-		if(user.zone_sel.selecting == "head")
+		if(user.zone_selected == "head")
 			if(!get_location_accessible(H, "head"))
 				to_chat(user, "<span class='warning'>The headgear is in the way.</span>")
 				return
-			if((C.species.bodyflags & ALL_RPARTS) && robohead.is_monitor) //If the target is of a species that can have prosthetic heads, but the head doesn't support human hair 'wigs'...
+			if((C.dna.species.bodyflags & ALL_RPARTS) && robohead.is_monitor) //If the target is of a species that can have prosthetic heads, but the head doesn't support human hair 'wigs'...
 				to_chat(user, "<span class='warning'>You find yourself disappointed at the appalling lack of hair.</span>")
 				return
 			if(C.h_style == "Bald" || C.h_style == "Balding Hair" || C.h_style == "Skinhead")
 				to_chat(user, "<span class='notice'>There is not enough hair left to shave...</span>")
 				return
-			if(M.get_species() == "Skrell")
+			if(isskrell(M))
 				to_chat(user, "<span class='warning'>Your razor isn't going to cut through tentacles.</span>")
 				return
 			if(H == user) //shaving yourself
-				user.visible_message("<span class='warning'>[user] starts to shave their head with \the [src].</span>", \
+				user.visible_message("<span class='warning'>[user] starts to shave [user.p_their()] head with [src].</span>", \
 				"<span class='warning'>You start to shave your head with \the [src].</span>")
 				if(do_after(user, 50 * toolspeed, target = H))
-					user.visible_message("<span class='notice'>[user] shaves \his head with \the [src].</span>", \
+					user.visible_message("<span class='notice'>[user] shaves [user.p_their()] head with [src].</span>", \
 					"<span class='notice'>You finish shaving with \the [src].</span>")
 					C.h_style = "Skinhead"
 					H.update_hair()

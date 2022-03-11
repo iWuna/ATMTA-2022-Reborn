@@ -8,9 +8,10 @@
 	var/lastattempt = null
 	var/attempts = 10
 	var/codelen = 4
+	integrity_failure = 0 //no breaking open the crate
 
-/obj/structure/closet/crate/secure/loot/New()
-	..()
+/obj/structure/closet/crate/secure/loot/Initialize(mapload)
+	. = ..()
 	var/list/digits = list("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
 	code = ""
 	for(var/i = 0, i < codelen, i++)
@@ -18,6 +19,7 @@
 		code += dig
 		digits -= dig  //Player can enter codes with matching digits, but there are never matching digits in the answer
 
+/obj/structure/closet/crate/secure/loot/populate_contents()
 	var/loot = rand(1,100) //100 different crates with varying chances of spawning
 	switch(loot)
 		if(1 to 5) //5% chance
@@ -36,14 +38,15 @@
 		if(11 to 15)
 			new /obj/item/reagent_containers/glass/beaker/bluespace(src)
 		if(16 to 20)
-			for(var/i in 1 to 10)
-				new /obj/item/ore/diamond(src)
+			new /obj/item/stack/ore/diamond(src, 10)
 		if(21 to 25)
 			for(var/i in 1 to 5)
 				new /obj/item/poster/random_contraband(src)
-		if(26 to 35)
+		if(26 to 30)
 			for(var/i in 1 to 3)
 				new /obj/item/reagent_containers/glass/beaker/noreact(src)
+		if(31 to 35)
+			new /obj/item/seeds/firelemon(src)
 		if(36 to 40)
 			new /obj/item/melee/baton(src)
 		if(41 to 45)
@@ -58,7 +61,7 @@
 		if(53 to 54)
 			new /obj/item/toy/balloon(src)
 		if(55 to 56)
-			var/newitem = pick(subtypesof(/obj/item/toy/prize))
+			var/newitem = pick(subtypesof(/obj/item/toy/figure/mech))
 			new newitem(src)
 		if(57 to 58)
 			new /obj/item/toy/syndicateballoon(src)
@@ -80,11 +83,10 @@
 			new /obj/item/clothing/head/corgi(src)
 		if(67 to 68)
 			for(var/i in 1 to rand(4, 7))
-				var /newitem = pick(subtypesof(/obj/item/stock_parts) - /obj/item/stock_parts/subspace)
+				var/newitem = pick(subtypesof(/obj/item/stock_parts))
 				new newitem(src)
 		if(69 to 70)
-			for(var/i in 1 to 5)
-				new /obj/item/ore/bluespace_crystal(src)
+			new /obj/item/stack/ore/bluespace_crystal(src, 5)
 		if(71 to 72)
 			new /obj/item/pickaxe/drill(src)
 		if(73 to 74)
@@ -102,21 +104,7 @@
 			new /obj/item/toy/katana(src)
 		if(85 to 86)
 			new /obj/item/defibrillator/compact(src)
-		if(87) //1% chance
-			new /obj/item/weed_extract(src)
-		if(88)
-			new /obj/item/organ/internal/brain(src)
-		if(89)
-			new /obj/item/organ/internal/brain/xeno(src)
-		if(90)
-			new /obj/item/organ/internal/heart(src)
-		if(91)
-			new /obj/item/soulstone(src)
-		if(92)
-			new /obj/item/katana(src)
-		if(93)
-			new /obj/item/dnainjector/xraymut(src)
-		if(94)
+		if(87 to 88)
 			new /obj/item/storage/backpack/clown(src)
 			new /obj/item/clothing/under/rank/clown(src)
 			new /obj/item/clothing/shoes/clown_shoes(src)
@@ -126,6 +114,18 @@
 			new /obj/item/toy/crayon/rainbow(src)
 			new /obj/item/reagent_containers/spray/waterflower(src)
 			new /obj/item/reagent_containers/food/drinks/bottle/bottleofbanana(src)
+		if(89) //1% chance
+			new /obj/item/weed_extract(src)
+		if(90)
+			new /obj/item/organ/internal/brain(src)
+		if(91)
+			new /obj/item/organ/internal/brain/xeno(src)
+		if(92)
+			new /obj/item/organ/internal/heart(src)
+		if(93)
+			new /obj/item/soulstone/anybody(src)
+		if(94)
+			new /obj/item/katana(src)
 		if(95)
 			new /obj/item/clothing/under/mime(src)
 			new /obj/item/clothing/shoes/black(src)
@@ -153,7 +153,7 @@
 /obj/structure/closet/crate/secure/loot/attack_hand(mob/user)
 	if(locked)
 		to_chat(user, "<span class='notice'>The crate is locked with a Deca-code lock.</span>")
-		var/input = input(usr, "Enter [codelen] digits.", "Deca-Code Lock", "") as text
+		var/input = clean_input("Enter [codelen] digits.", "Deca-Code Lock", "")
 		if(in_range(src, user))
 			if(input == code)
 				to_chat(user, "<span class='notice'>The crate unlocks!</span>")
@@ -171,9 +171,6 @@
 	else
 		return ..()
 
-/obj/structure/closet/crate/secure/loot/attack_animal(mob/user)
-	boom(user)
-
 /obj/structure/closet/crate/secure/loot/attackby(obj/item/W, mob/user)
 	if(locked)
 		if(istype(W, /obj/item/card/emag))
@@ -184,7 +181,7 @@
 			if(attempts == 1)
 				to_chat(user, "<span class='warning'>* Anti-Tamper Bomb will activate on next failed access attempt.</span>")
 			else
-				to_chat(user, "<span class='notice'>* Anti-Tamper Bomb will activate after [src.attempts] failed access attempts.</span>")
+				to_chat(user, "<span class='notice'>* Anti-Tamper Bomb will activate after [attempts] failed access attempts.</span>")
 			if(lastattempt != null)
 				var/bulls = 0
 				var/cows = 0
@@ -205,16 +202,15 @@
 			return 1
 	return ..()
 
+/obj/structure/closet/crate/secure/loot/emag_act(mob/user)
+	if(locked)
+		boom(user)
+
 /obj/structure/closet/crate/secure/loot/togglelock(mob/user)
 	if(locked)
 		boom(user)
 	else
 		..()
 
-/obj/structure/closet/crate/secure/loot/proc/boom(mob/user)
-	to_chat(user, "<span class='danger'>The crate's anti-tamper system activates!</span>")
-	for(var/atom/movable/AM in src)
-		qdel(AM)
-	var/turf/T = get_turf(src)
-	explosion(T, -1, -1, 1, 1)
-	qdel(src)
+/obj/structure/closet/crate/secure/loot/deconstruct(disassembled = TRUE)
+	boom()

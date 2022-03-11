@@ -1,134 +1,168 @@
-#define SOLID 1
-#define LIQUID 2
-#define GAS 3
-
 /obj/machinery/chem_dispenser
 	name = "chem dispenser"
-	density = 1
-	anchored = 1
+	density = TRUE
+	anchored = TRUE
 	icon = 'icons/obj/chemical.dmi'
 	icon_state = "dispenser"
-	use_power = 0
+	use_power = IDLE_POWER_USE
 	idle_power_usage = 40
-	clicksound = "button"
-	clickvol = 20
+	resistance_flags = FIRE_PROOF | ACID_PROOF
 	var/ui_title = "Chem Dispenser 5000"
-	var/energy = 100
-	var/max_energy = 100
-	var/amount = 30
+	var/cell_type = /obj/item/stock_parts/cell/high
+	var/obj/item/stock_parts/cell/cell
+	var/powerefficiency = 0.1
+	var/amount = 10
+	var/recharge_amount = 100
+	var/recharge_counter = 0
+	var/hackedcheck = FALSE
 	var/obj/item/reagent_containers/beaker = null
-	var/recharged = 0
-	var/hackedcheck = 0
 	var/list/dispensable_reagents = list("hydrogen", "lithium", "carbon", "nitrogen", "oxygen", "fluorine",
 	"sodium", "aluminum", "silicon", "phosphorus", "sulfur", "chlorine", "potassium", "iron",
-	"copper", "mercury", "plasma", "radium", "water", "ethanol", "sugar", "iodine", "bromine", "silver")
+	"copper", "mercury", "plasma", "radium", "water", "ethanol", "sugar", "iodine", "bromine", "silver", "chromium")
+	var/list/upgrade_reagents = list("oil", "ash", "acetone", "saltpetre", "ammonia", "diethylamine", "fuel")
 	var/list/hacked_reagents = list("toxin")
 	var/hack_message = "You disable the safety safeguards, enabling the \"Mad Scientist\" mode."
 	var/unhack_message = "You re-enable the safety safeguards, enabling the \"NT Standard\" mode."
-	var/list/broken_requirements = list()
-	var/broken_on_spawn = 0
-	var/recharge_delay = 5
-	var/image/icon_beaker = null //cached overlay
+	var/is_drink = FALSE
+
+/obj/machinery/chem_dispenser/get_cell()
+	return cell
+
+/obj/machinery/chem_dispenser/New()
+	..()
+	component_parts = list()
+	component_parts += new /obj/item/circuitboard/chem_dispenser(null)
+	component_parts += new /obj/item/stock_parts/matter_bin(null)
+	component_parts += new /obj/item/stock_parts/matter_bin(null)
+	component_parts += new /obj/item/stock_parts/capacitor(null)
+	component_parts += new /obj/item/stock_parts/manipulator(null)
+	component_parts += new /obj/item/stack/sheet/glass(null)
+	component_parts += new cell_type(null)
+	RefreshParts()
+	dispensable_reagents = sortList(dispensable_reagents)
+
+/obj/machinery/chem_dispenser/upgraded/New()
+	..()
+	component_parts = list()
+	component_parts += new /obj/item/circuitboard/chem_dispenser(null)
+	component_parts += new /obj/item/stock_parts/matter_bin/super(null)
+	component_parts += new /obj/item/stock_parts/matter_bin/super(null)
+	component_parts += new /obj/item/stock_parts/capacitor/super(null)
+	component_parts += new /obj/item/stock_parts/manipulator/pico(null)
+	component_parts += new /obj/item/stack/sheet/glass(null)
+	component_parts += new /obj/item/stack/cable_coil(null)
+	RefreshParts()
+
+/obj/machinery/chem_dispenser/mutagensaltpeter
+	name = "botanical chemical dispenser"
+	desc = "Creates and dispenses chemicals useful for botany."
+	flags = NODECONSTRUCT
+
+	dispensable_reagents = list(
+		"mutagen",
+		"saltpetre",
+		"eznutriment",
+		"left4zednutriment",
+		"robustharvestnutriment",
+		"water",
+		"atrazine",
+		"pestkiller",
+		"cryoxadone",
+		"ammonia",
+		"ash",
+		"diethylamine")
+	upgrade_reagents = null
+
+/obj/machinery/chem_dispenser/mutagensaltpeter/New()
+	..()
+	component_parts = list()
+	component_parts += new /obj/item/circuitboard/chem_dispenser(null)
+	component_parts += new /obj/item/stock_parts/matter_bin/bluespace(null)
+	component_parts += new /obj/item/stock_parts/matter_bin/bluespace(null)
+	component_parts += new /obj/item/stock_parts/capacitor/quadratic(null)
+	component_parts += new /obj/item/stock_parts/manipulator/femto(null)
+	component_parts += new /obj/item/stack/sheet/glass(null)
+	component_parts += new /obj/item/stack/cable_coil(null)
+	RefreshParts()
+
+/obj/machinery/chem_dispenser/RefreshParts()
+	recharge_amount = initial(recharge_amount)
+	var/newpowereff = 0.0666666
+	for(var/obj/item/stock_parts/cell/P in component_parts)
+		cell = P
+	for(var/obj/item/stock_parts/matter_bin/M in component_parts)
+		newpowereff += 0.0166666666 * M.rating
+	for(var/obj/item/stock_parts/capacitor/C in component_parts)
+		recharge_amount *= C.rating
+	for(var/obj/item/stock_parts/manipulator/M in component_parts)
+		if(M.rating > 3)
+			dispensable_reagents |= upgrade_reagents
+	powerefficiency = round(newpowereff, 0.01)
+
+/obj/machinery/chem_dispenser/Destroy()
+	QDEL_NULL(beaker)
+	QDEL_NULL(cell)
+	return ..()
+
+/obj/machinery/chem_dispenser/examine(mob/user)
+	. = ..()
+	if(panel_open)
+		. += "<span class='notice'>[src]'s maintenance hatch is open!</span>"
+	if(in_range(user, src) || isobserver(user))
+		. += "<span class='notice'>The status display reads: <br>Recharging <b>[recharge_amount]</b> power units per interval.<br>Power efficiency increased by <b>[round((powerefficiency * 1000) - 100, 1)]%</b>.<span>"
 
 
-/obj/machinery/chem_dispenser/proc/recharge()
-	if(stat & (BROKEN|NOPOWER)) return
-	var/addenergy = 1
-	var/oldenergy = energy
-	energy = min(energy + addenergy, max_energy)
-	if(energy != oldenergy)
-		use_power(1500) // This thing uses up alot of power (this is still low as shit for creating reagents from thin air)
-		SSnanoui.update_uis(src) // update all UIs attached to src
+/obj/machinery/chem_dispenser/process()
+	if(recharge_counter >= 4)
+		if(!is_operational())
+			return
+		var/usedpower = cell.give(recharge_amount)
+		if(usedpower)
+			use_power(15 * recharge_amount)
+		recharge_counter = 0
+		return
+	recharge_counter++
 
 /obj/machinery/chem_dispenser/power_change()
 	if(powered())
 		stat &= ~NOPOWER
 	else
-		spawn(rand(0, 15))
-			stat |= NOPOWER
-	SSnanoui.update_uis(src) // update all UIs attached to src
+		stat |= NOPOWER
 
-/obj/machinery/chem_dispenser/process()
-
-	if(recharged < 0)
-		recharge()
-		recharged = recharge_delay
-	else
-		recharged -= 1
-
-/obj/machinery/chem_dispenser/New()
-	..()
-	recharge()
-	dispensable_reagents = sortList(dispensable_reagents)
-
-	if(broken_on_spawn)
-		overlays.Cut()
-		var/amount = pick(3,3,4)
-		var/list/options = list()
-		options[/obj/item/stock_parts/capacitor/adv] = "Add an advanced capacitor to fix it."
-		options[/obj/item/stock_parts/console_screen] = "Replace the console screen to fix it."
-		options[/obj/item/stock_parts/manipulator/pico] = "Upgrade to a pico manipulator to fix it."
-		options[/obj/item/stock_parts/matter_bin/super] = "Give it a super matter bin to fix it."
-		options[/obj/item/stock_parts/cell/super] = "Replace the reagent synthesizer with a super capacity cell to fix it."
-		options[/obj/item/mass_spectrometer/adv] = "Replace the reagent scanner with an advanced mass spectrometer to fix it"
-		options[/obj/item/stock_parts/micro_laser/high] = "Repair the reagent synthesizer with an high-power micro-laser to fix it"
-		options[/obj/item/reagent_scanner/adv] = "Replace the reagent scanner with an advanced reagent scanner to fix it"
-		options[/obj/item/stack/nanopaste] = "Apply some nanopaste to the broken nozzles to fix it."
-		options[/obj/item/stack/sheet/plasteel] = "Surround the outside with a plasteel cover to fix it."
-		options[/obj/item/stack/sheet/rglass] = "Insert a pane of reinforced glass to fix it."
-
-		while(amount > 0)
-			amount -= 1
-
-			var/index = pick(options)
-			broken_requirements[index] = options[index]
-			options -= index
-
+/obj/machinery/chem_dispenser/update_icon()
+	if(panel_open)
+		icon_state = "[initial(icon_state)]-o"
+		return
+	if(!powered() && !is_drink)
+		icon_state = "dispenser_nopower"
+		return
+	icon_state = "[initial(icon_state)][beaker ? "_working" : ""]"
 
 /obj/machinery/chem_dispenser/ex_act(severity)
-	switch(severity)
-		if(1.0)
-			qdel(src)
-			return
-		if(2.0)
-			if(prob(50))
-				qdel(src)
-				return
+	if(severity < 3)
+		if(beaker)
+			beaker.ex_act(severity)
+		..()
 
-/obj/machinery/chem_dispenser/blob_act()
-	if(prob(50))
-		qdel(src)
+/obj/machinery/chem_dispenser/handle_atom_del(atom/A)
+	..()
+	if(A == beaker)
+		beaker = null
 
- /**
-  * The ui_interact proc is used to open and update Nano UIs
-  * If ui_interact is not used then the UI will not update correctly
-  * ui_interact is currently defined for /atom/movable
-  *
-  * @param user /mob The mob who is interacting with this ui
-  * @param ui_key string A string key to use for this ui. Allows for multiple unique uis on one obj/mob (defaut value "main")
-  *
-  * @return nothing
-  */
-/obj/machinery/chem_dispenser/ui_interact(mob/user, ui_key = "main", datum/nanoui/ui = null, force_open = 1)
-	if(broken_requirements.len)
-		to_chat(user, "<span class='warning'>[src] is broken. [broken_requirements[broken_requirements[1]]]</span>")
-		return
-
+/obj/machinery/chem_dispenser/ui_interact(mob/user, ui_key = "main", datum/tgui/ui = null, force_open = FALSE, datum/tgui/master_ui = null, datum/ui_state/state = GLOB.default_state)
 	// update the ui if it exists, returns null if no ui is passed/found
-	ui = SSnanoui.try_update_ui(user, src, ui_key, ui, force_open)
+	ui = SStgui.try_update_ui(user, src, ui_key, ui, force_open)
 	if(!ui)
-		// the ui does not exist, so we'll create a new() one
-        // for a list of parameters and their descriptions see the code docs in \code\modules\nano\nanoui.dm
-		ui = new(user, src, ui_key, "chem_dispenser.tmpl", ui_title, 390, 655)
-		// open the new ui window
+		ui = new(user, src, ui_key, "ChemDispenser", ui_title, 390, 655)
 		ui.open()
 
-/obj/machinery/chem_dispenser/ui_data(mob/user, ui_key = "main", datum/topic_state/state = default_state)
-	var/data[0]
+/obj/machinery/chem_dispenser/ui_data(mob/user)
+	var/list/data = list()
 
+	data["glass"] = is_drink
 	data["amount"] = amount
-	data["energy"] = round(energy)
-	data["maxEnergy"] = round(max_energy)
+	data["energy"] = cell.charge ? cell.charge * powerefficiency : "0" //To prevent NaN in the UI.
+	data["maxEnergy"] = cell.maxcharge * powerefficiency
 	data["isBeakerLoaded"] = beaker ? 1 : 0
 
 	var/beakerContents[0]
@@ -148,231 +182,441 @@
 
 	var/chemicals[0]
 	for(var/re in dispensable_reagents)
-		var/datum/reagent/temp = chemical_reagents_list[re]
+		var/datum/reagent/temp = GLOB.chemical_reagents_list[re]
 		if(temp)
 			chemicals.Add(list(list("title" = temp.name, "id" = temp.id, "commands" = list("dispense" = temp.id)))) // list in a list because Byond merges the first list...
 	data["chemicals"] = chemicals
 
 	return data
 
-/obj/machinery/chem_dispenser/Topic(href, href_list)
+/obj/machinery/chem_dispenser/ui_act(actions, params)
 	if(..())
-		return 1
-
-	if(href_list["amount"])
-		amount = round(text2num(href_list["amount"]), 5) // round to nearest 5
-		if(amount < 0) // Since the user can actually type the commands himself, some sanity checking
-			amount = 0
-		if(amount > 100)
-			amount = 100
-
-	if(href_list["dispense"])
-		if(dispensable_reagents.Find(href_list["dispense"]) && beaker != null)
-			var/obj/item/reagent_containers/glass/B = beaker
-			var/datum/reagents/R = B.reagents
-			var/space = R.maximum_volume - R.total_volume
-
-			R.add_reagent(href_list["dispense"], min(amount, energy * 10, space))
-			energy = max(energy - min(amount, energy * 10, space) / 10, 0)
-			overlays.Cut()
-			icon_beaker = image('icons/obj/chemical.dmi', src, "disp_beaker") //randomize beaker overlay position.
-			icon_beaker.pixel_x = rand(-10,5)
-			overlays += icon_beaker
-
-	if(href_list["remove"])
-		if(beaker)
-			if(href_list["removeamount"])
-				var/amount = text2num(href_list["removeamount"])
-				if(isnum(amount) && (amount > 0))
-					var/obj/item/reagent_containers/glass/B = beaker
-					var/datum/reagents/R = B.reagents
-					var/id = href_list["remove"]
-					R.remove_reagent(id, amount)
-
-	if(href_list["ejectBeaker"])
-		if(beaker)
-			var/obj/item/reagent_containers/glass/B = beaker
-			B.forceMove(loc)
-			beaker = null
-			overlays.Cut()
-	add_fingerprint(usr)
-	return 1 // update UIs attached to this object
-
-/obj/machinery/chem_dispenser/attackby(obj/item/reagent_containers/B, mob/user, params)
-	if(isrobot(user))
+		return
+	if(stat & (NOPOWER|BROKEN))
 		return
 
-	if(broken_requirements.len && B.type == broken_requirements[1])
-		if(istype(B,/obj/item/stack))
-			var/obj/item/stack/S = B
-			S.use(1)
-		else
-			if(!user.drop_item())
-				to_chat(user, "<span class='warning'>[B] is stuck to you!</span>")
+	. = TRUE
+	switch(actions)
+		if("amount")
+			amount = clamp(round(text2num(params["amount"]), 1), 0, 50) // round to nearest 1 and clamp to 0 - 50
+		if("dispense")
+			if(!is_operational() || QDELETED(cell))
 				return
-			qdel(B)
-		broken_requirements -= broken_requirements[1]
-		to_chat(user, "<span class='notice'>You fix [src].</span>")
+			if(!beaker || !dispensable_reagents.Find(params["reagent"]))
+				return
+			var/datum/reagents/R = beaker.reagents
+			var/free = R.maximum_volume - R.total_volume
+			var/actual = min(amount, (cell.charge * powerefficiency) * 10, free)
+			if(!cell.use(actual / powerefficiency))
+				atom_say("Not enough energy to complete operation!")
+				return
+			R.add_reagent(params["reagent"], actual)
+		if("remove")
+			var/amount = text2num(params["amount"])
+			if(!beaker || !amount)
+				return
+			var/datum/reagents/R = beaker.reagents
+			var/id = params["reagent"]
+			if(amount > 0)
+				R.remove_reagent(id, amount)
+			else if(amount == -1) //Isolate instead
+				R.isolate_reagent(id)
+		if("ejectBeaker")
+			if(!beaker)
+				return
+			beaker.forceMove(loc)
+			if(Adjacent(usr) && !issilicon(usr))
+				usr.put_in_hands(beaker)
+			beaker = null
+			update_icon()
+		else
+			return FALSE
+
+	add_fingerprint(usr)
+
+/obj/machinery/chem_dispenser/attackby(obj/item/I, mob/user, params)
+	if(exchange_parts(user, I))
+		SStgui.update_uis(src)
+		return
+
+	if(isrobot(user))
 		return
 
 	if(beaker)
 		to_chat(user, "<span class='warning'>Something is already loaded into the machine.</span>")
 		return
 
-	if(istype(B, /obj/item/reagent_containers/glass) || istype(B, /obj/item/reagent_containers/food/drinks))
-		beaker =  B
+	if(istype(I, /obj/item/reagent_containers/glass) || istype(I, /obj/item/reagent_containers/food/drinks))
+		if(panel_open)
+			to_chat(user, "<span class='notice'>Close the maintenance panel first.</span>")
+			return
 		if(!user.drop_item())
-			to_chat(user, "<span class='warning'>[B] is stuck to you!</span>")
+			to_chat(user, "<span class='warning'>[I] is stuck to you!</span>")
 			return
-		B.forceMove(src)
-		to_chat(user, "<span class='notice'>You set [B] on the machine.</span>")
-		SSnanoui.update_uis(src) // update all UIs attached to src
-		if(!icon_beaker)
-			icon_beaker = image('icons/obj/chemical.dmi', src, "disp_beaker") //randomize beaker overlay position.
-		icon_beaker.pixel_x = rand(-10,5)
-		overlays += icon_beaker
+		beaker =  I
+		I.forceMove(src)
+		to_chat(user, "<span class='notice'>You set [I] on the machine.</span>")
+		SStgui.update_uis(src) // update all UIs attached to src
+		update_icon()
 		return
+	return ..()
 
-/obj/machinery/chem_dispenser/attackby(obj/item/B, mob/user, params)
-	..()
-	if(istype(B, /obj/item/multitool))
-		if(hackedcheck == 0)
-			to_chat(user, hack_message)
-			dispensable_reagents += hacked_reagents
-			hackedcheck = 1
-			return
+/obj/machinery/chem_dispenser/crowbar_act(mob/user, obj/item/I)
+	if(!panel_open)
+		return
+	if(default_deconstruction_crowbar(user, I))
+		return TRUE
 
-		else
-			to_chat(user, unhack_message)
-			dispensable_reagents -= hacked_reagents
-			hackedcheck = 0
-			return
+/obj/machinery/chem_dispenser/deconstruct(disassembled)
+	if(beaker)
+		beaker.forceMove(loc)
+		beaker = null
+	if(cell)
+		cell.forceMove(loc)
+		cell = null
+	return ..()
+
+
+/obj/machinery/chem_dispenser/multitool_act(mob/user, obj/item/I)
+	. = TRUE
+	if(!I.use_tool(src, user, 0, volume = I.tool_volume))
+		return
+	if(!hackedcheck)
+		to_chat(user, hack_message)
+		dispensable_reagents += hacked_reagents
+		hackedcheck = TRUE
+	else
+		to_chat(user, unhack_message)
+		dispensable_reagents -= hacked_reagents
+		hackedcheck = FALSE
+	SStgui.update_uis(src)
+
+/obj/machinery/chem_dispenser/screwdriver_act(mob/user, obj/item/I)
+	if(default_deconstruction_screwdriver(user, "[initial(icon_state)]-o", "[initial(icon_state)]", I))
+		return TRUE
+
+/obj/machinery/chem_dispenser/wrench_act(mob/user, obj/item/I)
+	. = TRUE
+	if(!I.use_tool(src, user, 0, volume = I.tool_volume))
+		return
+	if(anchored)
+		anchored = FALSE
+		WRENCH_UNANCHOR_MESSAGE
+	else if(!anchored)
+		anchored = TRUE
+		WRENCH_ANCHOR_MESSAGE
 
 /obj/machinery/chem_dispenser/attack_ai(mob/user)
 	return attack_hand(user)
 
 /obj/machinery/chem_dispenser/attack_ghost(mob/user)
-	return attack_hand(user)
+	if(stat & BROKEN)
+		return
+	ui_interact(user)
 
 /obj/machinery/chem_dispenser/attack_hand(mob/user)
 	if(stat & BROKEN)
 		return
-
 	ui_interact(user)
+
+/obj/machinery/chem_dispenser/AltClick(mob/user)
+	if(!is_drink || !Adjacent(user))
+		return
+	if(user.incapacitated())
+		to_chat(user, "<span class='warning'>You can't do that right now!</span>")
+		return
+	if(anchored)
+		to_chat(user, "<span class='warning'>[src] is anchored to the floor!</span>")
+		return
+	pixel_x = 0
+	pixel_y = 0
+	setDir(turn(dir, 90))
 
 /obj/machinery/chem_dispenser/soda
 	icon_state = "soda_dispenser"
 	name = "soda fountain"
 	desc = "A drink fabricating machine, capable of producing many sugary drinks with just one touch."
 	ui_title = "Soda Dispens-o-matic"
-	energy = 100
-	max_energy = 100
 	dispensable_reagents = list("water", "ice", "milk", "soymilk", "coffee", "tea", "hot_coco", "cola", "spacemountainwind", "dr_gibb", "space_up",
 	"tonic", "sodawater", "lemon_lime", "grapejuice", "sugar", "orangejuice", "lemonjuice", "limejuice", "tomatojuice", "banana",
 	"watermelonjuice", "carrotjuice", "potato", "berryjuice")
+	upgrade_reagents = list("bananahonk", "milkshake", "cafe_latte", "cafe_mocha", "triple_citrus", "icecoffe","icetea")
+	hacked_reagents = list("thirteenloko")
 	hack_message = "You change the mode from 'McNano' to 'Pizza King'."
 	unhack_message = "You change the mode from 'Pizza King' to 'McNano'."
-	hacked_reagents = list("thirteenloko")
+	is_drink = TRUE
+
+/obj/machinery/chem_dispenser/soda/New()
+	..()
+	QDEL_LIST(component_parts)
+	component_parts += new /obj/item/circuitboard/chem_dispenser/soda(null)
+	component_parts += new /obj/item/stock_parts/matter_bin(null)
+	component_parts += new /obj/item/stock_parts/matter_bin(null)
+	component_parts += new /obj/item/stock_parts/manipulator(null)
+	component_parts += new /obj/item/stock_parts/capacitor(null)
+	component_parts += new /obj/item/stack/sheet/glass(null)
+	component_parts += new cell_type(null)
+	RefreshParts()
+
+/obj/machinery/chem_dispenser/soda/upgraded/New()
+	..()
+	QDEL_LIST(component_parts)
+	component_parts += new /obj/item/circuitboard/chem_dispenser/soda(null)
+	component_parts += new /obj/item/stock_parts/matter_bin/super(null)
+	component_parts += new /obj/item/stock_parts/matter_bin/super(null)
+	component_parts += new /obj/item/stock_parts/manipulator/pico(null)
+	component_parts += new /obj/item/stock_parts/capacitor/super(null)
+	component_parts += new /obj/item/stack/sheet/glass(null)
+	component_parts += new cell_type(null)
+	RefreshParts()
 
 /obj/machinery/chem_dispenser/beer
 	icon_state = "booze_dispenser"
 	name = "booze dispenser"
 	ui_title = "Booze Portal 9001"
-	energy = 100
-	max_energy = 100
 	desc = "A technological marvel, supposedly able to mix just the mixture you'd like to drink the moment you ask for one."
 	dispensable_reagents = list("ice", "cream", "cider", "beer", "kahlua", "whiskey", "wine", "vodka", "gin", "rum", "tequila", "vermouth", "cognac", "ale", "mead", "synthanol")
+	upgrade_reagents = list("iced_beer", "irishcream", "manhattan", "antihol", "synthignon", "bravebull")
+	hacked_reagents = list("goldschlager", "patron", "absinthe", "ethanol", "nothing", "sake")
 	hack_message = "You disable the 'nanotrasen-are-cheap-bastards' lock, enabling hidden and very expensive boozes."
 	unhack_message = "You re-enable the 'nanotrasen-are-cheap-bastards' lock, disabling hidden and very expensive boozes."
-	hacked_reagents = list("goldschlager", "patron", "absinthe", "ethanol", "nothing", "sake")
+	is_drink = TRUE
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/obj/machinery/chem_dispenser/constructable
-	name = "portable chem dispenser"
-	icon = 'icons/obj/chemical.dmi'
-	icon_state = "minidispenser"
-	energy = 5
-	max_energy = 5
-	amount = 5
-	recharge_delay = 10
-	dispensable_reagents = list()
-	var/list/special_reagents = list(list("hydrogen", "oxygen", "silicon", "phosphorus", "sulfur", "carbon", "nitrogen", "water"),
-						 		list("lithium", "sugar", "copper", "mercury", "sodium","iodine","bromine"),
-								list("ethanol", "chlorine", "potassium", "aluminum","plasma", "radium", "fluorine", "iron", "silver"),
-								list("oil", "ash", "acetone", "saltpetre", "ammonia", "diethylamine", "fuel"))
-
-/obj/machinery/chem_dispenser/constructable/New()
+/obj/machinery/chem_dispenser/beer/New()
 	..()
-	component_parts = list()
-	component_parts += new /obj/item/circuitboard/chem_dispenser(null)
+	QDEL_LIST(component_parts)
+	component_parts += new /obj/item/circuitboard/chem_dispenser/beer(null)
 	component_parts += new /obj/item/stock_parts/matter_bin(null)
 	component_parts += new /obj/item/stock_parts/matter_bin(null)
-	component_parts += new /obj/item/stock_parts/manipulator(null)
 	component_parts += new /obj/item/stock_parts/capacitor(null)
-	component_parts += new /obj/item/stock_parts/console_screen(null)
-	component_parts += new /obj/item/stock_parts/cell/super(null)
+	component_parts += new /obj/item/stock_parts/manipulator(null)
+	component_parts += new /obj/item/stack/sheet/glass(null)
+	component_parts += new cell_type(null)
 	RefreshParts()
 
-/obj/machinery/chem_dispenser/constructable/upgraded/New()
+/obj/machinery/chem_dispenser/beer/upgraded/New()
 	..()
-	component_parts = list()
-	component_parts += new /obj/item/circuitboard/chem_dispenser(null)
+	QDEL_LIST(component_parts)
+	component_parts += new /obj/item/circuitboard/chem_dispenser/beer(null)
 	component_parts += new /obj/item/stock_parts/matter_bin/super(null)
 	component_parts += new /obj/item/stock_parts/matter_bin/super(null)
-	component_parts += new /obj/item/stock_parts/manipulator/pico(null)
 	component_parts += new /obj/item/stock_parts/capacitor/super(null)
-	component_parts += new /obj/item/stock_parts/console_screen(null)
-	component_parts += new /obj/item/stock_parts/cell/hyper(null)
+	component_parts += new /obj/item/stock_parts/manipulator/pico(null)
+	component_parts += new /obj/item/stack/sheet/glass(null)
+	component_parts += new cell_type(null)
 	RefreshParts()
 
-/obj/machinery/chem_dispenser/constructable/RefreshParts()
-	var/time = 0
-	var/temp_energy = 0
-	var/i
-	for(var/obj/item/stock_parts/matter_bin/M in component_parts)
-		temp_energy += M.rating
-	temp_energy--
-	max_energy = temp_energy * 5  //max energy = (bin1.rating + bin2.rating - 1) * 5, 5 on lowest 25 on highest
-	for(var/obj/item/stock_parts/capacitor/C in component_parts)
-		time += C.rating
-	for(var/obj/item/stock_parts/cell/P in component_parts)
-		time += round(P.maxcharge, 10000) / 10000
-	recharge_delay = 10 / (time/2)         //delay between recharges, double the usual time on lowest 33% less than usual on highest
-	for(var/obj/item/stock_parts/manipulator/M in component_parts)
-		for(i=1, i<=M.rating, i++)
-			dispensable_reagents = sortList(dispensable_reagents | special_reagents[i])
+// Handheld chem dispenser
+/obj/item/handheld_chem_dispenser
+	name = "handheld chem dispenser"
+	icon = 'icons/obj/chemical.dmi'
+	item_state = "handheld_chem"
+	icon_state = "handheld_chem"
+	flags = NOBLUDGEON
+	var/obj/item/stock_parts/cell/high/cell = null
+	var/amount = 10
+	var/mode = "dispense"
+	var/is_drink = FALSE
+	var/list/dispensable_reagents = list("hydrogen", "lithium", "carbon", "nitrogen", "oxygen", "fluorine",
+	"sodium", "aluminum", "silicon", "phosphorus", "sulfur", "chlorine", "potassium", "iron",
+	"copper", "mercury", "plasma", "radium", "water", "ethanol", "sugar", "iodine", "bromine", "silver", "chromium")
+	var/current_reagent = null
+	var/efficiency = 0.2
+	var/recharge_rate = 1 // Keep this as an integer
 
-/obj/machinery/chem_dispenser/constructable/attackby(obj/item/I, mob/user, params)
-	if(istype(I, /obj/item/reagent_containers/glass))
-		if(panel_open)
-			to_chat(user, "<span class='notice'>Close the maintenance panel first.</span>")
-			return
-		..()
+/obj/item/handheld_chem_dispenser/Initialize()
+	..()
+	cell = new(src)
+	dispensable_reagents = sortList(dispensable_reagents)
+	current_reagent = pick(dispensable_reagents)
+	update_icon()
+	START_PROCESSING(SSobj, src)
+
+/obj/item/handheld_chem_dispenser/Destroy()
+	STOP_PROCESSING(SSobj, src)
+	return ..()
+
+/obj/item/handheld_chem_dispenser/get_cell()
+	return cell
+
+/obj/item/handheld_chem_dispenser/afterattack(obj/target, mob/user, proximity)
+	if(!proximity || !current_reagent || !amount)
+		return
+
+	if(!check_allowed_items(target,target_self = TRUE) || !target.is_refillable())
+		return
+	switch(mode)
+		if("dispense")
+			var/free = target.reagents.maximum_volume - target.reagents.total_volume
+			var/actual = min(amount, round(cell.charge * efficiency), free)
+			if(actual)
+				target.reagents.add_reagent(current_reagent, actual)
+				cell.charge -= actual / efficiency
+				to_chat(user, "<span class='notice'>You dispense [actual] unit\s of [current_reagent] into [target].</span>")
+				update_icon()
+			else if(free) // If actual is nil and there's still free space, it means we're out of juice
+				to_chat(user, "<span class='warning'>Insufficient energy to complete operation.</span>")
+		if("remove")
+			if(!target.reagents.remove_reagent(current_reagent, amount))
+				to_chat(user, "<span class='notice'>You remove [amount] unit\s of [current_reagent] from [target].</span>")
+		if("isolate")
+			if(!target.reagents.isolate_reagent(current_reagent))
+				to_chat(user, "<span class='notice'>You remove all but [current_reagent] from [target].</span>")
+
+/obj/item/handheld_chem_dispenser/attack_self(mob/user)
+	if(cell)
+		ui_interact(user)
 	else
-		..()
+		to_chat(user, "<span class='warning'>[src] lacks a power cell!</span>")
 
-	if(default_deconstruction_screwdriver(user, "minidispenser-o", "minidispenser", I))
+
+/obj/item/handheld_chem_dispenser/ui_interact(mob/user, ui_key = "main", datum/tgui/ui = null, force_open = FALSE, datum/tgui/master_ui = null, datum/ui_state/state = GLOB.inventory_state)
+	ui = SStgui.try_update_ui(user, src, ui_key, ui, force_open)
+	if(!ui)
+		ui = new(user, src, ui_key, "HandheldChemDispenser", name, 390, 500)
+		ui.open()
+
+/obj/item/handheld_chem_dispenser/ui_data(mob/user)
+	var/list/data = list()
+
+	data["glass"] = is_drink
+	data["amount"] = amount
+	data["energy"] = cell.charge ? cell.charge * efficiency : "0" //To prevent NaN in the UI.
+	data["maxEnergy"] = cell.maxcharge * efficiency
+	data["current_reagent"] = current_reagent
+	data["mode"] = mode
+
+	return data
+
+/obj/item/handheld_chem_dispenser/ui_static_data()
+	var/list/data = list()
+	var/list/chemicals = list()
+	for(var/re in dispensable_reagents)
+		var/datum/reagent/temp = GLOB.chemical_reagents_list[re]
+		if(temp)
+			chemicals.Add(list(list("title" = temp.name, "id" = temp.id, "commands" = list("dispense" = temp.id)))) // list in a list because Byond merges the first list...
+	data["chemicals"] = chemicals
+
+
+	return data
+
+/obj/item/handheld_chem_dispenser/ui_act(action, list/params)
+	if(..())
 		return
 
-	if(exchange_parts(user, I))
+	. = TRUE
+	switch(action)
+		if("amount")
+			amount = clamp(round(text2num(params["amount"])), 1, 50) // round to nearest 1 and clamp to 1 - 50
+		if("dispense")
+			if(params["reagent"] in dispensable_reagents)
+				current_reagent = params["reagent"]
+				update_icon()
+		if("mode")
+			switch(params["mode"])
+				if("remove")
+					mode = "remove"
+				if("dispense")
+					mode = "dispense"
+				if("isolate")
+					mode = "isolate"
+			update_icon()
+		else
+			return FALSE
+
+	add_fingerprint(usr)
+
+/obj/item/handheld_chem_dispenser/update_icon()
+	cut_overlays()
+
+	if(cell && cell.charge)
+		var/image/power_light = image('icons/obj/chemical.dmi', src, "light_low")
+		var/percent = round((cell.charge / cell.maxcharge) * 100)
+		switch(percent)
+			if(0 to 33)
+				power_light.icon_state = "light_low"
+			if(34 to 66)
+				power_light.icon_state = "light_mid"
+			if(67 to INFINITY)
+				power_light.icon_state = "light_full"
+		add_overlay(power_light)
+
+		var/image/mode_light = image('icons/obj/chemical.dmi', src, "light_remove")
+		mode_light.icon_state = "light_[mode]"
+		add_overlay(mode_light)
+
+		var/image/chamber_contents = image('icons/obj/chemical.dmi', src, "reagent_filling")
+		var/datum/reagent/R = GLOB.chemical_reagents_list[current_reagent]
+		chamber_contents.icon += R.color
+		add_overlay(chamber_contents)
+	..()
+
+/obj/item/handheld_chem_dispenser/process() //Every [recharge_time] seconds, recharge some reagents for the cyborg
+	if(isrobot(loc) && cell.charge < cell.maxcharge)
+		var/mob/living/silicon/robot/R = loc
+		if(R && R.cell && R.cell.charge > recharge_rate / efficiency)
+			var/actual = min(recharge_rate / efficiency, cell.maxcharge - cell.charge)
+			R.cell.charge -= actual
+			cell.charge += actual
+
+	update_icon()
+	return TRUE
+
+/obj/item/handheld_chem_dispenser/attackby(obj/item/W, mob/user, params)
+	if(istype(W, /obj/item/stock_parts/cell))
+		var/obj/item/stock_parts/cell/C = W
+		if(cell)
+			to_chat(user, "<span class='notice'>[src] already has a cell.</span>")
+		else
+			if(C.maxcharge < 100)
+				to_chat(user, "<span class='notice'>[src] requires a higher capacity cell.</span>")
+				return
+			if(!user.unEquip(W))
+				return
+			W.loc = src
+			cell = W
+			to_chat(user, "<span class='notice'>You install a cell in [src].</span>")
+			update_icon()
+
+/obj/item/handheld_chem_dispenser/screwdriver_act(mob/user, obj/item/I)
+	if(!isrobot(loc) && cell)
+		cell.update_icon()
+		cell.loc = get_turf(src)
+		cell = null
+		to_chat(user, "<span class='notice'>You remove the cell from [src].</span>")
+		update_icon()
 		return
+	..()
 
-	if(istype(I, /obj/item/wrench))
-		playsound(src, I.usesound, 50, 1)
-		if(anchored)
-			anchored = 0
-			to_chat(user, "<span class='caution'>[src] can now be moved.</span>")
-		else if(!anchored)
-			anchored = 1
-			to_chat(user, "<span class='caution'>[src] is now secured.</span>")
+/obj/item/handheld_chem_dispenser/booze
+	name = "handheld bar tap"
+	item_state = "handheld_booze"
+	icon_state = "handheld_booze"
+	is_drink = TRUE
+	dispensable_reagents = list("ice", "cream", "cider", "beer", "kahlua", "whiskey", "wine", "vodka", "gin", "rum", "tequila",
+	 "vermouth", "cognac", "ale", "mead", "synthanol")
 
-	if(panel_open)
-		if(istype(I, /obj/item/crowbar))
-			if(beaker)
-				var/obj/item/reagent_containers/glass/B = beaker
-				B.forceMove(loc)
-				beaker = null
-			default_deconstruction_crowbar(I)
-			return 1
+/obj/item/handheld_chem_dispenser/soda
+	name = "handheld soda fountain"
+	item_state = "handheld_soda"
+	icon_state = "handheld_soda"
+	is_drink = TRUE
+	dispensable_reagents = list("water", "ice", "milk", "soymilk", "coffee", "tea", "hot_coco", "cola", "spacemountainwind", "dr_gibb", "space_up",
+	"tonic", "sodawater", "lemon_lime", "grapejuice", "sugar", "orangejuice", "lemonjuice", "limejuice", "tomatojuice", "banana",
+	"watermelonjuice", "carrotjuice", "potato", "berryjuice")
+
+/obj/item/handheld_chem_dispenser/botanical
+	name = "handheld botanical chemical dispenser"
+	dispensable_reagents = list(
+		"mutagen",
+		"saltpetre",
+		"eznutriment",
+		"left4zednutriment",
+		"robustharvestnutriment",
+		"water",
+		"atrazine",
+		"pestkiller",
+		"cryoxadone",
+		"ammonia",
+		"ash",
+		"diethylamine")

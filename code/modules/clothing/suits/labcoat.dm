@@ -7,12 +7,12 @@
 	suit_adjusted = 1
 	blood_overlay_type = "coat"
 	body_parts_covered = UPPER_TORSO|LOWER_TORSO|ARMS
-	allowed = list(/obj/item/analyzer,/obj/item/stack/medical,/obj/item/dnainjector,/obj/item/reagent_containers/dropper,/obj/item/reagent_containers/syringe,/obj/item/reagent_containers/hypospray,/obj/item/healthanalyzer,/obj/item/flashlight/pen,/obj/item/reagent_containers/glass/bottle,/obj/item/reagent_containers/glass/beaker,/obj/item/reagent_containers/food/pill,/obj/item/storage/pill_bottle,/obj/item/paper,/obj/item/rad_laser)
-	armor = list(melee = 0, bullet = 0, laser = 0, energy = 0, bomb = 0, bio = 50, rad = 0)
-	species_fit = list("Vox","Grey")
+	allowed = list(/obj/item/analyzer, /obj/item/stack/medical, /obj/item/dnainjector, /obj/item/reagent_containers/dropper, /obj/item/reagent_containers/syringe, /obj/item/reagent_containers/hypospray, /obj/item/reagent_containers/applicator, /obj/item/healthanalyzer, /obj/item/flashlight/pen, /obj/item/reagent_containers/glass/bottle, /obj/item/reagent_containers/glass/beaker, /obj/item/reagent_containers/food/pill, /obj/item/storage/pill_bottle, /obj/item/paper, /obj/item/rad_laser, /obj/item/robotanalyzer)
+	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 50, RAD = 0, FIRE = 50, ACID = 50)
+	species_exception = list(/datum/species/golem)
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/species/vox/suit.dmi',
-		"Grey" = 'icons/mob/species/grey/suit.dmi'
+		"Vox" = 'icons/mob/clothing/species/vox/suit.dmi',
+		"Grey" = 'icons/mob/clothing/species/grey/suit.dmi'
 		)
 	actions_types = list(/datum/action/item_action/button)
 	adjust_flavour = "unbutton"
@@ -22,7 +22,6 @@
 	desc = "Bluer than the standard model."
 	icon_state = "labcoat_cmo_open"
 	item_state = "labcoat_cmo_open"
-	armor = list(melee = 0, bullet = 0, laser = 0, energy = 0, bomb = 0, bio = 70, rad = 0)
 
 /obj/item/clothing/suit/storage/labcoat/mad
 	name = "mad scientist's labcoat"
@@ -46,7 +45,6 @@
 	name = "virologist labcoat"
 	desc = "A suit that protects against minor chemical spills. Offers slightly more protection against biohazards than the standard model. Has a green stripe on the shoulder."
 	icon_state = "labcoat_vir_open"
-	armor = list(melee = 0, bullet = 0, laser = 0, energy = 0, bomb = 0, bio = 60, rad = 0)
 
 /obj/item/clothing/suit/storage/labcoat/science
 	name = "scientist labcoat"
@@ -61,13 +59,7 @@
 	item_state = "labcoat_mort_open"
 
 /obj/item/clothing/suit/storage/labcoat/emt
-	name = "EMT labcoat"
+	name = "\improper EMT labcoat"
 	desc = "A comfortable suit for paramedics. Has dark colours."
 	icon_state = "labcoat_emt_open"
 	item_state = "labcoat_emt_open"
-
-/obj/item/clothing/suit/storage/labcoat/rd
-	name = "research director's labcoat"
-	desc = "It smells like weird science."
-	icon_state = "labcoat_rd"
-	armor = list(melee = 0, bullet = 0, laser = 0, energy = 0, bomb = 20, bio = 50, rad = 50)

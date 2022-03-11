@@ -1,10 +1,11 @@
 /obj/item/ammo_box/a357
 	name = "speed loader (.357)"
 	desc = "Designed to quickly reload revolvers."
-	icon_state = "357"
 	ammo_type = /obj/item/ammo_casing/a357
 	max_ammo = 7
-	multiple_sprites = 1
+	icon_state = "357-7" // DEFAULT icon, composed of prefix + "-" + max_ammo for multiple_sprites == 1 boxes
+	multiple_sprites = 1 // see: /obj/item/ammo_box/update_icon()
+	icon_prefix = "357" // icon prefix, used in above formula to generate dynamic icons
 
 /obj/item/ammo_box/c38
 	name = "speed loader (.38)"
@@ -12,20 +13,15 @@
 	icon_state = "38"
 	ammo_type = /obj/item/ammo_casing/c38
 	max_ammo = 6
+	icon_state = "38-6" // see previous entry for explanation of these vars
 	multiple_sprites = 1
+	icon_prefix = "38"
 
 /obj/item/ammo_box/c9mm
 	name = "ammo box (9mm)"
 	icon_state = "9mmbox"
 	origin_tech = "combat=2"
 	ammo_type = /obj/item/ammo_casing/c9mm
-	max_ammo = 30
-
-/obj/item/ammo_box/rubber9mm
-	name = "ammo box (9mm rubber)"
-	icon_state = "9mmbox-r"
-	origin_tech = "combat=2"
-	ammo_type = /obj/item/ammo_casing/rubber9mm
 	max_ammo = 30
 
 /obj/item/ammo_box/c10mm
@@ -71,7 +67,7 @@
 	max_ammo = 14
 
 /obj/item/ammo_box/shotgun
-	name = "Shotgun Speedloader (slug)"
+	name = "shotgun speedloader (Slug)"
 	icon_state = "slugloader"
 	origin_tech = "combat=2"
 	ammo_type = /obj/item/ammo_casing/shotgun
@@ -80,53 +76,43 @@
 	multiple_sprites = 1
 
 /obj/item/ammo_box/shotgun/buck
-	name = "Shotgun Speedloader (buckshot)"
+	name = "shotgun speedloader (Buckshot)"
 	icon_state = "buckloader"
 	ammo_type = /obj/item/ammo_casing/shotgun/buckshot
 
 
 /obj/item/ammo_box/shotgun/dragonsbreath
-	name = "Shotgun Speedloader (dragonsbreath)"
+	name = "shotgun speedloader (Dragonsbreath)"
 	icon_state = "dragonsbreathloader"
 	ammo_type = /obj/item/ammo_casing/shotgun/incendiary/dragonsbreath
 
 
 /obj/item/ammo_box/shotgun/stun
-	name = "Shotgun Speedloader (stun shells)"
+	name = "shotgun speedloader (Stun shells)"
 	icon_state = "stunloader"
 	ammo_type = /obj/item/ammo_casing/shotgun/stunslug
 
 
 /obj/item/ammo_box/shotgun/beanbag
-	name = "Shotgun Speedloader (beanbag shells)"
+	name = "shotgun speedloader (Beanbag shells)"
 	icon_state = "beanbagloader"
 	ammo_type = /obj/item/ammo_casing/shotgun/beanbag
 	materials = list(MAT_METAL=1750)
 
 
 /obj/item/ammo_box/shotgun/rubbershot
-	name = "Shotgun Speedloader (rubbershot shells)"
+	name = "shotgun speedloader (Rubbershot shells)"
 	icon_state = "rubbershotloader"
 	ammo_type = /obj/item/ammo_casing/shotgun/rubbershot
 	materials = list(MAT_METAL=1750)
 
 
 /obj/item/ammo_box/shotgun/tranquilizer
-	name = "Shotgun Speedloader (tranquilizer darts)"
+	name = "shotgun speedloader (Tranquilizer darts)"
 	icon_state = "tranqloader"
 	ammo_type = /obj/item/ammo_casing/shotgun/tranquilizer
 	materials = list(MAT_METAL=1750)
 
-/obj/item/ammo_box/tranqdarts
-	name = "ammo box (9x39mm darts)"
-	icon_state = "dartbox"
-	origin_tech = "combat=2"
-	ammo_type = /obj/item/ammo_casing/shotgun/dart/special
-	max_ammo = 10
-
-/obj/item/ammo_box/tranqdarts/loaded
-	icon_state = "tranqbox"
-	ammo_type = /obj/item/ammo_casing/shotgun/dart/special/tranquilizer
 
 //FOAM DARTS
 /obj/item/ammo_box/foambox
@@ -135,10 +121,27 @@
 	icon_state = "foambox"
 	ammo_type = /obj/item/ammo_casing/caseless/foam_dart
 	max_ammo = 40
+	materials = list(MAT_METAL = 500)
 
 /obj/item/ammo_box/foambox/riot
 	icon_state = "foambox_riot"
 	ammo_type = /obj/item/ammo_casing/caseless/foam_dart/riot
+	materials = list(MAT_METAL = 50000)
+
+/obj/item/ammo_box/foambox/sniper
+	name = "ammo box (Foam Sniper Darts)"
+	icon = 'icons/obj/guns/toy.dmi'
+	icon_state = "foambox_sniper"
+	ammo_type = /obj/item/ammo_casing/caseless/foam_dart/sniper
+	max_ammo = 40
+	materials = list(MAT_METAL = 900)
+
+/obj/item/ammo_box/foambox/sniper/riot
+	icon_state = "foambox_sniper_riot"
+	ammo_type = /obj/item/ammo_casing/caseless/foam_dart/sniper/riot
+	materials = list(MAT_METAL = 90000)
+
+
 
 /obj/item/ammo_box/caps
 	name = "speed loader (caps)"

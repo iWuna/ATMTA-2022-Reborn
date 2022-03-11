@@ -3,9 +3,7 @@
 // This code allows for airlocks to be controlled externally by setting an id_tag and comm frequency (disables ID access)
 /obj/machinery/door/airlock
 	var/id_tag
-	var/frequency
 	var/shockedby = list()
-	var/datum/radio_frequency/radio_connection
 	var/cur_command = null	//the command the door is currently attempting to complete
 
 /obj/machinery/door/airlock/process()
@@ -39,8 +37,7 @@
 	if(command_completed(cur_command))
 		cur_command = null
 	else
-		if(!isprocessing)
-			START_PROCESSING(SSmachines, src)
+		START_PROCESSING(SSmachines, src)
 
 /obj/machinery/door/airlock/proc/do_command(command)
 	switch(command)
@@ -126,11 +123,11 @@
 			send_status(1)
 	return
 
-/obj/machinery/door/airlock/proc/set_frequency(new_frequency)
-	radio_controller.remove_object(src, frequency)
+/obj/machinery/door/airlock/set_frequency(new_frequency)
+	SSradio.remove_object(src, frequency)
 	if(new_frequency)
 		frequency = new_frequency
-		radio_connection = radio_controller.add_object(src, frequency, RADIO_AIRLOCK)
+		radio_connection = SSradio.add_object(src, frequency, RADIO_AIRLOCK)
 
 /obj/machinery/door/airlock/Initialize()
 	..()
@@ -143,22 +140,22 @@
 /obj/machinery/door/airlock/New()
 	..()
 
-	if(radio_controller)
+	if(SSradio)
 		set_frequency(frequency)
 
 /obj/machinery/airlock_sensor
 	icon = 'icons/obj/airlock_machines.dmi'
 	icon_state = "airlock_sensor_off"
+	layer = ABOVE_WINDOW_LAYER
 	name = "airlock sensor"
 	anchored = 1
+	resistance_flags = FIRE_PROOF
 	power_channel = ENVIRON
 
 	var/id_tag
 	var/master_tag
-	var/frequency = 1379
+	frequency = 1379
 	var/command = "cycle"
-
-	var/datum/radio_frequency/radio_connection
 
 	var/on = 1
 	var/alert = 0
@@ -202,10 +199,10 @@
 
 			update_icon()
 
-/obj/machinery/airlock_sensor/proc/set_frequency(new_frequency)
-	radio_controller.remove_object(src, frequency)
+/obj/machinery/airlock_sensor/set_frequency(new_frequency)
+	SSradio.remove_object(src, frequency)
 	frequency = new_frequency
-	radio_connection = radio_controller.add_object(src, frequency, RADIO_AIRLOCK)
+	radio_connection = SSradio.add_object(src, frequency, RADIO_AIRLOCK)
 
 /obj/machinery/airlock_sensor/Initialize()
 	..()
@@ -213,12 +210,12 @@
 
 /obj/machinery/airlock_sensor/New()
 	..()
-	if(radio_controller)
+	if(SSradio)
 		set_frequency(frequency)
 
 /obj/machinery/airlock_sensor/Destroy()
-	if(radio_controller)
-		radio_controller.remove_object(src, frequency)
+	if(SSradio)
+		SSradio.remove_object(src, frequency)
 	radio_connection = null
 	return ..()
 
@@ -232,15 +229,12 @@
 	icon = 'icons/obj/airlock_machines.dmi'
 	icon_state = "access_button_standby"
 	name = "access button"
+	layer = ABOVE_WINDOW_LAYER
 	anchored = 1
 	power_channel = ENVIRON
-
 	var/master_tag
-	var/frequency = 1449
+	frequency = AIRLOCK_FREQ
 	var/command = "cycle"
-
-	var/datum/radio_frequency/radio_connection
-
 	var/on = 1
 
 /obj/machinery/access_button/update_icon()
@@ -254,12 +248,17 @@
 	if(istype(I, /obj/item/card/id) || istype(I, /obj/item/pda))
 		attack_hand(user)
 		return
-	..()
+	return ..()
+
+/obj/machinery/access_button/attack_ghost(mob/user)
+	if(user.can_advanced_admin_interact())
+		return attack_hand(user)
 
 /obj/machinery/access_button/attack_hand(mob/user)
 	add_fingerprint(usr)
-	if(!allowed(user))
-		to_chat(user, "<span class='warning'>Access Denied</span>")
+
+	if(!allowed(user) && !user.can_advanced_admin_interact())
+		to_chat(user, "<span class='warning'>Access denied.</span>")
 
 	else if(radio_connection)
 		var/datum/signal/signal = new
@@ -270,10 +269,10 @@
 		radio_connection.post_signal(src, signal, range = AIRLOCK_CONTROL_RANGE, filter = RADIO_AIRLOCK)
 	flick("access_button_cycle", src)
 
-/obj/machinery/access_button/proc/set_frequency(new_frequency)
-	radio_controller.remove_object(src, frequency)
+/obj/machinery/access_button/set_frequency(new_frequency)
+	SSradio.remove_object(src, frequency)
 	frequency = new_frequency
-	radio_connection = radio_controller.add_object(src, frequency, RADIO_AIRLOCK)
+	radio_connection = SSradio.add_object(src, frequency, RADIO_AIRLOCK)
 
 /obj/machinery/access_button/Initialize()
 	..()
@@ -282,12 +281,12 @@
 /obj/machinery/access_button/New()
 	..()
 
-	if(radio_controller)
+	if(SSradio)
 		set_frequency(frequency)
 
 /obj/machinery/access_button/Destroy()
-	if(radio_controller)
-		radio_controller.remove_object(src, frequency)
+	if(SSradio)
+		SSradio.remove_object(src, frequency)
 	radio_connection = null
 	return ..()
 

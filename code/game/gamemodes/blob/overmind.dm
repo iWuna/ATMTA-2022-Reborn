@@ -5,19 +5,21 @@
 	icon_state = "marker"
 
 	see_in_dark = 8
-	see_invisible = SEE_INVISIBLE_MINIMUM
 	invisibility = INVISIBILITY_OBSERVER
+	lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE
 
 	pass_flags = PASSBLOB
-	faction = list("blob")
+	faction = list(ROLE_BLOB)
 
 	var/obj/structure/blob/core/blob_core = null // The blob overmind's core
 	var/blob_points = 0
 	var/max_blob_points = 100
 	var/last_attack = 0
+	var/nodes_required = TRUE //if the blob needs nodes to place resource and factory blobs
+	var/split_used = FALSE
+	var/is_offspring = FALSE
 	var/datum/reagent/blob/blob_reagent_datum = new/datum/reagent/blob()
 	var/list/blob_mobs = list()
-	var/ghostimage = null
 
 /mob/camera/blob/New()
 	var/new_name = "[initial(name)] ([rand(1, 999)])"
@@ -31,55 +33,43 @@
 	if(blob_core)
 		blob_core.adjustcolors(blob_reagent_datum.color)
 
-	ghostimage = image(src.icon,src,src.icon_state)
-	ghost_darkness_images |= ghostimage //so ghosts can see the blob cursor when they disable darkness
-	updateallghostimages()
+	color = blob_reagent_datum.complementary_color
 	..()
-
-/mob/camera/blob/Life(seconds, times_fired)
-	if(!blob_core)
-		qdel(src)
-	..()
+	START_PROCESSING(SSobj, src)
 
 /mob/camera/blob/Destroy()
-	if(ghostimage)
-		ghost_darkness_images -= ghostimage
-		QDEL_NULL(ghostimage)
-		updateallghostimages()
+	STOP_PROCESSING(SSobj, src)
 	return ..()
+
+/mob/camera/blob/process()
+	if(!blob_core)
+		qdel(src)
 
 /mob/camera/blob/Login()
 	..()
 	sync_mind()
-	to_chat(src, "<span class='notice'>You are the overmind!</span>")
-	to_chat(src, "Your randomly chosen reagent is: <b>[blob_reagent_datum.name]</b>!")
-	to_chat(src, "You are the overmind and can control the blob! You can expand, which will attack people, and place new blob pieces such as...")
-	to_chat(src, "<b>Normal Blob</b> will expand your reach and allow you to upgrade into special blobs that perform certain functions.")
-	to_chat(src, "<b>Shield Blob</b> is a strong and expensive blob which can take more damage. It is fireproof and can block air, use this to protect yourself from station fires.")
-	to_chat(src, "<b>Resource Blob</b> is a blob which will collect more resources for you, try to build these earlier to get a strong income. It will benefit from being near your core or multiple nodes, by having an increased resource rate; put it alone and it won't create resources at all.")
-	to_chat(src, "<b>Node Blob</b> is a blob which will grow, like the core. Unlike the core it won't give you a small income but it can power resource and factory blobs to increase their rate.")
-	to_chat(src, "<b>Factory Blob</b> is a blob which will spawn blob spores which will attack nearby food. Putting this nearby nodes and your core will increase the spawn rate; put it alone and it will not spawn any spores.")
-	to_chat(src, "<b>Shortcuts:</b> CTRL Click = Expand Blob / Middle Mouse Click = Rally Spores / Alt Click = Create Shield")
-	update_health()
+	blob_help()
+	update_health_hud()
 
-/mob/camera/blob/proc/update_health()
-	if(blob_core)
-		hud_used.blobhealthdisplay.maptext = "<div align='center' valign='middle' style='position:relative; top:0px; left:6px'><font color='#e36600'>[round(blob_core.health)]</font></div>"
+/mob/camera/blob/update_health_hud()
+	if(blob_core && hud_used)
+		hud_used.blobhealthdisplay.maptext = "<div align='center' valign='middle' style='position:relative; top:0px; left:6px'><font face='Small Fonts' color='#e36600'>[round(blob_core.obj_integrity)]</font></div>"
 
-/mob/camera/blob/proc/add_points(var/points)
+/mob/camera/blob/proc/add_points(points)
 	if(points != 0)
-		blob_points = Clamp(blob_points + points, 0, max_blob_points)
-		hud_used.blobpwrdisplay.maptext = "<div align='center' valign='middle' style='position:relative; top:0px; left:6px'><font color='#82ed00'>[round(src.blob_points)]</font></div>"
+		blob_points = clamp(blob_points + points, 0, max_blob_points)
+		if(hud_used)
+			hud_used.blobpwrdisplay.maptext = "<div align='center' valign='middle' style='position:relative; top:0px; left:6px'><font face='Small Fonts' color='#82ed00'>[round(src.blob_points)]</font></div>"
 
-/mob/camera/blob/say(var/message)
+/mob/camera/blob/say(message)
 	if(!message)
 		return
 
 	if(src.client)
-		if(client.prefs.muted & MUTE_IC)
+		if(check_mute(client.ckey, MUTE_IC))
 			to_chat(src, "You cannot send IC messages (muted).")
 			return
-		if(src.client.handle_spam_prevention(message,MUTE_IC))
+		if(src.client.handle_spam_prevention(message, MUTE_IC))
 			return
 
 	if(stat)
@@ -87,10 +77,19 @@
 
 	blob_talk(message)
 
+/mob/camera/blob/proc/add_mob_to_overmind(mob/living/simple_animal/hostile/blob/B)
+	B.color = blob_reagent_datum?.complementary_color
+	B.overmind = src
+	blob_mobs += B
+	RegisterSignal(B, COMSIG_PARENT_QDELETING, .proc/on_blob_mob_death)
+
+/mob/camera/blob/proc/on_blob_mob_death(mob/living/simple_animal/hostile/blob/B)
+	blob_mobs -= B
+
 /mob/camera/blob/proc/blob_talk(message)
 	log_say("(BLOB) [message]", src)
 
-	message = trim(copytext(sanitize_local(message), 1, MAX_MESSAGE_LEN))
+	message = trim(copytext(sanitize(message), 1, MAX_MESSAGE_LEN))
 
 	if(!message)
 		return
@@ -98,24 +97,24 @@
 	var/verb = "states,"
 	var/rendered = "<font color=\"#EE4000\"><i><span class='game say'>Blob Telepathy, <span class='name'>[name]([blob_reagent_datum.name])</span> <span class='message'>[verb] \"[message]\"</span></span></i></font>"
 
-	for(var/mob/M in mob_list)
-		if(isovermind(M) || isobserver(M))
+	for(var/mob/M in GLOB.mob_list)
+		if(isovermind(M) || isobserver(M) || istype((M), /mob/living/simple_animal/hostile/blob/blobbernaut))
 			M.show_message(rendered, 2)
 
-/mob/camera/blob/emote(var/act,var/m_type=1,var/message = null)
+/mob/camera/blob/emote(act, m_type = 1, message = null, force)
 	return
 
-/mob/camera/blob/blob_act()
+/mob/camera/blob/blob_act(obj/structure/blob/B)
 	return
 
 /mob/camera/blob/Stat()
 	..()
 	if(statpanel("Status"))
 		if(blob_core)
-			stat(null, "Core Health: [blob_core.health]")
+			stat(null, "Core Health: [blob_core.obj_integrity]")
 		stat(null, "Power Stored: [blob_points]/[max_blob_points]")
 
-/mob/camera/blob/Move(var/NewLoc, var/Dir = 0)
+/mob/camera/blob/Move(NewLoc, Dir = 0)
 	var/obj/structure/blob/B = locate() in range("3x3", NewLoc)
 	if(B)
 		loc = NewLoc

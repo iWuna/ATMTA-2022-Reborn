@@ -5,7 +5,7 @@
 	icon = 'icons/obj/cooking_machines.dmi'
 	icon_state = "oven_off"
 	cook_verbs = list("Baking", "Roasting", "Broiling")
-	recipe_type = /datum/recipe/oven
+	recipe_type = RECIPE_OVEN
 	off_icon = "oven_off"
 	on_icon = "oven_on"
 	broken_icon = "oven_broke"
@@ -24,7 +24,7 @@
 	component_parts += new /obj/item/circuitboard/oven(null)
 	component_parts += new /obj/item/stock_parts/micro_laser(null)
 	component_parts += new /obj/item/stock_parts/micro_laser(null)
-	component_parts += new /obj/item/stock_parts/console_screen(null)
+	component_parts += new /obj/item/stack/sheet/glass(null)
 	component_parts += new /obj/item/stack/cable_coil(null, 5)
 	RefreshParts()
 
@@ -34,7 +34,7 @@
 	component_parts += new /obj/item/circuitboard/oven(null)
 	component_parts += new /obj/item/stock_parts/micro_laser/ultra(null)
 	component_parts += new /obj/item/stock_parts/micro_laser/ultra(null)
-	component_parts += new /obj/item/stock_parts/console_screen(null)
+	component_parts += new /obj/item/stack/sheet/glass(null)
 	component_parts += new /obj/item/stack/cable_coil(null, 5)
 	RefreshParts()
 

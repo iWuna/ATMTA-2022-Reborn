@@ -2,9 +2,10 @@
 	name = "Dye Generator"
 	icon = 'icons/obj/vending.dmi'
 	icon_state = "barbervend"
-	density = 1
-	anchored = 1
-	use_power = 1
+	density = TRUE
+	anchored = TRUE
+	integrity_failure = 100
+	use_power = IDLE_POWER_USE
 	idle_power_usage = 40
 	var/dye_color = "#FFFFFF"
 
@@ -12,36 +13,27 @@
 	..()
 	power_change()
 
+/obj/machinery/dye_generator/deconstruct(disassembled = TRUE)
+	new /obj/item/stack/sheet/metal(loc, 3)
+	qdel(src)
+
 /obj/machinery/dye_generator/power_change()
-	if(stat & BROKEN)
-		icon_state = "[initial(icon_state)]-broken"
-		set_light(0)
+	if(powered() && anchored)
+		stat &= ~NOPOWER
+		set_light(2, l_color = dye_color)
 	else
-		if(powered())
-			icon_state = initial(icon_state)
-			stat &= ~NOPOWER
-			set_light(2, l_color = dye_color)
-		else
-			spawn(rand(0, 15))
-				src.icon_state = "[initial(icon_state)]-off"
-				stat |= NOPOWER
-				set_light(0)
+		stat |= NOPOWER
+		set_light(0)
+	update_icon()
 
-/obj/machinery/dye_generator/ex_act(severity)
-	switch(severity)
-		if(1.0)
-			qdel(src)
-			return
-		if(2.0)
-			if(prob(50))
-				qdel(src)
-				return
-		if(3.0)
-			if(prob(25))
-				stat |= BROKEN
-				icon_state = "[initial(icon_state)]-broken"
+/obj/machinery/dye_generator/update_icon()
+	cut_overlays()
+	if(stat & (BROKEN|NOPOWER))
+		add_overlay("barbervend_off")
+		if(stat & BROKEN)
+			add_overlay("barbervend_broken")
 
-/obj/machinery/dye_generator/attack_hand(mob/user as mob)
+/obj/machinery/dye_generator/attack_hand(mob/user)
 	..()
 	src.add_fingerprint(user)
 	if(stat & (BROKEN|NOPOWER))
@@ -50,23 +42,28 @@
 	dye_color = temp
 	set_light(2, l_color = temp)
 
-/obj/machinery/dye_generator/attackby(obj/item/W, mob/user, params)
+/obj/machinery/dye_generator/attackby(obj/item/I, mob/user, params)
 
-	if(default_unfasten_wrench(user, W, time = 60))
+	if(default_unfasten_wrench(user, I, time = 60))
 		return
 
-	if(istype(W, /obj/item/hair_dye_bottle))
-		user.visible_message("<span class='notice'>[user] fills the [W] up with some dye.</span>","<span class='notice'>You fill the [W] up with some hair dye.</span>")
-		var/obj/item/hair_dye_bottle/HD = W
+	if(istype(I, /obj/item/hair_dye_bottle))
+		var/obj/item/hair_dye_bottle/HD = I
+		user.visible_message("<span class='notice'>[user] fills [HD] up with some dye.</span>","<span class='notice'>You fill [HD] up with some hair dye.</span>")
 		HD.dye_color = dye_color
 		HD.update_dye_overlay()
-	else
-		..()
+		return
+	return ..()
+
+/obj/machinery/dye_generator/obj_break(damage_flag)
+	if(!(stat & BROKEN))
+		stat |= BROKEN
+		update_icon()
 
 //Hair Dye Bottle
 
 /obj/item/hair_dye_bottle
-	name = "Hair Dye Bottle"
+	name = "hair dye bottle"
 	desc = "A refillable bottle used for holding hair dyes of all sorts of colors."
 	icon = 'icons/obj/items.dmi'
 	icon_state = "hairdyebottle"
@@ -87,7 +84,7 @@
 	I.color = dye_color
 	overlays += I
 
-/obj/item/hair_dye_bottle/attack(mob/living/carbon/M as mob, mob/user as mob)
+/obj/item/hair_dye_bottle/attack(mob/living/carbon/M, mob/user)
 	if(user.a_intent != INTENT_HELP)
 		..()
 		return
@@ -98,11 +95,11 @@
 		var/mob/living/carbon/human/H = M
 		var/dye_list = list("hair", "alt. hair theme")
 
-		if(H.gender == MALE || H.get_species() == "Vulpkanin")
+		if(H.gender == MALE || isvulpkanin(H))
 			dye_list += "facial hair"
 			dye_list += "alt. facial hair theme"
 
-		if(H && (H.species.bodyflags & HAS_SKIN_COLOR))
+		if(H && (H.dna.species.bodyflags & HAS_SKIN_COLOR))
 			dye_list += "body"
 
 		var/what_to_dye = input(user, "Choose an area to apply the dye", "Dye Application") in dye_list

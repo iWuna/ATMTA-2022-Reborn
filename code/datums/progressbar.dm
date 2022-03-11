@@ -14,9 +14,9 @@
 		EXCEPTION("Invalid target given")
 	if(goal_number)
 		goal = goal_number
-	bar = image('icons/effects/progessbar.dmi', target, "prog_bar_0", HUD_LAYER)
+	bar = image('icons/effects/progessbar.dmi', target, "prog_bar_0", ABOVE_HUD_LAYER)
 	bar.alpha = 0
-	bar.plane = HUD_PLANE
+	bar.plane = ABOVE_HUD_PLANE
 	bar.appearance_flags = APPEARANCE_UI_IGNORE_ALPHA
 	user = User
 	if(user)
@@ -39,7 +39,7 @@
 		if(user.client)
 			user.client.images += bar
 
-	progress = Clamp(progress, 0, goal)
+	progress = clamp(progress, 0, goal)
 	bar.icon_state = "prog_bar_[round(((progress / goal) * 100), 5)]"
 	if(!shown)
 		user.client.images += bar

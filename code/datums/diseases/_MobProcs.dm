@@ -9,21 +9,21 @@
 
 /mob/proc/CanContractDisease(datum/disease/D)
 	if(stat == DEAD)
-		return 0
+		return FALSE
 
 	if(D.GetDiseaseID() in resistances)
-		return 0
+		return FALSE
 
 	if(HasDisease(D))
-		return 0
+		return FALSE
 
-	if(count_by_type(viruses, /datum/disease/advance) >= 3)
-		return 0
+	if(istype(D, /datum/disease/advance) && count_by_type(viruses, /datum/disease/advance) > 0)
+		return FALSE
 
 	if(!(type in D.viable_mobtypes))
 		return -1 //for stupid fucking monkies
 
-	return 1
+	return TRUE
 
 
 /mob/proc/ContractDisease(datum/disease/D)
@@ -36,7 +36,7 @@
 	var/datum/disease/DD = new D.type(1, D, 0)
 	viruses += DD
 	DD.affected_mob = src
-	active_diseases += DD //Add it to the active diseases list, now that it's actually in a mob and being processed.
+	GLOB.active_diseases += DD //Add it to the active diseases list, now that it's actually in a mob and being processed.
 
 	//Copy properties over. This is so edited diseases persist.
 	var/list/skipped = list("affected_mob","holder","carrier","stage","type","parent_type","vars","transformed")
@@ -126,19 +126,28 @@
 		AddDisease(D)
 
 
+/**
+ * Forces the mob to contract a virus. If the mob can have viruses. Ignores clothing and other protection
+ * Returns TRUE if it succeeds. False if it doesn't
+ *
+ * Arguments:
+ * * D - the disease the mob will try to contract
+ */
 //Same as ContractDisease, except never overidden clothes checks
 /mob/proc/ForceContractDisease(datum/disease/D)
 	if(!CanContractDisease(D))
-		return 0
+		return FALSE
 	AddDisease(D)
+	return TRUE
 
 
 /mob/living/carbon/human/CanContractDisease(datum/disease/D)
-	if((VIRUSIMMUNE in species.species_traits) && !D.bypasses_immunity)
-		return 0
+	if(HAS_TRAIT(src, TRAIT_VIRUSIMMUNE) && !D.bypasses_immunity)
+		return FALSE
+
 	for(var/thing in D.required_organs)
 		if(!((locate(thing) in bodyparts) || (locate(thing) in internal_organs)))
-			return 0
+			return FALSE
 	return ..()
 
 /mob/living/carbon/human/monkey/CanContractDisease(datum/disease/D)

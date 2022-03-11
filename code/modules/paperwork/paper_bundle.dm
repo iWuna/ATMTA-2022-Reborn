@@ -9,13 +9,19 @@
 	throw_range = 2
 	throw_speed = 1
 	layer = 4
-	pressure_resistance = 1
+	pressure_resistance = 2
 	attack_verb = list("bapped")
-	var/amount = 0 //Amount of items clipped to the paper
+	var/amount = 0 //Amount of items clipped to the paper. Note: If you have 2 paper, this should be 1
 	var/page = 1
 	var/screen = 0
 
-
+/obj/item/paper_bundle/New(default_papers = TRUE)
+	. = ..()
+	if(default_papers) // This is to avoid runtime occuring from a paper bundle being created without a paper in it.
+		new /obj/item/paper(src)
+		new /obj/item/paper(src)
+		amount += 1
+		
 /obj/item/paper_bundle/attackby(obj/item/W as obj, mob/user as mob, params)
 	..()
 	var/obj/item/paper/P
@@ -58,16 +64,15 @@
 		to_chat(user, "<span class='notice'>You add \the [W.name] to [(src.name == "paper bundle") ? "the paper bundle" : src.name].</span>")
 		qdel(W)
 	else
-		if(istype(W, /obj/item/stack/tape_roll))
-			return 0
 		if(istype(W, /obj/item/pen) || istype(W, /obj/item/toy/crayon))
-			usr << browse("", "window=[name]") //Closes the dialog
+			usr << browse("", "window=PaperBundle[UID()]") //Closes the dialog
 		P = src[page]
 		P.attackby(W, user, params)
 
 
 	update_icon()
-	attack_self(usr) //Update the browsed page.
+	if(winget(usr, "PaperBundle[UID()]", "is-visible") == "true") // NOT MY FAULT IT IS A BUILT IN PROC PLEASE DO NOT HIT ME
+		attack_self(usr) //Update the browsed page.
 	add_fingerprint(usr)
 	return
 
@@ -79,8 +84,8 @@
 		if(istype(P, /obj/item/lighter/zippo))
 			class = "<span class='rose'>"
 
-		user.visible_message("[class][user] holds \the [P] up to \the [src], it looks like \he's trying to burn it!", \
-		"[class]You hold \the [P] up to \the [src], burning it slowly.")
+		user.visible_message("[class][user] holds [P] up to [src], it looks like [user.p_theyre()] trying to burn it!", \
+		"[class]You hold [P] up to [src], burning it slowly.")
 
 		spawn(20)
 			if(get_dist(src, user) < 2 && user.get_active_hand() == P && P.lit)
@@ -97,10 +102,11 @@
 				to_chat(user, "<span class='warning'>You must hold \the [P] steady to burn \the [src].</span>")
 
 /obj/item/paper_bundle/examine(mob/user)
-	if(..(user, 1))
-		src.show_content(user)
+	. = ..()
+	if(in_range(user, src))
+		show_content(user)
 	else
-		to_chat(user, "<span class='notice'>It is too far away.</span>")
+		. += "<span class='notice'>It is too far away.</span>"
 
 /obj/item/paper_bundle/proc/show_content(mob/user as mob)
 	var/dat
@@ -121,15 +127,15 @@
 	if(istype(src[page], /obj/item/paper))
 		var/obj/item/paper/P = W
 		dat += P.show_content(usr, view = 0)
-		usr << browse(dat, "window=[name]")
+		usr << browse(dat, "window=PaperBundle[UID()]")
 	else if(istype(src[page], /obj/item/photo))
 		var/obj/item/photo/P = W
 		usr << browse_rsc(P.img, "tmp_photo.png")
 		usr << browse(dat + "<html><head><title>[P.name]</title></head>" \
 		+ "<body style='overflow:hidden'>" \
 		+ "<div> <img src='tmp_photo.png' width = '180'" \
-		+ "[P.scribble ? "<div><br> Written on the back:<br><i>[P.scribble]</i>" : ]"\
-		+ "</body></html>", "window=[name]")
+		+ "[P.scribble ? "<div><br> Written on the back:<br><i>[P.scribble]</i>" : ""]"\
+		+ "</body></html>", "window=PaperBundle[UID()]")
 
 /obj/item/paper_bundle/attack_self(mob/user as mob)
 	src.show_content(user)
@@ -162,7 +168,7 @@
 		if(href_list["remove"])
 			var/obj/item/W = src[page]
 			usr.put_in_hands(W)
-			to_chat(usr, "<span class='notice'>You remove the [W.name] from the bundle.</span>")
+			to_chat(usr, "<span class='notice'>You remove [W] from the bundle.</span>")
 			if(amount == 1)
 				var/obj/item/paper/P = src[1]
 				usr.unEquip(src)
@@ -188,7 +194,7 @@
 	set category = "Object"
 	set src in usr
 
-	var/n_name = sanitize_local(copytext(input(usr, "What would you like to label the bundle?", "Bundle Labelling", name) as text, 1, MAX_MESSAGE_LEN))
+	var/n_name = sanitize(copytext(input(usr, "What would you like to label the bundle?", "Bundle Labelling", name) as text, 1, MAX_MESSAGE_LEN))
 	if((loc == usr && usr.stat == 0))
 		name = "[(n_name ? text("[n_name]") : "paper bundle")]"
 	add_fingerprint(usr)
@@ -212,6 +218,7 @@
 
 
 /obj/item/paper_bundle/update_icon()
+	..()
 	if(contents.len)
 		var/obj/item/paper/P = src[1]
 		icon_state = P.icon_state

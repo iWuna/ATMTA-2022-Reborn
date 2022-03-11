@@ -1,6 +1,16 @@
 //Object specific defines
 #define CANDLE_LUM 3 //For how bright candles are
 
+//Directions (already defined on BYOND natively, purely here for reference)
+//#define NORTH		1
+//#define SOUTH		2
+//#define EAST		4
+//#define WEST		8
+//#define NORTHEAST	5
+//#define SOUTHEAST 6
+//#define NORTHWEST 9
+//#define SOUTHWEST 10
+
 //Security levels
 #define SEC_LEVEL_GREEN	0
 #define SEC_LEVEL_BLUE	1
@@ -12,7 +22,6 @@
 //Click cooldowns, in tenths of a second
 #define CLICK_CD_MELEE 8
 #define CLICK_CD_RANGE 4
-#define CLICK_CD_BREAKOUT 100
 #define CLICK_CD_HANDCUFFED 10
 #define CLICK_CD_TKSTRANGLE 10
 #define CLICK_CD_POINT 10
@@ -20,11 +29,6 @@
 #define CLICK_CD_CLICK_ABILITY 6
 #define CLICK_CD_RAPID 2
 
-//Sizes of mobs, used by mob/living/var/mob_size
-#define MOB_SIZE_TINY 0
-#define MOB_SIZE_SMALL 1
-#define MOB_SIZE_HUMAN 2
-#define MOB_SIZE_LARGE 3
 ///
 #define ROUNDSTART_LOGOUT_REPORT_TIME 6000 //Amount of time (in deciseconds) after the rounds starts, that the player disconnect report is issued.
 
@@ -47,17 +51,6 @@
 #define MAX_STACK_AMOUNT_GLASS	50
 #define MAX_STACK_AMOUNT_RODS	60
 
-//some colors
-#define COLOR_RED 		"#FF0000"
-#define COLOR_GREEN 	"#00FF00"
-#define COLOR_BLUE 		"#0000FF"
-#define COLOR_CYAN 		"#00FFFF"
-#define COLOR_PINK 		"#FF00FF"
-#define COLOR_YELLOW 	"#FFFF00"
-#define COLOR_ORANGE 	"#FF9900"
-#define COLOR_WHITE 	"#FFFFFF"
-#define COLOR_GRAY      "#808080"
-
 //FONTS:
 // Used by Paper and PhotoCopier (and PaperBin once a year).
 // Used by PDA's Notekeeper.
@@ -74,9 +67,6 @@
 //Flags for zone sleeping
 #define ZONE_ACTIVE 1
 #define ZONE_SLEEPING 0
-
-#define shuttle_time_in_station 1800 // 3 minutes in the station
-#define shuttle_time_to_arrive 6000 // 10 minutes to arrive
 
 #define EVENT_LEVEL_MUNDANE 1
 #define EVENT_LEVEL_MODERATE 2
@@ -104,30 +94,6 @@
 #define CHRISTMAS				"Christmas"
 #define FRIDAY_13TH				"Friday the 13th"
 
-//Light color defs, for light-emitting things
-//Some defs may be pure color- this is for neatness, and configurability. Changing #define COLOR_ is a bad idea.
-#define LIGHT_COLOR_CYAN		"#7BF9FF"
-#define LIGHT_COLOR_PURE_CYAN	"#00FFFF"
-
-#define LIGHT_COLOR_RED			"#B40000"
-#define LIGHT_COLOR_ORANGE		"#FF9933"
-#define LIGHT_COLOR_DARKRED		"#A91515"
-#define LIGHT_COLOR_PURE_RED	"#FF0000"
-
-#define LIGHT_COLOR_GREEN		"#00CC00"
-#define LIGHT_COLOR_DARKGREEN	"#50AB00"
-#define LIGHT_COLOR_PURE_GREEN	"#00FF00"
-
-#define LIGHT_COLOR_LIGHTBLUE	"#0099FF"
-#define LIGHT_COLOR_DARKBLUE	"#315AB4"
-#define LIGHT_COLOR_PURE_BLUE	"#0000FF"
-
-#define LIGHT_COLOR_FADEDPURPLE	"#A97FAA"
-#define LIGHT_COLOR_PURPLE		"#CD00CD"
-#define LIGHT_COLOR_PINK		"#FF33CC"
-
-#define LIGHT_COLOR_WHITE		"#FFFFFF"
-
 #define RESIZE_DEFAULT_SIZE 1
 
 //transfer_ai() defines. Main proc in ai_core.dm
@@ -152,12 +118,19 @@
   )
 
 #define FOR_DVIEW(type, range, center, invis_flags) \
-	dview_mob.loc = center; \
-	dview_mob.see_invisible = invis_flags; \
-	for(type in view(range, dview_mob))
-#define END_FOR_DVIEW dview_mob.loc = null
+	GLOB.dview_mob.loc = center; \
+	GLOB.dview_mob.see_invisible = invis_flags; \
+	for(type in view(range, GLOB.dview_mob))
+#define END_FOR_DVIEW GLOB.dview_mob.loc = null
 
+//Turf locational stuff
 #define get_turf(A) (get_step(A, 0))
+#define NORTH_OF_TURF(T)	locate(T.x, T.y + 1, T.z)
+#define EAST_OF_TURF(T)		locate(T.x + 1, T.y, T.z)
+#define SOUTH_OF_TURF(T)	locate(T.x, T.y - 1, T.z)
+#define WEST_OF_TURF(T)		locate(T.x - 1, T.y, T.z)
+
+#define ATOM_COORDS(A) list(A.x, A.y, A.z)
 
 #define MIN_SUPPLIED_LAW_NUMBER 15
 #define MAX_SUPPLIED_LAW_NUMBER 50
@@ -167,12 +140,6 @@
 #define FACING_SAME_DIR											1
 #define FACING_EACHOTHER										2
 #define FACING_INIT_FACING_TARGET_TARGET_FACING_PERPENDICULAR	3 //Do I win the most informative but also most stupid define award?
-
-//unmagic-strings for types of polls
-#define POLLTYPE_OPTION		"OPTION"
-#define POLLTYPE_TEXT		"TEXT"
-#define POLLTYPE_RATING		"NUMVAL"
-#define POLLTYPE_MULTI		"MULTICHOICE"
 
 #define MIDNIGHT_ROLLOVER	864000 //number of deciseconds in a day
 
@@ -185,6 +152,7 @@
 #define TURF_WET_WATER	1
 #define TURF_WET_LUBE	2
 #define TURF_WET_ICE	3
+#define TURF_WET_PERMAFROST 4
 
 #define APPEARANCE_UI_IGNORE_ALPHA			RESET_COLOR|RESET_TRANSFORM|NO_CLIENT_COLOR|RESET_ALPHA
 
@@ -194,40 +162,48 @@
 #define MFOAM_IRON 		2
 
 //Human Overlays Indexes/////////
-#define MUTANTRACE_LAYER		1
-#define TAIL_UNDERLIMBS_LAYER	2	//Tail split-rendering.
-#define LIMBS_LAYER				3
-#define MARKINGS_LAYER			4
-#define UNDERWEAR_LAYER			5
-#define MUTATIONS_LAYER			6
-#define DAMAGE_LAYER			7
-#define UNIFORM_LAYER			8
-#define ID_LAYER				9
-#define SHOES_LAYER				10
-#define GLOVES_LAYER			11
-#define EARS_LAYER				12
-#define SUIT_LAYER				13
-#define BELT_LAYER				14	//Possible make this an overlay of somethign required to wear a belt?
-#define SUIT_STORE_LAYER		15
-#define BACK_LAYER				16
-#define HEAD_ACCESSORY_LAYER	17
-#define FHAIR_LAYER				18
+#define WING_LAYER				41
+#define WING_UNDERLIMBS_LAYER		40
+#define BODY_LAYER				39
+#define MUTANTRACE_LAYER		38
+#define TAIL_UNDERLIMBS_LAYER	37	//Tail split-rendering.
+#define LIMBS_LAYER				36
+#define INTORGAN_LAYER			35
+#define MARKINGS_LAYER			34
+#define UNDERWEAR_LAYER			33
+#define MUTATIONS_LAYER			32
+#define H_DAMAGE_LAYER			31
+#define UNIFORM_LAYER			30
+#define ID_LAYER				29
+#define SHOES_LAYER				28
+#define GLOVES_LAYER			27
+#define EARS_LAYER				26
+#define SUIT_LAYER				25
+#define BELT_LAYER				24	//Possible make this an overlay of somethign required to wear a belt?
+#define SUIT_STORE_LAYER		23
+#define BACK_LAYER				22
+#define HEAD_ACCESSORY_LAYER	21
+#define FHAIR_LAYER				20
 #define GLASSES_LAYER			19
-#define HAIR_LAYER				20	//TODO: make part of head layer?
-#define HEAD_ACC_OVER_LAYER		21	//Select-layer rendering.
-#define FHAIR_OVER_LAYER		22	//Select-layer rendering.
-#define GLASSES_OVER_LAYER		23	//Select-layer rendering.
-#define TAIL_LAYER				24	//bs12 specific. this hack is probably gonna come back to haunt me
-#define FACEMASK_LAYER			25
-#define HEAD_LAYER				26
-#define COLLAR_LAYER			27
-#define HANDCUFF_LAYER			28
-#define LEGCUFF_LAYER			29
-#define L_HAND_LAYER			30
-#define R_HAND_LAYER			31
-#define TARGETED_LAYER			32	//BS12: Layer for the target overlay from weapon targeting system
-#define FIRE_LAYER				33	//If you're on fire
-#define TOTAL_LAYERS			33
+#define HAIR_LAYER				18	//TODO: make part of head layer?
+#define HEAD_ACC_OVER_LAYER		17	//Select-layer rendering.
+#define FHAIR_OVER_LAYER		16	//Select-layer rendering.
+#define GLASSES_OVER_LAYER		15	//Select-layer rendering.
+#define TAIL_LAYER				14	//bs12 specific. this hack is probably gonna come back to haunt me
+#define FACEMASK_LAYER			13
+#define OVER_MASK_LAYER			12	//Select-layer rendering.
+#define HEAD_LAYER				11
+#define COLLAR_LAYER			10
+#define HANDCUFF_LAYER			9
+#define LEGCUFF_LAYER			8
+#define L_HAND_LAYER			7
+#define R_HAND_LAYER			6
+#define TARGETED_LAYER			5	//BS12: Layer for the target overlay from weapon targeting system
+#define HALO_LAYER				4	//blood cult ascended halo, because there's currently no better solution for adding/removing
+#define FIRE_LAYER				3	//If you're on fire
+#define MISC_LAYER				2
+#define FROZEN_LAYER			1
+#define TOTAL_LAYERS			41
 
 ///Access Region Codes///
 #define REGION_ALL			0
@@ -264,20 +240,69 @@
                                0.4,0.6,0.0,\
                                0.2,0.2,0.6)
 
-#define LIST_REPLACE_RENAME list("rebeccapurple" = "dark purple", "darkslategrey" = "dark grey", "darkolivegreen" = "dark green", "darkslateblue" = "dark blue",\
-								 "darkkhaki" = "khaki", "darkseagreen" = "light green", "midnightblue" = "blue", "lightgrey" = "light grey", "darkgrey" = "dark grey",\
-								 "steelblue" = "blue", "goldenrod" = "gold")
+/*
+	Used for wire name appearances. Replaces the color name on the left with the one on the right.
+	The color on the left is the one used as the actual color of the wire, but it doesn't look good when written.
+	So, we need to replace the name to something that looks better.
+*/
+#define LIST_COLOR_RENAME 				\
+	list(								\
+		"rebeccapurple" = "dark purple",\
+		"darkslategrey" = "dark grey",	\
+		"darkolivegreen"= "dark green",	\
+		"darkslateblue" = "dark blue",	\
+		"darkkhaki" 	= "khaki",		\
+		"darkseagreen" 	= "light green",\
+		"midnightblue" 	= "blue",		\
+		"lightgrey" 	= "light grey",	\
+		"darkgrey" 		= "dark grey",	\
+		"steelblue" 	= "blue",		\
+		"goldenrod"	 	= "gold"		\
+	)
 
-#define LIST_GREYSCALE_REPLACE list("red" = "lightgrey", "blue" = "grey", "green" = "grey", "orange" = "lightgrey", "brown" = "grey",\
-									"gold" = "lightgrey", "cyan" = "lightgrey", "navy" = "grey", "purple" = "grey", "pink"= "lightgrey")
+/// Pure Black and white colorblindness. Every species except Vulpkanins and Tajarans will have this.
+#define GREYSCALE_COLOR_REPLACE		\
+	list(							\
+		"red"		= "grey",		\
+		"blue"		= "grey",		\
+		"green"		= "grey",		\
+		"orange"	= "light grey",	\
+		"brown"		= "grey",		\
+		"gold"		= "light grey",	\
+		"cyan"		= "silver",		\
+		"magenta"	= "grey",		\
+		"purple"	= "grey",		\
+		"pink"		= "light grey"	\
+	)
 
-#define LIST_VULP_REPLACE list("pink" = "beige", "orange" = "goldenrod", "gold" = "goldenrod", "red" = "darkolivegreen", "brown" = "darkolivegreen",\
-									 "green" = "darkslategrey", "cyan" = "steelblue", "purple" = "darkslategrey", "navy" = "midnightblue")
+/// Red colorblindness. Vulpkanins/Wolpins have this.
+#define PROTANOPIA_COLOR_REPLACE		\
+	list(								\
+		"red"		= "darkolivegreen",	\
+		"green"		= "darkslategrey",	\
+		"orange"	= "goldenrod",		\
+		"gold"		= "goldenrod", 		\
+		"brown"		= "darkolivegreen",	\
+		"cyan"		= "steelblue",		\
+		"magenta"	= "blue",			\
+		"purple"	= "darkslategrey",	\
+		"pink"		= "beige"			\
+	)
 
-#define LIST_TAJ_REPLACE list("red" = "rebeccapurple", "brown" = "rebeccapurple", "purple" = "darkslateblue", "blue" = "darkslateblue",\
-									 "green" = "darkolivegreen", "orange" = "darkkhaki", "gold" = "darkkhaki", "cyan" = "darkseagreen", \
-									 "navy" = "midnightblue", "pink" = "lightgrey")
-
+/// Yellow-Blue colorblindness. Tajarans/Farwas have this.
+#define TRITANOPIA_COLOR_REPLACE		\
+	list(								\
+		"red"		= "rebeccapurple",	\
+		"blue"		= "darkslateblue",	\
+		"green"		= "darkolivegreen",	\
+		"orange"	= "darkkhaki",		\
+		"gold"		= "darkkhaki",		\
+		"brown"		= "rebeccapurple",	\
+		"cyan"		= "darkseagreen",	\
+		"magenta"	= "darkslateblue",	\
+		"purple"	= "darkslateblue",	\
+		"pink"		= "lightgrey"		\
+	)
 
 //Gun trigger guards
 #define TRIGGER_GUARD_ALLOW_ALL -1
@@ -285,10 +310,10 @@
 #define TRIGGER_GUARD_NORMAL 1
 
 // Macro to get the current elapsed round time, rather than total world runtime
-#define ROUND_TIME (round_start_time ? (world.time - round_start_time) : 0)
+#define ROUND_TIME (SSticker.time_game_started ? (world.time - SSticker.time_game_started) : 0)
 
 // Macro that returns true if it's too early in a round to freely ghost out
-#define TOO_EARLY_TO_GHOST (config && (ROUND_TIME < (config.round_abandon_penalty_period)))
+#define TOO_EARLY_TO_GHOST (ROUND_TIME < GLOB.configuration.general.cryo_penalty_period MINUTES)
 
 // Used by radios to indicate that they have sent a message via something other than subspace
 #define RADIO_CONNECTION_FAIL 0
@@ -300,26 +325,17 @@
 #define SHELTER_DEPLOY_BAD_AREA "bad area"
 #define SHELTER_DEPLOY_ANCHORED_OBJECTS "anchored objects"
 
-// Client donator levels
-#define DONATOR_LEVEL_NONE 0
-#define DONATOR_LEVEL_ONE 1
-#define DONATOR_LEVEL_TWO 2
+// transit_tube stuff
+#define TRANSIT_TUBE_OPENING 0
+#define TRANSIT_TUBE_OPEN 1
+#define TRANSIT_TUBE_CLOSING 2
+#define TRANSIT_TUBE_CLOSED 3
+
+// Maximum donation level
+#define DONATOR_LEVEL_MAX 4
 
 // The cooldown on OOC messages such as OOC, LOOC, praying and adminhelps
 #define OOC_COOLDOWN 5
-
-// Medal names
-#define BOSS_KILL_MEDAL "Killer"
-#define ALL_KILL_MEDAL "Exterminator"	//Killing all of x type
-
-// Score names
-#define LEGION_SCORE "Legion Killed"
-#define COLOSSUS_SCORE "Colossus Killed"
-#define BUBBLEGUM_SCORE "Bubblegum Killed"
-#define DRAKE_SCORE "Drakes Killed"
-#define BIRD_SCORE "Hierophants Killed"
-#define BOSS_SCORE "Bosses Killed"
-#define TENDRIL_CLEAR_SCORE "Tendrils Killed"
 
 // The number of station goals generated each round.
 #define STATION_GOAL_BUDGET 1
@@ -328,13 +344,14 @@
 #define SECOND_DIAG_STEP 2
 
 #define ARBITRARY_VIEWRANGE_NOHUD 2
-#define SECOND_DIAG_STEP 2
 
 //Bloody shoes/footprints
 #define MAX_SHOE_BLOODINESS			100
 #define BLOODY_FOOTPRINT_BASE_ALPHA	150
 #define BLOOD_GAIN_PER_STEP			100
 #define BLOOD_LOSS_PER_STEP			5
+#define BLOOD_LOSS_IN_SPREAD		20
+#define BLOOD_AMOUNT_PER_DECAL		20
 
 //Bloody shoe blood states
 #define BLOOD_STATE_HUMAN			"blood"
@@ -344,5 +361,153 @@
 //for obj explosion block calculation
 #define EXPLOSION_BLOCK_PROC -1
 
+// Defines for investigate to prevent typos and for styling
+#define INVESTIGATE_LABEL "labels"
+
+#define INVESTIGATE_BOMB "bombs"
+
 // The SQL version required by this version of the code
-#define SQL_VERSION 2
+#define SQL_VERSION 33
+
+// Vending machine stuff
+#define CAT_NORMAL 1
+#define CAT_HIDDEN 2
+#define CAT_COIN   4
+
+// Jobs
+// used for alternate_option
+#define GET_RANDOM_JOB 0
+#define BE_ASSISTANT 1
+#define RETURN_TO_LOBBY 2
+
+//Melting Temperatures for various specific objects
+#define GIRDER_MELTING_TEMP 5000
+
+// Area selection defines
+#define AREASELECT_CORNERA "corner A"
+#define AREASELECT_CORNERB "corner B"
+
+//https://secure.byond.com/docs/ref/info.html#/atom/var/mouse_opacity
+#define MOUSE_OPACITY_TRANSPARENT 0
+#define MOUSE_OPACITY_ICON 1
+#define MOUSE_OPACITY_OPAQUE 2
+
+// Defib stats
+/// Past this much time the patient is unrecoverable (in deciseconds).
+#define DEFIB_TIME_LIMIT 300 SECONDS
+/// Brain damage starts setting in on the patient after some time left rotting.
+#define DEFIB_TIME_LOSS 60 SECONDS
+
+//different types of atom colorations
+#define ADMIN_COLOUR_PRIORITY 		1 //only used by rare effects like greentext coloring mobs and when admins varedit color
+#define TEMPORARY_COLOUR_PRIORITY 	2 //e.g. purple effect of the revenant on a mob, black effect when mob electrocuted
+#define WASHABLE_COLOUR_PRIORITY 	3 //color splashed onto an atom (e.g. paint on turf)
+#define FIXED_COLOUR_PRIORITY 		4 //color inherent to the atom (e.g. blob color)
+#define COLOUR_PRIORITY_AMOUNT 4 //how many priority levels there are.
+
+//Ruin Generation
+
+#define SPACERUIN_MAP_EDGE_PAD 15
+#define PLACEMENT_TRIES 100 //How many times we try to fit the ruin somewhere until giving up (really should just swap to some packing algo)
+
+#define PLACE_DEFAULT "random"
+#define PLACE_SAME_Z "same"
+#define PLACE_SPACE_RUIN "space"
+#define PLACE_LAVA_RUIN "lavaland"
+
+//Cleaning tool strength
+// 1 is also a valid cleaning strength but completely unused so left undefined
+#define CLEAN_WEAK 			2
+#define CLEAN_MEDIUM		3 // Acceptable tools
+#define CLEAN_STRONG		4 // Industrial strength
+#define CLEAN_IMPRESSIVE	5 // Cleaning strong enough your granny would be proud
+#define CLEAN_GOD			6 // Cleans things spotless down to the atomic structure
+
+//Ghost orbit types:
+#define GHOST_ORBIT_CIRCLE		"circle"
+#define GHOST_ORBIT_TRIANGLE	"triangle"
+#define GHOST_ORBIT_HEXAGON		"hexagon"
+#define GHOST_ORBIT_SQUARE		"square"
+#define GHOST_ORBIT_PENTAGON	"pentagon"
+
+//Explosive wall groups
+#define EXPLOSIVE_WALL_GROUP_SYNDICATE_BASE "syndicate_base"
+
+/// Prepares a text to be used for maptext. Use this so it doesn't look hideous.
+#define MAPTEXT(text) {"<span class='maptext'>[##text]</span>"}
+
+//Fullscreen overlay resolution in tiles.
+#define FULLSCREEN_OVERLAY_RESOLUTION_X 15
+#define FULLSCREEN_OVERLAY_RESOLUTION_Y 15
+
+//suit sensors: sensor_mode defines
+#define SENSOR_OFF 0
+#define SENSOR_LIVING 1
+#define SENSOR_VITALS 2
+#define SENSOR_COORDS 3
+
+// Dice rigged options.
+#define DICE_NOT_RIGGED 1
+#define DICE_BASICALLY_RIGGED 2
+#define DICE_TOTALLY_RIGGED 3
+
+// Water temperature
+#define COLD_WATER_TEMPERATURE 283.15 // 10 degrees celsius
+
+// Parallax
+#define PARALLAX_DELAY_DEFAULT	world.tick_lag
+#define PARALLAX_DELAY_MED		1
+#define PARALLAX_DELAY_LOW		2
+#define PARALLAX_LOOP_TIME		25
+
+// Engine types
+#define ENGTYPE_SING 		"Singularity"
+#define ENGTYPE_SM		"Supermatter"
+#define ENGTYPE_TESLA		"Tesla"
+
+#define SUMMON_GUNS "guns"
+#define SUMMON_MAGIC "magic"
+
+// Medical stuff
+#define SYMPTOM_ACTIVATION_PROB 3
+
+// Atmos stuff that fucking terrifies me
+#define LINDA_SPAWN_HEAT 1
+#define LINDA_SPAWN_20C 2
+#define LINDA_SPAWN_TOXINS 4
+#define LINDA_SPAWN_OXYGEN 8
+#define LINDA_SPAWN_CO2 16
+#define LINDA_SPAWN_NITROGEN 32
+#define LINDA_SPAWN_N2O 64
+#define LINDA_SPAWN_AGENT_B 128
+#define LINDA_SPAWN_AIR 256
+
+/// Send to the primary Discord webhook
+#define DISCORD_WEBHOOK_PRIMARY "PRIMARY"
+
+/// Send to the admin Discord webhook
+#define DISCORD_WEBHOOK_ADMIN "ADMIN"
+
+/// Send to the mentor Discord webhook
+#define DISCORD_WEBHOOK_MENTOR "MENTOR"
+
+// Hallucination severities
+#define HALLUCINATE_MINOR 1
+#define HALLUCINATE_MODERATE 2
+#define HALLUCINATE_MAJOR 3
+
+// Runechat symbol types
+#define RUNECHAT_SYMBOL_EMOTE 1
+
+/// Waits at a line of code until X is true
+#define UNTIL(X) while(!(X)) sleep(world.tick_lag)
+
+/proc/client_from_var(I)
+	if(ismob(I))
+		var/mob/A = I
+		return A.client
+	if(isclient(I))
+		return I
+	if(istype(I, /datum/mind))
+		var/datum/mind/B = I
+		return B.current.client

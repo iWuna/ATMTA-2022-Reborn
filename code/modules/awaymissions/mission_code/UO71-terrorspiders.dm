@@ -1,44 +1,44 @@
 /area/awaymission/UO71
 	name = "UO71"
 	icon_state = "away"
-	report_alerts = 0
-	tele_proof = 1
+	report_alerts = FALSE
+	tele_proof = TRUE
 
 
 /area/awaymission/UO71/plaza
 	name = "UO71 Plaza"
 	icon_state = "awaycontent1"
-	fire = 1
+	fire = TRUE
 
 /area/awaymission/UO71/centralhall
 	name = "UO71 Central"
 	icon_state = "awaycontent2"
-	fire = 1
+	fire = TRUE
 
 /area/awaymission/UO71/eng
 	name = "UO71 Engineering"
 	icon_state = "awaycontent3"
-	fire = 1
+	fire = TRUE
 
 /area/awaymission/UO71/mining
 	name = "UO71 Mining"
 	icon_state = "awaycontent4"
-	fire = 1
+	fire = TRUE
 
 /area/awaymission/UO71/science
 	name = "UO71 Science"
 	icon_state = "awaycontent5"
-	fire = 1
+	fire = TRUE
 
 /area/awaymission/UO71/medical
 	name = "UO71 Medical"
 	icon_state = "awaycontent6"
-	fire = 1
+	fire = TRUE
 
 /area/awaymission/UO71/gateway
 	name = "UO71 Gateway"
 	icon_state = "awaycontent7"
-	fire = 1
+	fire = TRUE
 
 /area/awaymission/UO71/outside
 	name = "UO71 Outside"
@@ -47,36 +47,33 @@
 /area/awaymission/UO71/bridge
 	name = "UO71 Bridge"
 	icon_state = "awaycontent21"
-	fire = 1
-	requires_power = 0
-	tele_proof = 1
+	fire = TRUE
+	requires_power = FALSE
+	tele_proof = TRUE
+	dynamic_lighting = DYNAMIC_LIGHTING_FORCED
 
 /area/awaymission/UO71/queen
 	name = "UO71 Queen Lair"
 	icon_state = "awaycontent9"
-	fire = 1
-	requires_power = 0
-	tele_proof = 1
+	fire = TRUE
+	requires_power = FALSE
+	tele_proof = TRUE
+	dynamic_lighting = DYNAMIC_LIGHTING_FORCED
 
 /area/awaymission/UO71/prince
 	name = "UO71 Prince Containment"
 	icon_state = "awaycontent10"
-	fire = 1
-	requires_power = 0
-	tele_proof = 1
-
-/area/awaymission/UO71/mother
-	name = "UO71 Mother Containment"
-	icon_state = "awaycontent10"
-	fire = 1
-	requires_power = 0
-	tele_proof = 1
+	fire = TRUE
+	requires_power = FALSE
+	tele_proof = TRUE
+	dynamic_lighting = DYNAMIC_LIGHTING_FORCED
 
 /area/awaymission/UO71/loot
 	name = "UO71 Loot Vault"
 	icon_state = "awaycontent11"
-	requires_power = 0
-	tele_proof = 1
+	requires_power = FALSE
+	tele_proof = TRUE
+	dynamic_lighting = DYNAMIC_LIGHTING_FORCED
 
 /obj/item/paper/terrorspiders1
 	name = "paper - 'Sealed Facility'"
@@ -85,6 +82,7 @@
 	This facility is sealed shut by order of Commander Marquez. Do not enter.<br>
 	Terror spiders live here. We believe they are a weapon developed by the syndicate.<br>
 	Any surviving personnel are to evacuate immediately via the gateway.<br>
+	Any arriving response team is advised to use the ID Upgrade Machine to obtain local access.<br>
 	"}
 
 /obj/item/paper/terrorspiders2
@@ -92,12 +90,9 @@
 	info = {"<b>Status Report on the 'Terrors'</b><br>
 	<br>
 	All the spiders are deadly. We know this much already. Within an hour of their appearance, they have killed several staff.<br>
-	Three, however, bear particular mention, as they appear to be leading the spider hivemind.<br>
+	Two, however, bear particular mention, as they appear to be leading the spider hivemind.<br>
 	<br>
-	The Mother is held in containment 1. Advise leaving her alone.<br>
-	It is likely that the hundreds of tiny spiders swarming over her back would come to her defense if she was threatened.<br>
-	<br>
-	The Prince is held in containment 2. He appears very aggressive, incredibly fast, strong, and durable. Extreme force and agility would be required to neutralize him.<br>
+	The Prince is held in containment. He appears very aggressive, incredibly fast, strong, and durable. Extreme force and agility would be required to neutralize him.<br>
 	It is likely the appearance of the prince was related to our initial aggression against the Queen. These things can THINK.<br>
 	<br>
 	The Queen cannot be contained. She lives in the old bar, south of mining. She continues to breed dangerous spiders at an alarming rate.<br>
@@ -118,8 +113,8 @@
 	I have seeded the Terror Queen egg in a dingy looking bar that bored engineers constructed near the mining tunnels.<br>
 	No doubt she will grow soon.<br>
 	<br>
-	I have also placed the Mother and Prince eggs nearby, injected with sedative. Hopefully the dimwitted NT scientists bring them back for study.<br>
-	With any luck, the Queen will sense them telepathically, think NT is holding her children hostage, and attack.<br>
+	I have also placed the Prince egg nearby, injected with sedative. Hopefully the dimwitted NT scientists bring them back for study.<br>
+	With any luck, the Queen will sense them telepathically, think NT is holding her prince hostage, and attack.<br>
 	<br>
 	I am going to extract out of the gateway before this all goes down.<br>
 	I don't imagine the staff have very long to live once the Queen declares war on this place.<br>
@@ -129,10 +124,10 @@
 	name = "paper - 'Prescription for Jones, David'"
 	info = {"PRESCRIPTION FOR: David Jones<br>
 	RANK: Miner<br>
-	FOR: Haloperidol<br>
-	REASON FOR TREATMENT: Hallucinations, Paranoia<br>
-	CAUSE: Hallucinations caused by encounter with toxic spit of spider in the caves. Paranoia caused by disappearing staff and suspicions of syndicate infiltration.<br>
-	TREATMENT PLAN: Take as needed. See Dr. Phloxi in one week if symptoms persist. <br>
+	FOR: Charcoal<br>
+	REASON FOR TREATMENT: Toxins in bloodstream<br>
+	CAUSE: Bitten by a black terror spider.<br>
+	TREATMENT PLAN: Take hourly. See Dr. Phloxi if symptoms persist more than three hours.<br>
 	"}
 
 /obj/item/paper/terrorspiders5
@@ -144,9 +139,8 @@
 	<p>Green<br>Will lay eggs on dead bodies, breeding more spiders.</p>
 	<p>Black<br>Even a single bite is enough to kill a humanoid, given time.</p>
 	<p>White<br>Injects a parasitic agent. Deemed to pose too great an infection risk to study.</p>
-	<p>Purple<br>Only seen guarding the nest of the Queen to the south. Appear to be territorial, and very dangerous.</p>
-	<p>Prince<br>Held in containment 2. Appears to be a sort of super-warrior. Fast, strong, and thickly armored.</p>
-	<p>Mother<br>Carries hordes of spiderlings on its back. Held in containment 1. </p>
+	<p>Purple<br>Seen guarding key areas and important spiders. Appear to be territorial, and very dangerous.</p>
+	<p>Prince<br>Held in containment. Appears to be a sort of super-warrior. Fast, strong, and thickly armored.</p>
 	<p>Queen<br>Unable to contain. Present south of Cargo before contact was lost. Presumed ruler of the local hive.</p>
 	"}
 
@@ -179,37 +173,33 @@
 	(the writing trails off, as if the writer was interrupted)<br>
 	"}
 
-/obj/item/paper/terrorspiders9
-	name = "paper - 'Research Notes'"
-	info = "<b>The notes appear gibberish to you. Perhaps a destructive analyser in R&D could make sense of them.</b>"
-	origin_tech = "combat=4;materials=4;engineering=4;biotech=4"
-
 /obj/item/gun/energy/laser/awaymission_aeg
-	name = "Wireless Energy Gun"
+	name = "wireless energy gun"
 	desc = "An energy gun that recharges wirelessly during away missions. Does not work on the main station."
 	force = 10
 	origin_tech = null
 	selfcharge = 1
 	can_charge = 0
-	var/inawaymission = 1
+	// Selfcharge is enabled and disabled, and used as the away mission tracker
+	selfcharge = TRUE
 
-/obj/item/gun/energy/laser/awaymission_aeg/process()
-	var/turf/my_loc = get_turf(src)
-	if(is_away_level(my_loc.z))
-		if(inawaymission)
-			return ..()
+/obj/item/gun/energy/laser/awaymission_aeg/Initialize(mapload)
+	. = ..()
+	// Force update it incase it spawns outside an away mission and shouldnt be charged
+	onTransitZ(new_z = loc.z)
+
+/obj/item/gun/energy/laser/awaymission_aeg/onTransitZ(old_z, new_z)
+	if(is_away_level(new_z))
 		if(ismob(loc))
 			to_chat(loc, "<span class='notice'>Your [src] activates, starting to draw power from a nearby wireless power source.</span>")
-		inawaymission = 1
+		selfcharge = TRUE
 	else
-		if(inawaymission)
+		if(selfcharge)
 			if(ismob(loc))
 				to_chat(loc, "<span class='danger'>Your [src] deactivates, as it is out of range from its power source.</span>")
-			power_supply.charge = 0
-			inawaymission = 0
+			cell.charge = 0
+			selfcharge = FALSE
 			update_icon()
-
-
 
 /obj/item/reagent_containers/glass/beaker/terror_black_toxin
 	name = "beaker 'Black Terror Venom'"
@@ -224,7 +214,7 @@
 	name = "ID Upgrade Machine"
 	icon_state = "guest"
 	icon_screen = "pass"
-	var/list/access_to_give = list(access_away01)
+	var/list/access_to_give = list(ACCESS_AWAY01)
 	var/beenused = 0
 	var/door_to_open = "UO71_Start"
 
@@ -248,7 +238,7 @@
 			spawn(1)
 				beenused = 1
 				var/unlocked_something = 0
-				for(var/obj/machinery/door/poddoor/P in airlocks)
+				for(var/obj/machinery/door/poddoor/P in GLOB.airlocks)
 					if(P.density && P.id_tag == door_to_open && P.z == z)
 						P.open()
 						unlocked_something = 1
@@ -256,6 +246,5 @@
 					to_chat(user, "<span class='danger'>Activating the machine has unlocked a way forward!</span>")
 		else
 			to_chat(user, "<span class='notice'>Your ID card already has all the access this machine can give.</span>")
-		. = 1
-
-
+		return
+	return ..()

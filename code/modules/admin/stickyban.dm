@@ -16,7 +16,7 @@
 			if(data["ckey"])
 				ckey = ckey(data["ckey"])
 			else
-				ckey = input(usr,"Ckey","Ckey","") as text|null
+				ckey = clean_input("Ckey","Ckey","")
 				if(!ckey)
 					return
 				ckey = ckey(ckey)
@@ -26,7 +26,7 @@
 			if(data["reason"])
 				ban["message"] = data["reason"]
 			else
-				var/reason = input(usr,"Reason","Reason","Ban Evasion") as text|null
+				var/reason = clean_input("Reason","Reason","Ban Evasion")
 				if(!reason)
 					return
 				ban["message"] = "[reason]"
@@ -112,7 +112,7 @@
 				to_chat(usr, "<span class='adminnotice'>Error: No sticky ban for [ckey] found!")
 				return
 			var/oldreason = ban["message"]
-			var/reason = input(usr,"Reason","Reason","[ban["message"]]") as text|null
+			var/reason = clean_input("Reason","Reason","[ban["message"]]")
 			if(!reason || reason == oldreason)
 				return
 			//we have to do this again incase something changed while we waited for input
@@ -167,7 +167,7 @@
 	"}
 	usr << browse(html,"window=stickybans;size=700x400")
 
-/proc/get_stickyban_from_ckey(var/ckey)
+/proc/get_stickyban_from_ckey(ckey)
 	if(!ckey)
 		return null
 	ckey = ckey(ckey)
@@ -177,7 +177,7 @@
 			. = stickyban2list(world.GetConfig("ban",key))
 			break
 
-/proc/stickyban2list(var/ban)
+/proc/stickyban2list(ban)
 	if(!ban)
 		return null
 	. = params2list(ban)
@@ -186,7 +186,7 @@
 	.["IP"] = splittext(.["IP"], ",")
 	.["computer_id"] = splittext(.["computer_id"], ",")
 
-/proc/list2stickyban(var/list/ban)
+/proc/list2stickyban(list/ban)
 	if(!ban || !islist(ban))
 		return null
 	. = ban.Copy()

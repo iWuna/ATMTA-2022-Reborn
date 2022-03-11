@@ -1,12 +1,13 @@
 /////SINGULARITY SPAWNER
-/obj/machinery/the_singularitygen/
+/obj/machinery/the_singularitygen
 	name = "Gravitational Singularity Generator"
 	desc = "An odd device which produces a Gravitational Singularity when set up."
 	icon = 'icons/obj/singularity.dmi'
 	icon_state = "TheSingGen"
 	anchored = 0
 	density = 1
-	use_power = 0
+	use_power = NO_POWER_USE
+	resistance_flags = FIRE_PROOF
 	var/energy = 0
 	var/creation_type = /obj/singularity
 
@@ -25,13 +26,13 @@
 		anchored = !anchored
 		playsound(src.loc, W.usesound, 75, 1)
 		if(anchored)
-			user.visible_message("[user.name] secures [src.name] to the floor.", \
-				"You secure the [src.name] to the floor.", \
+			user.visible_message("[user.name] secures [src] to the floor.", \
+				"You secure [src] to the floor.", \
 				"You hear a ratchet")
 			src.add_hiddenprint(user)
 		else
-			user.visible_message("[user.name] unsecures [src.name] from the floor.", \
-				"You unsecure the [src.name] from the floor.", \
+			user.visible_message("[user.name] unsecures [src] from the floor.", \
+				"You unsecure [src.name] from the floor.", \
 				"You hear a ratchet")
 		return
 	return ..()

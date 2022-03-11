@@ -12,11 +12,11 @@
 
 	light_color = LIGHT_COLOR_CYAN
 
-/obj/machinery/computer/HolodeckControl/attack_ai(var/mob/user as mob)
+/obj/machinery/computer/HolodeckControl/attack_ai(mob/user as mob)
 	return attack_hand(user)
 
 
-/obj/machinery/computer/HolodeckControl/attack_hand(var/mob/user as mob)
+/obj/machinery/computer/HolodeckControl/attack_hand(mob/user as mob)
 	if(..())
 		return 1
 
@@ -38,7 +38,6 @@
 	dat += "<A href='?src=[UID()];theatre=1'>((Theatre)</font>)</A><BR>"
 	dat += "<A href='?src=[UID()];meetinghall=1'>((Meeting Hall)</font>)</A><BR>"
 	dat += "<A href='?src=[UID()];knightarena=1'>((Knight Arena)</font>)</A><BR>"
-	dat += "<A href='?src=[UID()];lounge=1'>((Lounge)</font>)</A><BR>"
 //		dat += "<A href='?src=[UID()];turnoff=1'>((Shutdown System)</font>)</A><BR>"
 
 	dat += "Please ensure that only holographic weapons are used in the holodeck if a combat simulation has been loaded.<BR>"
@@ -129,11 +128,6 @@
 		if(target)
 			loadProgram(target)
 
-	else if(href_list["lounge"])
-		target = locate(/area/holodeck/source_lounge)
-		if(target)
-			loadProgram(target)
-
 	else if(href_list["turnoff"])
 		target = locate(/area/holodeck/source_plating)
 		if(target)
@@ -165,7 +159,7 @@
 	updateUsrDialog()
 	return
 
-/obj/machinery/computer/HolodeckControl/attackby(var/obj/item/D as obj, var/mob/user as mob, params)
+/obj/machinery/computer/HolodeckControl/attackby(obj/item/D as obj, mob/user as mob, params)
 	return
 
 /obj/machinery/computer/HolodeckControl/emag_act(user as mob)
@@ -198,9 +192,9 @@
 	emergencyShutdown()
 	..()
 
-/obj/machinery/computer/HolodeckControl/blob_act()
+/obj/machinery/computer/HolodeckControl/blob_act(obj/structure/blob/B)
 	emergencyShutdown()
-	..()
+	return ..()
 
 /obj/machinery/computer/HolodeckControl/process()
 	for(var/item in holographic_items) // do this first, to make sure people don't take items out when power is down.
@@ -223,13 +217,11 @@
 
 			for(var/turf/T in linkedholodeck)
 				if(prob(30))
-					var/datum/effect_system/spark_spread/s = new /datum/effect_system/spark_spread
-					s.set_up(2, 1, T)
-					s.start()
+					do_sparks(2, 1, T)
 				T.ex_act(3)
 				T.hotspot_expose(1000,500,1)
 
-/obj/machinery/computer/HolodeckControl/proc/derez(var/obj/obj , var/silent = 1)
+/obj/machinery/computer/HolodeckControl/proc/derez(obj/obj , silent = 1)
 	holographic_items.Remove(obj)
 
 	if(obj == null)
@@ -242,17 +234,17 @@
 
 	if(!silent)
 		var/obj/oldobj = obj
-		visible_message("The [oldobj.name] fades away!")
+		visible_message("[oldobj] fades away!")
 	qdel(obj)
 
-/obj/machinery/computer/HolodeckControl/proc/checkInteg(var/area/A)
+/obj/machinery/computer/HolodeckControl/proc/checkInteg(area/A)
 	for(var/turf/T in A)
 		if(istype(T, /turf/space))
 			return 0
 
 	return 1
 
-/obj/machinery/computer/HolodeckControl/proc/togglePower(var/toggleOn = 0)
+/obj/machinery/computer/HolodeckControl/proc/togglePower(toggleOn = 0)
 
 	if(toggleOn)
 		var/area/targetsource = locate(/area/holodeck/source_emptycourt)
@@ -263,9 +255,7 @@
 				if(L.name=="Atmospheric Test Start")
 					spawn(20)
 						var/turf/T = get_turf(L)
-						var/datum/effect_system/spark_spread/s = new /datum/effect_system/spark_spread
-						s.set_up(2, 1, T)
-						s.start()
+						do_sparks(2, 1, T)
 						if(T)
 							T.temperature = 5000
 							T.hotspot_expose(50000,50000,1)*/
@@ -279,7 +269,7 @@
 		active = 0
 
 
-/obj/machinery/computer/HolodeckControl/proc/loadProgram(var/area/A)
+/obj/machinery/computer/HolodeckControl/proc/loadProgram(area/A)
 
 	if(world.time < (last_change + 25))
 		if(world.time < (last_change + 15))//To prevent super-spam clicking, reduced process size and annoyance -Sieve
@@ -312,9 +302,7 @@
 /*			if(L.name=="Atmospheric Test Start")
 				spawn(20)
 					var/turf/T = get_turf(L)
-					var/datum/effect_system/spark_spread/s = new /datum/effect_system/spark_spread
-					s.set_up(2, 1, T)
-					s.start()
+					do_sparks(2, 1, T)
 					if(T)
 						T.temperature = 5000
 						T.hotspot_expose(50000,50000,1)*/
@@ -339,35 +327,80 @@
 /turf/simulated/floor/holofloor/
 	thermal_conductivity = 0
 	icon_state = "plating"
+
+/turf/simulated/floor/holofloor/carpet
+	name = "carpet"
+	icon = 'icons/turf/floors/carpet.dmi'
+	icon_state = "carpet-255"
+	base_icon_state = "carpet"
+	floor_tile = /obj/item/stack/tile/carpet
+	broken_states = list("damaged")
+	smoothing_flags = SMOOTH_BITMASK
+	smoothing_groups = list(SMOOTH_GROUP_TURF, SMOOTH_GROUP_CARPET)
+	canSmoothWith = list(SMOOTH_GROUP_CARPET)
+	footstep = FOOTSTEP_CARPET
+	barefootstep = FOOTSTEP_CARPET_BAREFOOT
+	clawfootstep = FOOTSTEP_CARPET_BAREFOOT
+	heavyfootstep = FOOTSTEP_GENERIC_HEAVY
+
+/turf/simulated/floor/holofloor/carpet/Initialize(mapload)
+	. = ..()
+	update_icon()
+
+/turf/simulated/floor/holofloor/carpet/update_icon()
+	if(!..())
+		return 0
+	if(smoothing_flags & (SMOOTH_CORNERS|SMOOTH_BITMASK))
+		QUEUE_SMOOTH(src)
 /turf/simulated/floor/holofloor/grass
 	name = "Lush Grass"
-	icon_state = "grass1"
+	icon = 'icons/turf/floors/grass.dmi'
+	icon_state = "grass-0"
+	base_icon_state = "grass"
+	smoothing_flags = SMOOTH_BITMASK
+	smoothing_groups = list(SMOOTH_GROUP_TURF, SMOOTH_GROUP_GRASS)
+	canSmoothWith = list(SMOOTH_GROUP_GRASS, SMOOTH_GROUP_JUNGLE_GRASS)
+	pixel_x = -9
+	pixel_y = -9
+	layer = ABOVE_OPEN_TURF_LAYER
 	floor_tile = /obj/item/stack/tile/grass
-
-/turf/simulated/floor/holofloor/grass/New()
-	..()
-	spawn(1)
-		update_icon()
-
-/turf/simulated/floor/holofloor/grass/update_icon()
-	..()
-	if(!(icon_state in list("grass1", "grass2", "grass3", "grass4", "sand")))
-		icon_state = "grass[pick("1","2","3","4")]"
 
 /turf/simulated/floor/holofloor/attackby(obj/item/W as obj, mob/user as mob, params)
 	return
 	// HOLOFLOOR DOES NOT GIVE A FUCK
 
+/turf/simulated/floor/holofloor/space
+	name = "\proper space"
+	icon = 'icons/turf/space.dmi'
+	icon_state = "0"
+	plane = PLANE_SPACE
+
+/turf/simulated/floor/holofloor/space/Initialize(mapload)
+	icon_state = SPACE_ICON_STATE // so realistic
+	. = ..()
+
+/turf/simulated/floor/holofloor/space/get_smooth_underlay_icon(mutable_appearance/underlay_appearance, turf/asking_turf, adjacency_dir)
+	underlay_appearance.icon = 'icons/turf/space.dmi'
+	underlay_appearance.icon_state = SPACE_ICON_STATE
+	underlay_appearance.plane = PLANE_SPACE
+	return TRUE
+
 /obj/structure/table/holotable
-	can_deconstruct = FALSE
-	canSmoothWith = list(/obj/structure/table/holotable)
+	flags = NODECONSTRUCT
+	canSmoothWith = list(SMOOTH_GROUP_TABLES)
 
 /obj/structure/table/holotable/wood
 	name = "wooden table"
 	desc = "A square piece of wood standing on four wooden legs. It can not move."
 	icon = 'icons/obj/smooth_structures/wood_table.dmi'
-	icon_state = "wood_table"
-	canSmoothWith = list(/obj/structure/table/holotable/wood)
+	icon_state = "wood_table-0"
+	base_icon_state = "wood_table"
+	smoothing_groups = list(SMOOTH_GROUP_WOOD_TABLES) //Don't smooth with SMOOTH_GROUP_TABLES
+	canSmoothWith = list(SMOOTH_GROUP_WOOD_TABLES)
+
+/obj/structure/chair/stool/holostool
+	flags = NODECONSTRUCT
+	item_chair = null
 
 /obj/item/clothing/gloves/boxing/hologlove
 	name = "boxing gloves"
@@ -387,7 +420,7 @@
 	flags = ON_BORDER
 
 /obj/structure/rack/holorack
-	can_deconstruct = FALSE
+	flags = NODECONSTRUCT
 
 /obj/item/holo
 	damtype = STAMINA
@@ -413,7 +446,7 @@
 	item_state = "claymorered"
 
 /obj/item/holo/esword
-	name = "Holographic Energy Sword"
+	name = "holographic energy sword"
 	desc = "This looks like a real energy sword!"
 	icon_state = "sword0"
 	hitsound = "swing_hit"
@@ -427,17 +460,20 @@
 	var/active = 0
 
 /obj/item/holo/esword/green/New()
+	..()
 	item_color = "green"
 
 /obj/item/holo/esword/red/New()
+	..()
 	item_color = "red"
 
-/obj/item/holo/esword/hit_reaction(mob/living/carbon/human/owner, attack_text, final_block_chance)
+/obj/item/holo/esword/hit_reaction(mob/living/carbon/human/owner, atom/movable/hitby, attack_text = "the attack", final_block_chance = 0, damage = 0, attack_type = MELEE_ATTACK)
 	if(active)
 		return ..()
 	return 0
 
 /obj/item/holo/esword/New()
+	..()
 	item_color = pick("red","blue","green","purple")
 
 /obj/item/holo/esword/attack_self(mob/living/user as mob)
@@ -472,6 +508,12 @@
 	desc = "Here's your chance, do your dance at the Space Jam."
 	w_class = WEIGHT_CLASS_BULKY //Stops people from hiding it in their bags/pockets
 
+/obj/item/beach_ball/holoball/baseball
+	icon_state = "baseball"
+	name = "baseball"
+	item_state = "baseball"
+	desc = "Take me out to the ball game."
+
 /obj/structure/holohoop
 	name = "basketball hoop"
 	desc = "Boom, Shakalaka!"
@@ -489,27 +531,25 @@
 			return
 		G.affecting.loc = src.loc
 		G.affecting.Weaken(5)
-		visible_message("<span class='warning'>[G.assailant] dunks [G.affecting] into the [src]!</span>")
+		visible_message("<span class='warning'>[G.assailant] dunks [G.affecting] into [src]!</span>")
 		qdel(W)
 		return
 	else if(istype(W, /obj/item) && get_dist(src,user)<2)
 		user.drop_item(src)
-		visible_message("<span class='notice'>[user] dunks [W] into the [src]!</span>")
+		visible_message("<span class='notice'>[user] dunks [W] into [src]!</span>")
 		return
 
-/obj/structure/holohoop/CanPass(atom/movable/mover, turf/target, height=0)
-	if(istype(mover,/obj/item) && mover.throwing)
-		var/obj/item/I = mover
-		if(istype(I, /obj/item/projectile))
-			return
+
+/obj/structure/holohoop/hitby(atom/movable/AM, skipcatch, hitpush, blocked, datum/thrownthing/throwingdatum)
+	if(isitem(AM) && !istype(AM,/obj/item/projectile))
 		if(prob(50))
-			I.loc = src.loc
-			visible_message("<span class='notice'>Swish! \the [I] lands in \the [src].</span>")
+			AM.forceMove(get_turf(src))
+			visible_message("<span class='notice'>Swish! [AM] lands in [src].</span>")
 		else
-			visible_message("<span class='alert'>\The [I] bounces off of \the [src]'s rim!</span>")
-		return 0
+			visible_message("<span class='danger'>[AM] bounces off of [src]'s rim!</span>")
+			return ..()
 	else
-		return ..(mover, target, height)
+		return ..()
 
 /obj/machinery/readybutton
 	name = "Ready Declaration Device"
@@ -521,7 +561,7 @@
 	var/eventstarted = 0
 
 	anchored = 1.0
-	use_power = 1
+	use_power = IDLE_POWER_USE
 	idle_power_usage = 2
 	active_power_usage = 6
 	power_channel = ENVIRON

@@ -12,65 +12,79 @@
 	if(proximity && istype(G) && G.Touch(A, 1))
 		return
 
+	if(HAS_TRAIT(src, TRAIT_HULK))
+		if(proximity) //no telekinetic hulk attack
+			if(A.attack_hulk(src))
+				return
+
+	if(buckled && isstructure(buckled))
+		var/obj/structure/S = buckled
+		if(S.prevents_buckled_mobs_attacking())
+			return
+
 	A.attack_hand(src)
 
 /atom/proc/attack_hand(mob/user as mob)
 	return
 
 /*
-/mob/living/carbon/human/RestrainedClickOn(var/atom/A) -- Handled by carbons
+/mob/living/carbon/human/RestrainedClickOn(atom/A) -- Handled by carbons
 	return
 */
 
-/mob/living/carbon/RestrainedClickOn(var/atom/A)
+/mob/living/carbon/RestrainedClickOn(atom/A)
 	return 0
 
-// Commented out to prevent overwriting RangedAttack in click.dm ~ Bone White
-/*
-/mob/living/carbon/human/RangedAttack(var/atom/A)
-	if(!gloves && !mutations.len) return
-	var/obj/item/clothing/gloves/G = gloves
-	if((LASER in mutations) && a_intent == INTENT_HARM)
-		LaserEyes(A) // moved into a proc below
+/mob/living/carbon/human/RangedAttack(atom/A, params)
+	. = ..()
+	if(gloves)
+		var/obj/item/clothing/gloves/G = gloves
+		if(istype(G) && G.Touch(A, 0)) // for magic gloves
+			return
 
-	else if(istype(G) && G.Touch(A,0)) // for magic gloves
-		return
+	if(HAS_TRAIT(src, TRAIT_LASEREYES) && a_intent == INTENT_HARM)
+		LaserEyes(A)
 
-	else if(TK in mutations)
+	if(HAS_TRAIT(src, TRAIT_TELEKINESIS))
 		A.attack_tk(src)
-*/
+
+	if(isturf(A) && get_dist(src, A) <= 1)
+		Move_Pulled(A)
 
 /*
 	Animals & All Unspecified
 */
-/mob/living/UnarmedAttack(var/atom/A)
+/mob/living/UnarmedAttack(atom/A)
 	A.attack_animal(src)
 
-/mob/living/simple_animal/hostile/UnarmedAttack(var/atom/A)
+/mob/living/simple_animal/hostile/UnarmedAttack(atom/A)
 	target = A
 	AttackingTarget()
 
-/atom/proc/attack_animal(mob/user as mob)
+/atom/proc/attack_animal(mob/user)
 	return
-/mob/living/RestrainedClickOn(var/atom/A)
+
+/mob/living/RestrainedClickOn(atom/A)
 	return
 
 /*
 	Aliens
 	Defaults to same as monkey in most places
 */
-/mob/living/carbon/alien/UnarmedAttack(var/atom/A)
+/mob/living/carbon/alien/UnarmedAttack(atom/A)
 	A.attack_alien(src)
-/atom/proc/attack_alien(mob/user as mob)
+
+/atom/proc/attack_alien(mob/living/carbon/alien/user)
 	attack_hand(user)
-	return
-/mob/living/carbon/alien/RestrainedClickOn(var/atom/A)
+
+/mob/living/carbon/alien/RestrainedClickOn(atom/A)
 	return
 
 // Babby aliens
-/mob/living/carbon/alien/larva/UnarmedAttack(var/atom/A)
+/mob/living/carbon/alien/larva/UnarmedAttack(atom/A)
 	A.attack_larva(src)
-/atom/proc/attack_larva(mob/user as mob)
+
+/atom/proc/attack_larva(mob/user)
 	return
 
 
@@ -78,11 +92,13 @@
 	Slimes
 	Nothing happening here
 */
-/mob/living/carbon/slime/UnarmedAttack(var/atom/A)
+/mob/living/simple_animal/slime/UnarmedAttack(atom/A)
 	A.attack_slime(src)
-/atom/proc/attack_slime(mob/user as mob)
+
+/atom/proc/attack_slime(mob/user)
 	return
-/mob/living/carbon/slime/RestrainedClickOn(var/atom/A)
+
+/mob/living/simple_animal/slime/RestrainedClickOn(atom/A)
 	return
 
 /*
@@ -93,5 +109,5 @@
 	return
 
 // pAIs are not intended to interact with anything in the world
-/mob/living/silicon/pai/UnarmedAttack(var/atom/A)
+/mob/living/silicon/pai/UnarmedAttack(atom/A)
 	return

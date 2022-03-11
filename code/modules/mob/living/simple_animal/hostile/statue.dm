@@ -9,6 +9,7 @@
 	icon_dead = "angel"
 	gender = NEUTER
 	a_intent = INTENT_HARM
+	mob_biotypes = MOB_HUMANOID
 
 	response_help = "touches"
 	response_disarm = "pushes"
@@ -33,16 +34,17 @@
 
 	animate_movement = NO_STEPS // Do not animate movement, you jump around as you're a scary statue.
 
-	see_in_dark = 13
+	see_in_dark = 8
 	vision_range = 12
 	aggro_vision_range = 12
-	idle_vision_range = 12
 
 	search_objects = 1 // So that it can see through walls
 
-	see_invisible = SEE_INVISIBLE_OBSERVER_NOLIGHTING
+	lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE
 	sight = SEE_SELF|SEE_MOBS|SEE_OBJS|SEE_TURFS
-	anchored = 1
+	move_force = MOVE_FORCE_EXTREMELY_STRONG
+	move_resist = MOVE_FORCE_EXTREMELY_STRONG
+	pull_force = MOVE_FORCE_EXTREMELY_STRONG
 	status_flags = GODMODE // Cannot push also
 
 	var/cannot_be_seen = 1
@@ -51,12 +53,12 @@
 
 // No movement while seen code.
 
-/mob/living/simple_animal/hostile/statue/New(loc, var/mob/living/creator)
+/mob/living/simple_animal/hostile/statue/New(loc, mob/living/creator)
 	..()
 	// Give spells
 	AddSpell(new /obj/effect/proc_holder/spell/aoe_turf/flicker_lights(null))
 	AddSpell(new /obj/effect/proc_holder/spell/aoe_turf/blindness(null))
-	AddSpell(new /obj/effect/proc_holder/spell/targeted/night_vision(null))
+	AddSpell(new /obj/effect/proc_holder/spell/night_vision(null))
 
 	// Set creator
 	if(creator)
@@ -85,11 +87,11 @@
 	if(can_be_seen(get_turf(loc)))
 		if(client)
 			to_chat(src, "<span class='warning'>You cannot attack, there are eyes on you!</span>")
-			return
+		return FALSE
 	else
-		..()
+		return ..()
 
-/mob/living/simple_animal/hostile/statue/DestroySurroundings()
+/mob/living/simple_animal/hostile/statue/DestroyPathToTarget()
 	if(!can_be_seen(get_turf(loc)))
 		..()
 
@@ -102,7 +104,7 @@
 		return null
 	// Check for darkness
 	var/turf/T = get_turf(loc)
-	if(T && destination && T.lighting_overlay)
+	if(T && destination && T.lighting_object)
 		if(T.get_lumcount() * 10 < 1 && destination.get_lumcount() * 10 < 1) // No one can see us in the darkness, right?
 			return null
 		if(T == destination)
@@ -160,7 +162,11 @@
 
 	charge_max = 300
 	clothes_req = 0
-	range = 14
+
+/obj/effect/proc_holder/spell/aoe_turf/flicker_lights/create_new_targeting()
+	var/datum/spell_targeting/aoe/turf/T = new()
+	T.range = 14
+	return T
 
 /obj/effect/proc_holder/spell/aoe_turf/flicker_lights/cast(list/targets, mob/user = usr)
 	for(var/turf/T in targets)
@@ -176,37 +182,20 @@
 	message = "<span class='notice'>You glare your eyes.</span>"
 	charge_max = 600
 	clothes_req = 0
-	range = 10
+
+/obj/effect/proc_holder/spell/aoe_turf/blindness/create_new_targeting()
+	var/datum/spell_targeting/aoe/turf/T = new()
+	T.range = 10
+	return T
 
 /obj/effect/proc_holder/spell/aoe_turf/blindness/cast(list/targets, mob/user = usr)
-	for(var/mob/living/L in living_mob_list)
+	for(var/mob/living/L in GLOB.alive_mob_list)
 		if(L == user)
 			continue
 		var/turf/T = get_turf(L.loc)
-		if(T && T in targets)
+		if(T && (T in targets))
 			L.EyeBlind(4)
 	return
-
-//Toggle Night Vision
-/obj/effect/proc_holder/spell/targeted/night_vision
-	name = "Toggle Nightvision"
-	desc = "Toggle your nightvision mode."
-
-	charge_max = 10
-	clothes_req = 0
-
-	message = "<span class='notice'>You toggle your night vision!</span>"
-	range = -1
-	include_user = 1
-	var/non_night_vision = SEE_INVISIBLE_LIVING
-	var/night_vision = SEE_INVISIBLE_OBSERVER_NOLIGHTING
-
-/obj/effect/proc_holder/spell/targeted/night_vision/cast(list/targets, mob/user = usr)
-	for(var/mob/living/target in targets)
-		if(target.see_invisible == non_night_vision)
-			target.see_invisible = night_vision
-		else
-			target.see_invisible = non_night_vision
 
 /mob/living/simple_animal/hostile/statue/sentience_act()
 	faction -= "neutral"

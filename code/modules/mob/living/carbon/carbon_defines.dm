@@ -1,9 +1,10 @@
 /mob/living/carbon
 	gender = MALE
-	var/list/stomach_contents = list()
+	pressure_resistance = 15
+	var/list/stomach_contents
+	var/list/processing_patches
 	var/list/internal_organs	= list()
 	var/list/internal_organs_slot	= list()	//Same as above, but stores "slot ID" - "organ" pairs for easy access.
-	var/antibodies = 0
 
 	var/life_tick = 0      // The amount of life ticks that have processed on this mob.
 
@@ -22,9 +23,11 @@
 
 	var/wetlevel = 0 //how wet the mob is
 
-	var/failed_last_breath = FALSE //This is used to determine if the mob failed a breath. If they did fail a brath, they will attempt to breathe each tick, otherwise just once per 4 ticks.
 	var/co2overloadtime = null
 	var/dreaming = 0 //How many dream images we have left to send
 	var/nightmare = 0
+
+	/// The world.time after which the mob can hallucinate again.
+	var/next_hallucination = 0
 
 	blood_volume = BLOOD_VOLUME_NORMAL
