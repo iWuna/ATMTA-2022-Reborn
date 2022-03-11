@@ -2,13 +2,11 @@
 	name = "traitor+changeling"
 	config_tag = "traitorchan"
 	traitors_possible = 3 //hard limit on traitors if scaling is turned off
-	restricted_jobs = list("Cyborg")
-	secondary_restricted_jobs = list("AI") // Allows AI to roll traitor, but not changeling
+	restricted_jobs = list("AI", "Cyborg")
 	required_players = 10
 	required_enemies = 1	// how many of each type are required
 	recommended_enemies = 3
-	secondary_enemies_scaling = 0.025
-	secondary_protected_species = list("Machine")
+	var/protected_species_changeling = list("Machine")
 
 /datum/game_mode/traitor/changeling/announce()
 	to_chat(world, "<B>The current game mode is - Traitor+Changeling!</B>")
@@ -16,27 +14,20 @@
 
 
 /datum/game_mode/traitor/changeling/pre_setup()
-	if(GLOB.configuration.gamemode.prevent_mindshield_antags)
+	if(config.protect_roles_from_antagonist)
 		restricted_jobs += protected_jobs
 
 	var/list/datum/mind/possible_changelings = get_players_for_role(ROLE_CHANGELING)
-	secondary_enemies = CEILING((secondary_enemies_scaling * num_players()), 1)
 
-	for(var/mob/new_player/player in GLOB.player_list)
-		if((player.mind in possible_changelings) && (player.client.prefs.active_character.species in secondary_protected_species))
+	for(var/mob/new_player/player in player_list)
+		if((player.mind in possible_changelings) && (player.client.prefs.species in protected_species_changeling))
 			possible_changelings -= player.mind
 
 	if(possible_changelings.len > 0)
-		for(var/I in possible_changelings)
-			if(length(changelings) >= secondary_enemies)
-				break
-			var/datum/mind/changeling = pick(possible_changelings)
-			changelings += changeling
-			modePlayer += changelings
-			possible_changelings -= changeling
-			changeling.restricted_roles = (restricted_jobs + secondary_restricted_jobs)
-			changeling.special_role = SPECIAL_ROLE_CHANGELING
-
+		var/datum/mind/changeling = pick(possible_changelings)
+		changelings += changeling
+		modePlayer += changelings
+		changeling.restricted_roles = restricted_jobs
 		return ..()
 	else
 		return 0
@@ -47,6 +38,5 @@
 		changeling.special_role = SPECIAL_ROLE_CHANGELING
 		forge_changeling_objectives(changeling)
 		greet_changeling(changeling)
-		update_change_icons_added(changeling)
 	..()
 	return

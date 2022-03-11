@@ -1,41 +1,45 @@
 /mob/living/silicon/robot/Life(seconds, times_fired)
 	set invisibility = 0
-	if(notransform)
+	set background = BACKGROUND_ENABLED
+
+	if(src.notransform)
 		return
 
-	. = ..()
+	//Status updates, death etc.
+	clamp_values()
 
-	handle_equipment()
-
-	// if Alive
-	if(.)
-		handle_robot_hud_updates()
+	if(..())
 		handle_robot_cell()
 		process_locks()
-		update_items()
+		process_queued_alarms()
 
+/mob/living/silicon/robot/proc/clamp_values()
+	SetStunned(min(stunned, 30))
+	SetParalysis(min(paralysis, 30))
+	SetWeakened(min(weakened, 20))
+	SetSleeping(0)
 
 /mob/living/silicon/robot/proc/handle_robot_cell()
 	if(stat != DEAD)
-		if(!is_component_functioning("power cell"))
+		if(!is_component_functioning("power cell") || !cell)
+			Paralyse(2)
 			uneq_all()
 			low_power_mode = 1
 			update_headlamp()
 			diag_hud_set_borgcell()
 			return
 		if(low_power_mode)
-			if(is_component_functioning("power cell") && cell.charge)
+			if(is_component_functioning("power cell") && cell && cell.charge)
 				low_power_mode = 0
 				update_headlamp()
 		else if(stat == CONSCIOUS)
 			use_power()
 
 /mob/living/silicon/robot/proc/use_power()
-	// this check is safe because `cell` is guaranteed to be set when the power cell is functioning
-	if(is_component_functioning("power cell") && cell.charge)
+	if(is_component_functioning("power cell") && cell && cell.charge)
 		if(cell.charge <= 100)
 			uneq_all()
-		var/amt = clamp((lamp_intensity - 2) * 2,1,cell.charge) //Always try to use at least one charge per tick, but allow it to completely drain the cell.
+		var/amt = Clamp((lamp_intensity - 2) * 2,1,cell.charge) //Always try to use at least one charge per tick, but allow it to completely drain the cell.
 		cell.use(amt) //Usage table: 1/tick if off/lowest setting, 4 = 4/tick, 6 = 8/tick, 8 = 12/tick, 10 = 16/tick
 	else
 		uneq_all()
@@ -43,12 +47,58 @@
 		update_headlamp()
 	diag_hud_set_borgcell()
 
-/mob/living/silicon/robot/proc/handle_equipment()
+/mob/living/silicon/robot/handle_regular_status_updates()
+
+	. = ..()
+
 	if(camera && !scrambledcodes)
-		if(stat == DEAD || wires.is_cut(WIRE_BORG_CAMERA))
+		if(stat == DEAD || wires.IsCameraCut())
 			camera.status = 0
 		else
 			camera.status = 1
+
+	if(getOxyLoss() > 50)
+		Paralyse(3)
+
+	if(sleeping)
+		Paralyse(3)
+		AdjustSleeping(-1)
+
+	if(resting)
+		Weaken(5)
+
+	if(.) //alive
+		if(health <= config.health_threshold_dead)
+			death()
+			diag_hud_set_status()
+			return
+
+		if(!istype(src, /mob/living/silicon/robot/drone))
+			if(health < 50) //Gradual break down of modules as more damage is sustained
+				if(uneq_module(module_state_3))
+					to_chat(src, "<span class='warning'>SYSTEM ERROR: Module 3 OFFLINE.</span>")
+
+				if(health < 0)
+					if(uneq_module(module_state_2))
+						to_chat(src, "<span class='warning'>SYSTEM ERROR: Module 2 OFFLINE.</span>")
+
+					if(health < -50)
+						if(uneq_module(module_state_1))
+							to_chat(src, "<span class='warning'>CRITICAL ERROR: All modules OFFLINE.</span>")
+
+		if(paralysis || stunned || weakened)
+			stat = UNCONSCIOUS
+
+			if(!paralysis > 0)
+				SetEyeBlind(0)
+
+		else
+			stat = CONSCIOUS
+
+		diag_hud_set_health()
+		diag_hud_set_status()
+	else //dead
+		SetEyeBlind(0)
 
 	//update the state of modules and components here
 	if(stat != CONSCIOUS)
@@ -59,21 +109,60 @@
 	else
 		radio.on = 1
 
-/mob/living/silicon/robot/proc/SetEmagged(new_state)
-	emagged = new_state
-	update_icons()
+	if(is_component_functioning("camera") && stat == CONSCIOUS)
+		blinded = 0
+	else
+		blinded = 1
+
+	if(!is_component_functioning("actuator"))
+		Paralyse(3)
+
+	return 1
+
+/mob/living/silicon/robot/update_sight()
+	if(!client)
+		return
+	if(stat == DEAD)
+		grant_death_vision()
+		return
+
+	see_invisible = initial(see_invisible)
+	see_in_dark = initial(see_in_dark)
+	sight = initial(sight)
+
+	if(client.eye != src)
+		var/atom/A = client.eye
+		if(A.update_remote_sight(src)) //returns 1 if we override all other sight updates.
+			return
+
+	if(sight_mode & BORGMESON)
+		sight |= SEE_TURFS
+		see_invisible = min(see_invisible, SEE_INVISIBLE_MINIMUM)
+		see_in_dark = 1
+
+	if(sight_mode & BORGXRAY)
+		sight |= (SEE_TURFS|SEE_MOBS|SEE_OBJS)
+		see_invisible = SEE_INVISIBLE_LIVING
+		see_in_dark = 8
+
+	if(sight_mode & BORGTHERM)
+		sight |= SEE_MOBS
+		see_invisible = min(see_invisible, SEE_INVISIBLE_LIVING)
+		see_in_dark = 8
+
+	if(see_override)
+		see_invisible = see_override
+
+/mob/living/silicon/robot/handle_hud_icons()
+	update_items()
+	update_cell()
 	if(emagged)
 		throw_alert("hacked", /obj/screen/alert/hacked)
 	else
 		clear_alert("hacked")
+	..()
 
-/mob/living/silicon/robot/proc/handle_robot_hud_updates()
-	if(!client)
-		return
-
-	update_cell_hud_icon()
-
-/mob/living/silicon/robot/update_health_hud()
+/mob/living/silicon/robot/handle_hud_icons_health()
 	if(healths)
 		if(stat != DEAD)
 			if(health >= maxHealth)
@@ -91,7 +180,19 @@
 		else
 			healths.icon_state = "health7"
 
-/mob/living/silicon/robot/proc/update_cell_hud_icon()
+	switch(bodytemperature) //310.055 optimal body temp
+		if(335 to INFINITY)
+			throw_alert("temp", /obj/screen/alert/hot/robot, 2)
+		if(320 to 335)
+			throw_alert("temp", /obj/screen/alert/hot/robot, 1)
+		if(300 to 320)
+			clear_alert("temp")
+		if(260 to 300)
+			throw_alert("temp", /obj/screen/alert/cold/robot, 1)
+		else
+			throw_alert("temp", /obj/screen/alert/cold/robot, 2)
+
+/mob/living/silicon/robot/proc/update_cell()
 	if(cell)
 		var/cellcharge = cell.charge/cell.maxcharge
 		switch(cellcharge)
@@ -110,7 +211,7 @@
 
 
 
-/mob/living/silicon/robot/proc/update_items() // What in the Sam hell is this?
+/mob/living/silicon/robot/proc/update_items()
 	if(client)
 		for(var/obj/I in get_all_slots())
 			client.screen |= I
@@ -133,7 +234,7 @@
 			weaponlock_time = 120
 
 /mob/living/silicon/robot/update_canmove(delay_action_updates = 0)
-	if(paralysis || stunned || IsWeakened() || buckled || lockcharge || stat)
+	if(paralysis || stunned || weakened || buckled || lockcharge)
 		canmove = 0
 	else
 		canmove = 1
@@ -144,8 +245,7 @@
 
 //Robots on fire
 /mob/living/silicon/robot/handle_fire()
-	. = ..()
-	if(!.)
+	if(..())
 		return
 	if(fire_stacks > 0)
 		fire_stacks--
@@ -153,13 +253,15 @@
 	else
 		ExtinguishMob()
 
+	//adjustFireLoss(3)
+	return
 
 /mob/living/silicon/robot/update_fire()
 	overlays -= image("icon"='icons/mob/OnFire.dmi', "icon_state"="Generic_mob_burning")
 	if(on_fire)
 		overlays += image("icon"='icons/mob/OnFire.dmi', "icon_state"="Generic_mob_burning")
 
-/mob/living/silicon/robot/fire_act(datum/gas_mixture/air, exposed_temperature, exposed_volume, global_overlay = TRUE)
+/mob/living/silicon/robot/fire_act()
 	if(!on_fire) //Silicons don't gain stacks from hotspots, but hotspots can ignite them
 		IgniteMob()
 

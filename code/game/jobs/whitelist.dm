@@ -1,62 +1,99 @@
-/proc/is_job_whitelisted(mob/M, rank)
-	if(!check_job_karma(rank)) // If it aint a karma job, let them play
-		return TRUE
-	if(!GLOB.configuration.general.enable_karma)
-		return TRUE
-	if(check_rights(R_ADMIN, FALSE, M))
-		return TRUE
+#define WHITELISTFILE "data/whitelist.txt"
 
-	var/package_id = job2package(rank)
-	if(!package_id) // Not a valid karma package
-		return TRUE
-	if(M.client.karmaholder.hasPackage(package_id)) // They have it
-		return TRUE
+var/list/whitelist = list()
 
-	return FALSE
+/hook/startup/proc/loadWhitelist()
+	if(config.usewhitelist)
+		load_whitelist()
+	return 1
 
-/proc/can_use_species(mob/M, species)
-	if(!GLOB.configuration.general.enable_karma)
-		return TRUE
+/proc/load_whitelist()
+	whitelist = file2list(WHITELISTFILE)
+	if(!whitelist.len)	whitelist = null
+/*
+/proc/check_whitelist(mob/M, var/rank)
+	if(!whitelist)
+		return 0
+	return ("[M.ckey]" in whitelist)
+*/
+
+/proc/is_job_whitelisted(mob/M, var/rank)
+	if(guest_jobbans(rank))
+		if(!config.usewhitelist)
+			return 1
+		if(config.disable_karma)
+			return 1
+		if(check_rights(R_ADMIN, 0, M))
+			return 1
+		if(!dbcon.IsConnected())
+			to_chat(usr, "<span class='warning'>Unable to connect to whitelist database. Please try again later.<br></span>")
+			return 0
+		else
+			var/DBQuery/query = dbcon.NewQuery("SELECT job FROM [format_table_name("whitelist")] WHERE ckey='[M.ckey]'")
+			query.Execute()
+
+
+			while(query.NextRow())
+				var/joblist = query.item[1]
+				if(joblist!="*")
+					var/allowed_jobs = splittext(joblist,",")
+					if(rank in allowed_jobs) return 1
+				else return 1
+			return 0
+	else
+		return 1
+
+
+
+
+/var/list/alien_whitelist = list()
+
+/hook/startup/proc/loadAlienWhitelist()
+	if(config.usealienwhitelist)
+		load_alienwhitelist()
+	return 1
+
+/proc/load_alienwhitelist()
+	var/text = file2text("config/alienwhitelist.txt")
+	if(!text)
+		log_config("Failed to load config/alienwhitelist.txt\n")
+	else
+		alien_whitelist = splittext(text, "\n")
+
+//todo: admin aliens
+/proc/is_alien_whitelisted(mob/M, var/species)
+	if(!config.usealienwhitelist)
+		return 1
+	if(config.disable_karma)
+		return 1
 	if(species == "human" || species == "Human")
-		return TRUE
-	if(check_rights(R_ADMIN, FALSE))
-		return TRUE
+		return 1
+	if(check_rights(R_ADMIN, 0))
+		return 1
+	if(!alien_whitelist)
+		return 0
+	if(!dbcon.IsConnected())
+		to_chat(usr, "<span class='warning'>Unable to connect to whitelist database. Please try again later.<br></span>")
+		return 0
+	else
+		var/DBQuery/query = dbcon.NewQuery("SELECT species FROM [format_table_name("whitelist")] WHERE ckey='[M.ckey]'")
+		query.Execute()
 
-	// Cant be using this if youre not an admin
-	var/datum/species/S = GLOB.all_species[species]
-	if(S.blacklisted)
-		return FALSE
+		while(query.NextRow())
+			var/specieslist = query.item[1]
+			if(specieslist!="*")
+				var/allowed_species = splittext(specieslist,",")
+				if(species in allowed_species) return 1
+			else return 1
+		return 0
+/*
+	if(M && species)
+		for(var/s in alien_whitelist)
+			if(findtext(s,"[M.ckey] - [species]"))
+				return 1
+			if(findtext(s,"[M.ckey] - All"))
+				return 1
+*/
 
-	var/package_id = species2package(species)
-	if(!package_id)
-		return TRUE // Not a valid karma package
-	if(M.client.karmaholder.hasPackage(package_id)) // They have it
-		return TRUE
 
-	return FALSE
-
-/proc/species2package(species_id)
-	switch(species_id)
-		if("Grey")
-			return KARMAPACKAGE_SPECIES_GREY
-		if("Kidan")
-			return KARMAPACKAGE_SPECIES_KIDAN
-		if("Slime People")
-			return KARMAPACKAGE_SPECIES_SLIMEPEOPLE
-		if("Vox")
-			return KARMAPACKAGE_SPECIES_VOX
-		if("Drask")
-			return KARMAPACKAGE_SPECIES_DRASK
-		if("Machine")
-			return KARMAPACKAGE_SPECIES_MACHINE
-		if("Plasmaman")
-			return KARMAPACKAGE_SPECIES_PLASMAMAN
-
-/proc/job2package(job_id)
-	switch(job_id)
-		if("Blueshield")
-			return KARMAPACKAGE_JOB_BLUESHIELD
-		if("Barber")
-			return KARMAPACKAGE_JOB_BARBER
-		if("Nanotrasen Representative")
-			return KARMAPACKAGE_JOB_NANOTRASENREPRESENTATIVE
+#undef WHITELISTFILE

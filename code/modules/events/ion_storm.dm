@@ -1,15 +1,14 @@
-#define ION_NOANNOUNCEMENT -1
 #define ION_RANDOM 0
 #define ION_ANNOUNCE 1
 
 /datum/event/ion_storm
 	var/botEmagChance = 10
-	var/announceEvent = ION_NOANNOUNCEMENT // -1 means don't announce, 0 means have it randomly announce, 1 means
+	var/announceEvent = ION_RANDOM // -1 means don't announce, 0 means have it randomly announce, 1 means
 	var/ionMessage = null
 	var/ionAnnounceChance = 33
 	announceWhen	= 1
 
-/datum/event/ion_storm/New(botEmagChance = 10, announceEvent = ION_NOANNOUNCEMENT, ionMessage = null, ionAnnounceChance = 33)
+/datum/event/ion_storm/New(var/botEmagChance = 10, var/announceEvent = ION_RANDOM, var/ionMessage = null, var/ionAnnounceChance = 33)
 	src.botEmagChance = botEmagChance
 	src.announceEvent = announceEvent
 	src.ionMessage = ionMessage
@@ -18,12 +17,13 @@
 
 /datum/event/ion_storm/announce()
 	if(announceEvent == ION_ANNOUNCE || (announceEvent == ION_RANDOM && prob(ionAnnounceChance)))
-		GLOB.event_announcement.Announce("Ion storm detected near the station. Please check all AI-controlled equipment for errors.", "Anomaly Alert", 'sound/AI/ions.ogg')
+		event_announcement.Announce("Ion storm detected near the station. Please check all AI-controlled equipment for errors.", "Anomaly Alert", 'sound/AI/ionstorm.ogg')
+
 
 /datum/event/ion_storm/start()
 	//AI laws
-	for(var/mob/living/silicon/ai/M in GLOB.alive_mob_list)
-		if(M.stat != DEAD && M.see_in_dark != FALSE)
+	for(var/mob/living/silicon/ai/M in living_mob_list)
+		if(M.stat != 2 && M.see_in_dark != 0)
 			var/message = generate_ion_law(ionMessage)
 			if(message)
 				M.add_ion_law(message)
@@ -31,11 +31,8 @@
 				to_chat(M, "<span class='danger'>[message] ...LAWS UPDATED</span>")
 				to_chat(M, "<br>")
 
-				for(var/player in GLOB.dead_mob_list)
-					to_chat(player, "<span class='deadsay'><b>[M] ([ghost_follow_link(M, player)])</b> has recieved an ion law:\n<b>'[message]'</b></span>")
-
 	if(botEmagChance)
-		for(var/mob/living/simple_animal/bot/bot in GLOB.machines)
+		for(var/mob/living/simple_animal/bot/bot in machines)
 			if(prob(botEmagChance))
 				bot.emag_act()
 
@@ -122,22 +119,22 @@
 						if(2) //X is an object
 							message = "THE CREW ARE NOW [ionnumberbase] [ionnumbermodhalf][ionadjectiveshalf][ionobjects]"
 
-		if(9) //X is harmful to crew
+		if(9) //X is harmful to humans
 			switch(rand(1,7)) //What is X?
 				if(1) //X is a threat
-					message = "[ionadjectiveshalf][ionthreats] ARE HARMFUL TO CREW"
+					message = "[ionadjectiveshalf][ionthreats] ARE HARMFUL TO HUMANS"
 				if(2) //X is a job
-					message = "[ionadjectiveshalf][ioncrew1] ARE HARMFUL TO CREW"
+					message = "[ionadjectiveshalf][ioncrew1] ARE HARMFUL TO HUMANS"
 				if(3) //X is an object
-					message = "[ionadjectiveshalf][ionobjects] ARE HARMFUL TO CREW"
+					message = "[ionadjectiveshalf][ionobjects] ARE HARMFUL TO HUMANS"
 				if(4) //X is an action
-					message = "THOSE WHO [ionmust] ARE HARMFUL TO CREW"
+					message = "THOSE WHO [ionmust] ARE HARMFUL TO HUMANS"
 				if(5) //X is an abstract
-					message = "[ionabstract] IS HARMFUL TO CREW"
+					message = "[ionabstract] IS HARMFUL TO HUMANS"
 				if(6) //X is being a job
-					message = "BEING [ionadjectiveshalf][ioncrew1] IS HARMFUL TO CREW"
+					message = "BEING [ionadjectiveshalf][ioncrew1] IS HARMFUL TO HUMANS"
 				if(7) //X is doing a thing
-					message = "[ionthings] IS HARMFUL TO CREW"
+					message = "[ionthings] IS HARMFUL TO HUMANS"
 		if(10 to 11) //(Not) Having X is harmful
 
 			switch(rand(1,2)) //Is having or not having harmful?
@@ -307,16 +304,16 @@
 		if(24 to 26) //The AI must always
 			message = "YOU MUST ALWAYS [ionmust]"
 
-		if(27 to 28) //Crew must eat X to survive
+		if(27 to 28) //Humans must eat X to survive
 			switch(rand(1,4)) //What is X?
 				if(1) //X is a food
-					message = "CREW MUST EAT [ionadjectiveshalf][ionfood] TO SURVIVE"
+					message = "HUMANS MUST EAT [ionadjectiveshalf][ionfood] TO SURVIVE"
 				if(2) //X is an object
-					message = "CREW MUST EAT [ionadjectiveshalf][ionobjects] TO SURVIVE"
+					message = "HUMANS MUST EAT [ionadjectiveshalf][ionobjects] TO SURVIVE"
 				if(3) //X is a threat
-					message = "CREW MUST EAT [ionadjectiveshalf][ionthreats] TO SURVIVE"
+					message = "HUMANS MUST EAT [ionadjectiveshalf][ionthreats] TO SURVIVE"
 				if(4) //X is a job
-					message = "CREW MUST EAT [ionadjectiveshalf][ioncrew1] TO SURVIVE"
+					message = "HUMANS MUST EAT [ionadjectiveshalf][ioncrew1] TO SURVIVE"
 
 		if(29 to 31) //Change jobs or ranks
 			switch(rand(1,2)) //Change job or rank?
@@ -363,54 +360,54 @@
 						if(2) //X is perform Y
 							message = "THE [ioncrew1] MUST [ionmust]"
 
-		if(34) //X is non/the only crew
+		if(34) //X is non/the only human
 			switch(rand(1,2)) //Only or non?
-				if(1) //Only crew
+				if(1) //Only human
 					switch(rand(1,7)) //Who is it?
 						if(1) //A specific job
-							message = "ONLY THE [ioncrew1] ARE CREW"
+							message = "ONLY THE [ioncrew1] ARE HUMAN"
 						if(2) //Two specific jobs
-							message = "ONLY THE [ioncrew1] AND [ioncrew2] ARE CREW"
+							message = "ONLY THE [ioncrew1] AND [ioncrew2] ARE HUMAN"
 						if(3) //Threats
-							message = "ONLY [ionadjectiveshalf][ionthreats] ARE CREW"
+							message = "ONLY [ionadjectiveshalf][ionthreats] ARE HUMAN"
 						if(4) // Objects
-							message = "ONLY [ionadjectiveshalf][ionobjects] ARE CREW"
+							message = "ONLY [ionadjectiveshalf][ionobjects] ARE HUMAN"
 						if(5) // Species
-							message = "ONLY [ionspecies] ARE CREW"
+							message = "ONLY [ionspecies] ARE HUMAN"
 						if(6) //Adjective crewmembers
-							message = "ONLY [ionadjectives] PEOPLE ARE CREW"
+							message = "ONLY [ionadjectives] PEOPLE ARE HUMAN"
 
 						if(7) //Only people who X
 							switch(rand(1,3)) //What is X?
 								if(1) //X is perform an action
-									message = "ONLY THOSE WHO [ionmust] ARE CREW"
+									message = "ONLY THOSE WHO [ionmust] ARE HUMAN"
 								if(2) //X is own certain objects
-									message = "ONLY THOSE WHO HAVE [ionadjectiveshalf][ionobjects] ARE CREW"
+									message = "ONLY THOSE WHO HAVE [ionadjectiveshalf][ionobjects] ARE HUMAN"
 								if(3) //X is eat certain food
-									message = "ONLY THOSE WHO EAT [ionadjectiveshalf][ionfood] ARE CREW"
+									message = "ONLY THOSE WHO EAT [ionadjectiveshalf][ionfood] ARE HUMAN"
 
-				if(2) //Non crew
+				if(2) //Non human
 					switch(rand(1,7)) //Who is it?
 						if(1) //A specific job
-							message = "[ioncrew1] ARE NON-CREW"
+							message = "[ioncrew1] ARE NON-HUMAN"
 						if(2) //Two specific jobs
-							message = "[ioncrew1] AND [ioncrew2] ARE NON-CREW"
+							message = "[ioncrew1] AND [ioncrew2] ARE NON-HUMAN"
 						if(3) //Threats
-							message = "[ionadjectiveshalf][ionthreats] ARE NON-CREW"
+							message = "[ionadjectiveshalf][ionthreats] ARE NON-HUMAN"
 						if(4) // Objects
-							message = "[ionadjectiveshalf][ionobjects] ARE NON-CREW"
+							message = "[ionadjectiveshalf][ionobjects] ARE NON-HUMAN"
 						if(5) // Species
-							message = "[ionspecies] ARE NON-CREW"
+							message = "[ionspecies] ARE NON-HUMAN"
 						if(6) //Adjective crewmembers
-							message = "[ionadjectives] PEOPLE ARE NON-CREW"
+							message = "[ionadjectives] PEOPLE ARE NON-HUMAN"
 						if(7) //Only people who X
 							switch(rand(1,3)) //What is X?
 								if(1) //X is perform an action
-									message = "THOSE WHO [ionmust] ARE NON-CREW"
+									message = "THOSE WHO [ionmust] ARE NON-HUMAN"
 								if(2) //X is own certain objects
-									message = "THOSE WHO HAVE [ionadjectiveshalf][ionobjects] ARE NON-CREW"
+									message = "THOSE WHO HAVE [ionadjectiveshalf][ionobjects] ARE NON-HUMAN"
 								if(3) //X is eat certain food
-									message = "THOSE WHO EAT [ionadjectiveshalf][ionfood] ARE NON-CREW"
+									message = "THOSE WHO EAT [ionadjectiveshalf][ionfood] ARE NON-HUMAN"
 
 		if(35 to 36) //You must protect or harm X
 			switch(rand(1,2)) //Protect or harm?
@@ -488,15 +485,15 @@
 						if(3) //X is Ying an abstract
 							message = "THE [ionabstract] IS [ionverb] THE [ionadjectiveshalf][ionobjects]"
 
-		else //Static laws
+		if(40 to INFINITY) //Static laws
 			message = uppertext(generate_static_ion_law())
 
 	return message
 
 /proc/generate_static_ion_law()
-	var/list/players = list()
-	for(var/mob/living/carbon/human/player in GLOB.player_list)
-		if(	!player.mind || player.mind.assigned_role == player.mind.special_role || player.client.inactivity > 10 MINUTES)
+	/var/list/players = list()
+	for(var/mob/living/carbon/human/player in player_list)
+		if(	!player.mind || player.mind.assigned_role == player.mind.special_role || player.client.inactivity > MinutesToTicks(10))
 			continue
 		players += player.real_name
 	var/random_player = "The Captain"
@@ -559,6 +556,5 @@
 							"There will be a mandatory tea break every 30 minutes, with a duration of 5 minutes. Anyone caught working during a tea break must be sent a formal, but fairly polite, complaint about their actions, in writing.")
 	return pick(laws)
 
-#undef ION_NOANNOUNCEMENT
 #undef ION_RANDOM
 #undef ION_ANNOUNCE

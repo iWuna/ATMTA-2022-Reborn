@@ -1,22 +1,23 @@
 /obj/item/projectile/guardian
 	name = "crystal spray"
 	icon_state = "guardian"
-	damage = 25
+	damage = 5
 	damage_type = BRUTE
 	armour_penetration = 100
 
 /mob/living/simple_animal/hostile/guardian/ranged
+	a_intent = INTENT_HELP
 	friendly = "quietly assesses"
 	melee_damage_lower = 10
 	melee_damage_upper = 10
 	damage_transfer = 0.9
-	can_strip = TRUE
 	projectiletype = /obj/item/projectile/guardian
-	ranged_cooldown_time = 5 //fast!
+	ranged_cooldown_time = 10
 	projectilesound = 'sound/effects/hit_on_shattered_glass.ogg'
 	ranged = 1
+	rapid = 1
 	range = 13
-	lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE
+	see_invisible = SEE_INVISIBLE_MINIMUM
 	see_in_dark = 8
 	playstyle_string = "As a <b>Ranged</b> type, you have only light damage resistance, but are capable of spraying shards of crystal at incredibly high speed. You can also deploy surveillance snares to monitor enemy movement. Finally, you can switch to scout mode, in which you can't attack, but can move without limit."
 	magic_fluff_string = "..And draw the Sentinel, an alien master of ranged combat."
@@ -36,7 +37,6 @@
 			alpha = 255
 			range = 13
 			incorporeal_move = 0
-			can_strip = TRUE
 			to_chat(src, "<span class='danger'>You switch to combat mode.</span>")
 			toggle = FALSE
 		else
@@ -48,31 +48,18 @@
 			alpha = 60
 			range = 255
 			incorporeal_move = 1
-			can_strip = FALSE  //spiritual pickpocketting is forbidden
 			to_chat(src, "<span class='danger'>You switch to scout mode.</span>")
 			toggle = TRUE
 	else
 		to_chat(src, "<span class='danger'>You have to be recalled to toggle modes!</span>")
 
 /mob/living/simple_animal/hostile/guardian/ranged/ToggleLight()
-	var/msg
-	switch(lighting_alpha)
-		if (LIGHTING_PLANE_ALPHA_VISIBLE)
-			lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_VISIBLE
-			msg = "You activate your night vision."
-		if (LIGHTING_PLANE_ALPHA_MOSTLY_VISIBLE)
-			lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE
-			msg = "You increase your night vision."
-		if (LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE)
-			lighting_alpha = LIGHTING_PLANE_ALPHA_INVISIBLE
-			msg = "You maximize your night vision."
-		else
-			lighting_alpha = LIGHTING_PLANE_ALPHA_VISIBLE
-			msg = "You deactivate your night vision."
-
-	update_sight()
-
-	to_chat(src, "<span class='notice'>[msg]</span>")
+	if(see_invisible == SEE_INVISIBLE_MINIMUM)
+		to_chat(src, "<span class='notice'>You deactivate your night vision.</span>")
+		see_invisible = SEE_INVISIBLE_LIVING
+	else
+		to_chat(src, "<span class='notice'>You activate your night vision.</span>")
+		see_invisible = SEE_INVISIBLE_MINIMUM
 
 /mob/living/simple_animal/hostile/guardian/ranged/verb/Snare()
 	set name = "Set Surveillance Trap"
@@ -104,13 +91,8 @@
 	var/mob/living/spawner
 	invisibility = 1
 
-/obj/effect/snare/singularity_act()
-	return
 
-/obj/effect/snare/singularity_pull()
-	return
-
-/obj/item/effect/snare/Crossed(AM as mob|obj, oldloc)
+/obj/item/effect/snare/Crossed(AM as mob|obj)
 	if(isliving(AM))
 		var/turf/snare_loc = get_turf(loc)
 		if(spawner)

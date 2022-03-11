@@ -1,90 +1,62 @@
 /obj/machinery/wish_granter
-	name = "wish granter"
+	name = "WishMaster 1.0"
 	desc = "You're not so sure about this, anymore..."
 	icon = 'icons/obj/device.dmi'
 	icon_state = "syndbeacon"
 
-	use_power = NO_POWER_USE
-	anchored = TRUE
-	density = TRUE
+	use_power = 0
+	anchored = 1
+	density = 1
+	var/datum/mind/target
+	var/list/types = list()
+	var/inuse = 0
 
-	var/charges = 1
-	var/insisting = FALSE
+/obj/machinery/wish_granter/New()
+	for(var/supname in all_superheroes)
+		types |= supname
+	..()
 
-/obj/machinery/wish_granter/attack_hand(mob/living/carbon/user)
-	. = ..()
+/obj/machinery/wish_granter/attack_hand(var/mob/user as mob)
+	usr.set_machine(src)
 
-	if(.)
-		return ..()
-
-	if(charges <= 0)
-		to_chat(user, "<span class='warning'>The Wish Granter lies silent.</span>")
-		return TRUE
-
-	else if(!ishuman(user))
-		to_chat(user, "<span class='warning'>You feel a dark stirring inside of the Wish Granter, something you want nothing of. Your instincts are better than any man's..</span>")
+	if(!istype(user, /mob/living/carbon/human))
+		to_chat(user, "You feel a dark stirring inside of the WishMaster 1.0, something you want nothing of. Your instincts are better than any man's.")
 		return
 
-	else if(is_special_character(user))
-		to_chat(user, "<span class='warning'>Even to a heart as dark as yours, you know nothing good will come of this. Something instinctual makes you pull away.</span>")
+	if(is_special_character(user))
+		to_chat(user, "Even to a heart as dark as yours, you know nothing good will come of this.  Something instinctual makes you pull away.")
+		return
 
-	else if(!insisting)
-		to_chat(user, "<span class='warning'>Your first touch makes the Wish Granter stir, listening to you. Are you really sure you want to do this?</span>")
-		insisting = TRUE
+	if(inuse)
+		to_chat(user, "Someone is already communing with the WishMaster 1.0.")
+		return
 
-	else
-		to_chat(user, "<span class='notice'>You speak. [pick("I want the station to disappear", "Humanity is corrupt, mankind must be destroyed", "I want to be rich", "I want to rule the world", "I want immortality.")]. The Wish Granter answers.</span>")
-		to_chat(user, "<span class='notice'>Your head pounds for a moment, before your vision clears.  You are the avatar of the Wish Granter, and your power is LIMITLESS!  And it's all yours.  You need to make sure no one can take it from you.  No one can know, first.</span>")
+	to_chat(user, "The power of the WishMaster 1.0 have turned you into the superhero the station deserves. You are a masked vigilante, and answer to no man. Will you use your newfound strength to protect the innocent, or will you hunt the guilty?")
 
-		charges--
-		insisting = FALSE
-
-		user.mind.add_antag_datum(/datum/antagonist/wishgranter)
-
-		to_chat(user, "You have a very bad feeling about this.")
-
-/obj/machinery/wish_granter/super
-	name = "super wish granter"
-	var/list/types = list()
-
-/obj/machinery/wish_granter/super/attack_hand(mob/living/carbon/user)
-	. = ..()
-
-	if(.)
-		return ..()
-
-	if(!ishuman(user))
-		to_chat(user, "<span class='warning'>You feel a dark stirring inside of the Wish Granter, something you want nothing of. Your instincts are better than any man's.</warning>")
-		return TRUE
-
-	if(is_special_character(user) || jobban_isbanned(user, ROLE_TRAITOR) || jobban_isbanned(user, ROLE_SYNDICATE))
-		to_chat(user, "<span class='warning'>Something instinctual makes you pull away.</span>")
-		return TRUE
-
-	to_chat(user, "<span class='notice'>Your touch makes the Wish Granter stir. Are you really sure you want to do this?</span>")
-
-	for(var/supname in GLOB.all_superheroes)
-		types += supname
-
+	inuse = 1
 	var/wish
 	if(types.len == 1)
 		wish = pick(types)
 	else
-		wish = input("You want to become...", "Wish") as null|anything in types
-
-	if(!wish || user.stat == DEAD || (get_dist(src, user) > 4)) // Another check after the input to check if someone already used it, closed it, or if they're dead, or if they ran off.
+		wish = input("You want to become...","Wish") as null|anything in types
+	if(!wish)
+		inuse=0
 		return
+	types -= wish
+	var/mob/living/carbon/human/M = user
+	var/datum/superheroes/S = all_superheroes[wish]
+	if(S)
+		S.create(M)
+	inuse=0
 
-	var/datum/superheroes/S = GLOB.all_superheroes[wish]
-	if(S.activated)
-		to_chat(user,"<span class='warning'>There can only be one! Pick something else!</span>")
+	//Remove the wishgranter or teleport it randomly on the station
+	if(!types.len)
+		to_chat(user, "The wishgranter slowly fades into mist...")
+		qdel(src)
 		return
-
-	S.create(user)
-	S.activated = TRUE //sets this superhero as taken so we don't have duplicates
-
-	playsound(src.loc, 'sound/effects/bamf.ogg', 50, 1)
-	visible_message("<span class='notice'>The wishgranter fades into mist..</span>")
-	add_attack_logs(user, user, "Became [GLOB.all_superheroes[wish]]")
-	notify_ghosts("[GLOB.all_superheroes[wish]] has appeared in [get_area(user)].", source = user)
-	qdel(src)
+	else
+		var/impact_area = findEventArea()
+		var/turf/T = pick(get_area_turfs(impact_area))
+		if(T)
+			src.loc = T
+	return

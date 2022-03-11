@@ -15,9 +15,7 @@
 	var/list/stage3 = list("You feel utterly plain.")
 	var/list/stage4 = list("You feel white bread.")
 	var/list/stage5 = list("Oh the humanity!")
-	var/transformation_text = null
 	var/new_form = /mob/living/carbon/human
-	var/job_role = null
 
 /datum/disease/transformation/stage_act()
 	..()
@@ -41,13 +39,11 @@
 	if(istype(affected_mob, /mob/living/carbon) && affected_mob.stat != DEAD)
 		if(stage5)
 			to_chat(affected_mob, pick(stage5))
-		if(jobban_isbanned(affected_mob, job_role))
-			affected_mob.death()
+		if(jobban_isbanned(affected_mob, new_form))
+			affected_mob.death(1)
 			return
 		if(affected_mob.notransform)
 			return
-		if(transformation_text)
-			to_chat(affected_mob, transformation_text)
 		affected_mob.notransform = 1
 		affected_mob.canmove = 0
 		affected_mob.icon = null
@@ -61,9 +57,6 @@
 			W.plane = initial(W.plane)
 			W.loc = affected_mob.loc
 			W.dropped(affected_mob)
-		if(isobj(affected_mob.loc))
-			var/obj/O = affected_mob.loc
-			O.force_eject_occupant(affected_mob)
 		var/mob/living/new_mob = new new_form(affected_mob.loc)
 		if(istype(new_mob))
 			new_mob.a_intent = "harm"
@@ -115,7 +108,7 @@
 				affected_mob.AdjustConfused(10)
 		if(4)
 			if(prob(3))
-				affected_mob.say(pick("Eeek, ook ook!", "Eee-eeek!", "Eeee!", "Ungh, ungh."))
+				affected_mob.say(pick("иииик, окк окк!", "Иии-ииик!", "Yee!", "Ух, ух."))
 
 
 /datum/disease/transformation/robot
@@ -134,7 +127,6 @@
 	stage4	= list("<span class='danger'>Your skin feels very loose.</span>", "<span class='danger'>You can feel... something...inside you.</span>")
 	stage5	= list("<span class='danger'>Your skin feels as if it's about to burst off!</span>")
 	new_form = /mob/living/silicon/robot
-	job_role = "Cyborg"
 
 
 /datum/disease/transformation/robot/stage_act()
@@ -142,13 +134,13 @@
 	switch(stage)
 		if(3)
 			if(prob(8))
-				affected_mob.say(pick("Beep, boop", "beep, beep!", "Boop...bop"))
+				affected_mob.say(pick("Бип, боб", "бип, бип!", "Буп...боп"))
 			if(prob(4))
 				to_chat(affected_mob, "<span class='danger'>You feel a stabbing pain in your head.</span>")
 				affected_mob.Paralyse(2)
 		if(4)
 			if(prob(20))
-				affected_mob.say(pick("beep, beep!", "Boop bop boop beep.", "kkkiiiill mmme", "I wwwaaannntt tttoo dddiiieeee..."))
+				affected_mob.say(pick("бип, бип!", "буууп буууп бип.", "уууууббеййй меняя", "я хоооочу умерееееть"))
 
 
 /datum/disease/transformation/xeno
@@ -167,7 +159,6 @@
 	stage4	= list("<span class='danger'>Your skin feels very tight.</span>", "<span class='danger'>Your blood boils!</span>", "<span class='danger'>You can feel... something...inside you.</span>")
 	stage5	= list("<span class='danger'>Your skin feels as if it's about to burst off!</span>")
 	new_form = /mob/living/carbon/alien/humanoid/hunter
-	job_role = ROLE_ALIEN
 
 /datum/disease/transformation/xeno/stage_act()
 	..()
@@ -178,7 +169,7 @@
 				affected_mob.Paralyse(2)
 		if(4)
 			if(prob(20))
-				affected_mob.say(pick("You look delicious.", "Going to... devour you...", "Hsssshhhhh!"))
+				affected_mob.say(pick("Выглядишь аппетитно.", "Хочу... сожрать тебя...", "Х-сссссссс-шшшш!"))
 
 
 /datum/disease/transformation/slime
@@ -195,7 +186,7 @@
 	stage3	= list("<span class='danger'>Your appendages are melting away.</span>", "<span class='danger'>Your limbs begin to lose their shape.</span>")
 	stage4	= list("<span class='danger'>You are turning into a slime.</span>")
 	stage5	= list("<span class='danger'>You have become a slime.</span>")
-	new_form = /mob/living/simple_animal/slime/random
+	new_form = /mob/living/carbon/slime/random
 
 /datum/disease/transformation/slime/stage_act()
 	..()
@@ -203,13 +194,13 @@
 		if(1)
 			if(ishuman(affected_mob))
 				var/mob/living/carbon/human/H = affected_mob
-				if(isslimeperson(H))
+				if(H.species.name == "Slime People")
 					stage = 5
 		if(3)
 			if(ishuman(affected_mob))
 				var/mob/living/carbon/human/human = affected_mob
-				if(!isslimeperson(human))
-					human.set_species(/datum/species/slime)
+				if(human.species.name != "Slime People")
+					human.set_species("Slime People")
 
 /datum/disease/transformation/corgi
 	name = "The Barkening"
@@ -223,17 +214,17 @@
 	stage3	= list("<span class='danger'>Must... eat... chocolate....</span>", "<span class='danger'>YAP</span>")
 	stage4	= list("<span class='danger'>Visions of washing machines assail your mind!</span>")
 	stage5	= list("<span class='danger'>AUUUUUU!!!</span>")
-	new_form = /mob/living/simple_animal/pet/dog/corgi
+	new_form = /mob/living/simple_animal/pet/corgi
 
 /datum/disease/transformation/corgi/stage_act()
 	..()
 	switch(stage)
 		if(3)
 			if(prob(8))
-				affected_mob.say(pick("YAP", "Woof!"))
+				affected_mob.say(pick("ЙАП", "ВУФ!"))
 		if(4)
 			if(prob(20))
-				affected_mob.say(pick("Bark!", "AUUUUUU"))
+				affected_mob.say(pick("ГАФ!", "АУУУУ"))
 
 /datum/disease/transformation/morph
 	name = "Gluttony's Blessing"
@@ -249,6 +240,4 @@
 	stage3	= list("<span class='danger'>Your appendages are melting away.</span>", "<span class='danger'>Your limbs begin to lose their shape.</span>")
 	stage4	= list("<span class='danger'>You're ravenous.</span>")
 	stage5	= list("<span class='danger'>You have become a morph.</span>")
-	transformation_text = "<span class='userdanger'>This transformation does NOT make you an antagonist if you were not one already. If you were not an antagonist, you should not eat any steal objectives or the contents of the armory.</span>"
 	new_form = /mob/living/simple_animal/hostile/morph
-	job_role = ROLE_MORPH

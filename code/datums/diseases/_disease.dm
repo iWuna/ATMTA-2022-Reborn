@@ -1,6 +1,4 @@
 
-#define VIRUS_SYMPTOM_LIMIT	6
-
 //Visibility Flags
 #define HIDDEN_SCANNER	1
 #define HIDDEN_PANDEMIC	2
@@ -29,7 +27,7 @@
 #define BIOHAZARD	"BIOHAZARD THREAT!"
 
 
-GLOBAL_LIST_INIT(diseases, subtypesof(/datum/disease))
+var/list/diseases = subtypesof(/datum/disease)
 
 
 /datum/disease
@@ -50,10 +48,6 @@ GLOBAL_LIST_INIT(diseases, subtypesof(/datum/disease))
 	var/stage = 1
 	var/max_stages = 0
 	var/stage_prob = 4
-	/// The fraction of stages the virus must at least be at to show up on medical HUDs. Rounded up.
-	var/discovery_threshold = 0.5
-	/// If TRUE, this virus will show up on medical HUDs. Automatically set when it reaches mid-stage.
-	var/discovered = FALSE
 
 	//Other
 	var/list/viable_mobtypes = list() //typepaths of viable mobs
@@ -63,7 +57,6 @@ GLOBAL_LIST_INIT(diseases, subtypesof(/datum/disease))
 	var/cure_chance = 8
 	var/carrier = FALSE //If our host is only a carrier
 	var/bypasses_immunity = FALSE //Does it skip species virus immunity check? Some things may diseases and not viruses
-	var/virus_heal_resistant = FALSE // Some things aren't technically viruses/traditional diseases and should be immune to edge case cure methods, like healing viruses.
 	var/permeability_mod = 1
 	var/severity =	NONTHREAT
 	var/list/required_organs = list()
@@ -72,23 +65,20 @@ GLOBAL_LIST_INIT(diseases, subtypesof(/datum/disease))
 
 /datum/disease/Destroy()
 	affected_mob = null
-	GLOB.active_diseases.Remove(src)
+	active_diseases.Remove(src)
 	return ..()
 
 /datum/disease/proc/stage_act()
 	var/cure = has_cure()
 
 	if(carrier && !cure)
-		return TRUE
+		return
 
 	stage = min(stage, max_stages)
 
 	if(!cure)
 		if(prob(stage_prob))
 			stage = min(stage + 1,max_stages)
-			if(!discovered && stage >= CEILING(max_stages * discovery_threshold, 1)) // Once we reach a late enough stage, medical HUDs can pick us up even if we regress
-				discovered = TRUE
-				affected_mob.med_hud_set_status()
 	else
 		if(prob(cure_chance))
 			stage = max(stage - 1, 1)
@@ -96,8 +86,6 @@ GLOBAL_LIST_INIT(diseases, subtypesof(/datum/disease))
 	if(disease_flags & CURABLE)
 		if(cure && prob(cure_chance))
 			cure()
-			return FALSE
-	return TRUE
 
 
 /datum/disease/proc/has_cure()

@@ -43,9 +43,9 @@
 	return num
 
 //Returns the hex value of a number given a value assumed to be a base-ten value
-/proc/num2hex(num, placeholder = 2)
-	if(!isnum(num) || num < 0)
-		return
+/proc/num2hex(num, placeholder)
+	if(!isnum(num)) return
+	if(placeholder == null) placeholder = 2
 
 	var/hex = ""
 	while(num)
@@ -146,7 +146,7 @@
 	return
 
 //Converts an angle (degrees) into an ss13 direction
-/proc/angle2dir(degree)
+/proc/angle2dir(var/degree)
 	degree = ((degree+22.5)%365)
 	if(degree < 45)		return NORTH
 	if(degree < 90)		return NORTHEAST
@@ -157,20 +157,9 @@
 	if(degree < 315)	return WEST
 	return NORTH|WEST
 
-/proc/angle2dir_cardinal(angle)
-	switch(round(angle, 0.1))
-		if(315.5 to 360, 0 to 45.5)
-			return NORTH
-		if(45.6 to 135.5)
-			return EAST
-		if(135.6 to 225.5)
-			return SOUTH
-		if(225.6 to 315.5)
-			return WEST
-
 //returns the north-zero clockwise angle in degrees, given a direction
 
-/proc/dir2angle(D)
+/proc/dir2angle(var/D)
 	switch(D)
 		if(NORTH)		return 0
 		if(SOUTH)		return 180
@@ -183,7 +172,7 @@
 		else			return null
 
 //Returns the angle in english
-/proc/angle2text(degree)
+/proc/angle2text(var/degree)
 	return dir2text(angle2dir(degree))
 
 //Converts a blend_mode constant to one acceptable to icon.Blend()
@@ -212,7 +201,6 @@
 	if(rights & R_PROCCALL)		. += "[seperator]+PROCCALL"
 	if(rights & R_MOD)			. += "[seperator]+MODERATOR"
 	if(rights & R_MENTOR)		. += "[seperator]+MENTOR"
-	if(rights & R_VIEWRUNTIMES)	. += "[seperator]+VIEWRUNTIMES"
 	return .
 
 /proc/ui_style2icon(ui_style)
@@ -281,7 +269,7 @@
 	if(3*hue < 2)	return (a+(b-a)*((2/3)-hue)*6)
 	return a
 
-/proc/num2septext(theNum, sigFig = 7, sep=",") // default sigFig (1,000,000)
+/proc/num2septext(var/theNum, var/sigFig = 7,var/sep=",") // default sigFig (1,000,000)
 	var/finalNum = num2text(theNum, sigFig)
 
 	// Start from the end, or from the decimal point
@@ -323,7 +311,7 @@
 			. = max(0, min(255, 138.5177312231 * log(temp - 10) - 305.0447927307))
 
 //Argument: Give this a space-separated string consisting of 6 numbers. Returns null if you don't
-/proc/text2matrix(matrixtext)
+/proc/text2matrix(var/matrixtext)
 	var/list/matrixtext_list = splittext(matrixtext, " ")
 	var/list/matrix_list = list()
 	for(var/item in matrixtext_list)
@@ -351,7 +339,7 @@
 //The string is well, obviously the string being checked
 //The datum is used as a source for var names, to check validity
 //Otherwise every single word could technically be a variable!
-/proc/string2listofvars(t_string, datum/var_source)
+/proc/string2listofvars(var/t_string, var/datum/var_source)
 	if(!t_string || !var_source)
 		return list()
 
@@ -385,9 +373,9 @@
 		switch(child)
 			if(/datum)
 				return null
-			if(/obj, /mob)
+			if(/obj || /mob)
 				return /atom/movable
-			if(/area, /turf)
+			if(/area || /turf)
 				return /atom
 			else
 				return /datum

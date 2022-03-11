@@ -3,28 +3,30 @@
 
 /datum/event/spawn_morph/proc/get_morph()
 	spawn()
-		var/list/candidates = SSghost_spawns.poll_candidates("Do you want to play as a morph?", ROLE_MORPH, TRUE, source = /mob/living/simple_animal/hostile/morph)
+		var/list/candidates = pollCandidates("Do you want to play as a morph?", ROLE_MORPH, 1)
 		if(!candidates.len)
 			key_of_morph = null
-			kill()
-			return
+			return kill()
 		var/mob/C = pick(candidates)
 		key_of_morph = C.key
 
 		if(!key_of_morph)
-			kill()
-			return
+			return kill()
 
 		var/datum/mind/player_mind = new /datum/mind(key_of_morph)
 		player_mind.active = 1
-		if(!GLOB.xeno_spawn)
-			kill()
-			return
-		var/mob/living/simple_animal/hostile/morph/S = new /mob/living/simple_animal/hostile/morph(pick(GLOB.xeno_spawn))
+		if(!xeno_spawn)
+			return kill()
+		var/mob/living/simple_animal/hostile/morph/S = new /mob/living/simple_animal/hostile/morph(pick(xeno_spawn))
 		player_mind.transfer_to(S)
-		S.make_morph_antag()
+		player_mind.assigned_role = SPECIAL_ROLE_MORPH
+		player_mind.special_role = SPECIAL_ROLE_MORPH
+		ticker.mode.traitors |= player_mind
+		to_chat(S, S.playstyle_string)
+		S << 'sound/magic/Mutate.ogg'
 		message_admins("[key_of_morph] has been made into morph by an event.")
 		log_game("[key_of_morph] was spawned as a morph by an event.")
+		return 1
 
 /datum/event/spawn_morph/start()
 	get_morph()

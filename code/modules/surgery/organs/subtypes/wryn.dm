@@ -6,6 +6,8 @@
 	icon_state = "antennae"
 	parent_organ = "head"
 	slot = "hivenode"
+	species = "Wryn"
 
 /obj/item/organ/internal/eyes/wryn
-	see_in_dark = 3
+	dark_view = 3
+	species = "Wryn"

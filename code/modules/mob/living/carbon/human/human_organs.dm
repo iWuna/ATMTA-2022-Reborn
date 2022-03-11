@@ -8,22 +8,19 @@
 /mob/living/carbon/human/var/list/bodyparts_by_name = list() // map organ names to organs
 
 // Takes care of organ related updates, such as broken and missing limbs
-/mob/living/carbon/human/handle_organs()
-	..()
+/mob/living/carbon/human/proc/handle_organs()
 	//processing internal organs is pretty cheap, do that first.
-	for(var/X in internal_organs)
-		var/obj/item/organ/internal/I = X
+	for(var/obj/item/organ/internal/I in internal_organs)
 		I.process()
 
-	for(var/Y in bodyparts)
-		var/obj/item/organ/external/E = Y
+	for(var/obj/item/organ/external/E in bodyparts)
 		E.process()
 
 		if(!lying && world.time - l_move_time < 15)
 		//Moving around with fractured ribs won't do you any good
 			if(E.is_broken() && E.internal_organs && E.internal_organs.len && prob(15))
 				var/obj/item/organ/internal/I = pick(E.internal_organs)
-				custom_pain("You feel broken bones moving in your [E.name]!")
+				custom_pain("You feel broken bones moving in your [E.name]!", 1)
 				I.receive_damage(rand(3,5))
 
 	//handle_stance()
@@ -41,7 +38,7 @@
 
 	// Buckled to a bed/chair. Stance damage is forced to 0 since they're sitting on something solid
 	// Not standing, so no need to care about stance
-	if(istype(buckled, /obj/structure/chair) || !isturf(loc))
+	if(istype(buckled, /obj/structure/stool/bed) || !isturf(loc))
 		return
 
 	for(var/limb_tag in list("l_leg","r_leg","l_foot","r_foot"))
@@ -65,7 +62,7 @@
 	// standing is poor
 	if(stance_damage >= 8)
 		if(!(lying || resting))
-			if(!HAS_TRAIT(src, TRAIT_NOPAIN))
+			if(!(NO_PAIN in species.species_traits))
 				emote("scream")
 			custom_emote(1, "collapses!")
 		Weaken(5) //can't emote while weakened, apparently.
@@ -93,7 +90,7 @@
 					continue
 
 			var/emote_scream = pick("screams in pain and ", "lets out a sharp cry and ", "cries out and ")
-			custom_emote(1, "[HAS_TRAIT(src, TRAIT_NOPAIN) ? "" : emote_scream ]drops what [p_they()] [p_were()] holding in [p_their()] [E.name]!")
+			custom_emote(1, "[(NO_PAIN in species.species_traits) ? "" : emote_scream ]drops what they were holding in their [E.name]!")
 
 		else if(E.is_malfunctioning())
 
@@ -108,22 +105,44 @@
 				if(!unEquip(r_hand))
 					continue
 
-			custom_emote(1, "drops what [p_they()] [p_were()] holding, [p_their()] [E.name] malfunctioning!")
+			custom_emote(1, "drops what they were holding, their [E.name] malfunctioning!")
 
-			do_sparks(5, 0, src)
-
-/mob/living/carbon/human/handle_germs()
-	..()
-	if(gloves && germ_level > gloves.germ_level && prob(10))
-		gloves.germ_level += 1
+			var/datum/effect_system/spark_spread/spark_system = new /datum/effect_system/spark_spread()
+			spark_system.set_up(5, 0, src)
+			spark_system.attach(src)
+			spark_system.start()
+			spawn(10)
+				qdel(spark_system)
 
 /mob/living/carbon/human/proc/becomeSlim()
 	to_chat(src, "<span class='notice'>You feel fit again!</span>")
-	REMOVE_TRAIT(src, TRAIT_FAT, OBESITY)
+	var/obj/item/organ/external/chest/C = get_organ("chest")
+	if(istype(C))
+		C.makeSlim(0)
+	else
+		to_chat(src, "Err, well, you *would*, but you don't have a torso. Yell at a coder.")
+		log_debug("[src] at ([x],[y],[z]) doesn't have a torso.")
+	mutations.Remove(FAT)
+	update_mutantrace(0)
+	update_mutations(0)
+	update_body(0, 1)
+	update_inv_w_uniform(0)
+	update_inv_wear_suit()
 
 /mob/living/carbon/human/proc/becomeFat()
 	to_chat(src, "<span class='alert'>You suddenly feel blubbery!</span>")
-	ADD_TRAIT(src, TRAIT_FAT, OBESITY)
+	var/obj/item/organ/external/chest/C = get_organ("chest")
+	if(istype(C))
+		C.makeFat()
+	else
+		to_chat(src, "Err, well, you *would*, but you don't have a torso. Yell at a coder.")
+		log_debug("[src] at ([x],[y],[z]) doesn't have a torso.")
+	mutations.Add(FAT)
+	update_mutantrace(0)
+	update_mutations(0)
+	update_body(0, 1)
+	update_inv_w_uniform(0)
+	update_inv_wear_suit()
 
 //Handles chem traces
 /mob/living/carbon/human/proc/handle_trace_chems()
@@ -138,7 +157,7 @@ Otherwise, this restricts itself to organs that share the UE of the host.
 
 old_ue: Set this to a UE string, and this proc will overwrite the dna of organs that have that UE, instead of the host's present UE
 */
-/mob/living/carbon/human/proc/sync_organ_dna(assimilate = 1, old_ue = null)
+/mob/living/carbon/human/proc/sync_organ_dna(var/assimilate = 1, var/old_ue = null)
 	var/ue_to_compare = (old_ue) ? old_ue : dna.unique_enzymes
 	var/list/all_bits = internal_organs|bodyparts
 	for(var/obj/item/organ/O in all_bits)
@@ -150,7 +169,7 @@ Given the name of an organ, returns the external organ it's contained in
 I use this to standardize shadowling dethrall code
 -- Crazylemon
 */
-/mob/living/carbon/human/proc/named_organ_parent(organ_name)
+/mob/living/carbon/human/proc/named_organ_parent(var/organ_name)
 	if(!get_int_organ_tag(organ_name))
 		return null
 	var/obj/item/organ/internal/O = get_int_organ_tag(organ_name)
@@ -159,7 +178,7 @@ I use this to standardize shadowling dethrall code
 /mob/living/carbon/human/has_organic_damage()
 	var/odmg = 0
 	for(var/obj/item/organ/external/O in bodyparts)
-		if(O.is_robotic())
+		if(O.status & ORGAN_ROBOT)
 			odmg += O.brute_dam
 			odmg += O.burn_dam
 	return (health < (100 - odmg))

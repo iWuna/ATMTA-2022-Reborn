@@ -1,7 +1,6 @@
-/mob/dead/observer/DblClickOn(atom/A, params)
+/mob/dead/observer/DblClickOn(var/atom/A, var/params)
 	if(client.click_intercept)
-		// Not doing a click intercept here, because otherwise we double-tap with the `ClickOn` proc.
-		// But we return here since we don't want to do regular dblclick handling
+		client.click_intercept.InterceptClickOn(src, params, A)
 		return
 
 	if(can_reenter_corpse && mind && mind.current)
@@ -15,10 +14,10 @@
 
 	// Otherwise jump
 	else
+		following = null
 		forceMove(get_turf(A))
-		update_parallax_contents()
 
-/mob/dead/observer/ClickOn(atom/A, params)
+/mob/dead/observer/ClickOn(var/atom/A, var/params)
 	if(client.click_intercept)
 		client.click_intercept.InterceptClickOn(src, params, A)
 		return
@@ -39,37 +38,24 @@
 		if(modifiers["shift"] && modifiers["middle"])
 			M = get_mob_in_atom_with_warning(A)
 			if(M)
-				client.freeze(M)
+				admin_mob_info(M)
 			return
-	if(modifiers["middle"])
-		MiddleClickOn(A)
-		return
 	if(modifiers["shift"])
 		ShiftClickOn(A)
 		return
 	if(modifiers["alt"])
-		AltClickNoInteract(src, A)
+		AltClickOn(A)
 		return
 	// You are responsible for checking config.ghost_interaction when you override this function
 	// Not all of them require checking, see below
 	A.attack_ghost(src)
 
 // We don't need a fucking toggle.
-/mob/dead/observer/ShiftClickOn(atom/A)
+/mob/dead/observer/ShiftClickOn(var/atom/A)
 	examinate(A)
 
-/atom/proc/attack_ghost(mob/user)
+/atom/proc/attack_ghost(mob/user as mob)
 	return
-
-// health + cyborg analyzer for ghosts
-/mob/living/attack_ghost(mob/dead/observer/user)
-	if(!istype(user)) // Make sure user is actually an observer. Revenents also use attack_ghost, but do not have the health_scan var.
-		return
-	if(user.client && user.health_scan)
-		if(issilicon(src) || ismachineperson(src))
-			robot_healthscan(user, src)
-		else if(ishuman(src))
-			healthscan(user, src, 1, TRUE)
 
 // ---------------------------------------
 // And here are some good things for free:

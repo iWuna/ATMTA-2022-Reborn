@@ -9,9 +9,8 @@
 	var/admin_notes
 
 /datum/map_template/shuttle/New()
-	if(port_id && suffix)
-		shuttle_id = "[port_id]_[suffix]"
-		mappath = "[prefix][shuttle_id].dmm"
+	shuttle_id = "[port_id]_[suffix]"
+	mappath = "[prefix][shuttle_id].dmm"
 	. = ..()
 
 /datum/map_template/shuttle/emergency
@@ -25,11 +24,6 @@
 /datum/map_template/shuttle/ferry
 	port_id = "ferry"
 	name = "Base Shuttle Template (Ferry)"
-
-/datum/map_template/shuttle/admin
-	port_id = "admin"
-	name = "Base Shuttle Template (Admin)"
-
 
 
 // Shuttles start here:
@@ -123,23 +117,3 @@
 		definitely no zombifyin' reagents!"
 	admin_notes = "Meat currently contains no zombifying reagents, people on \
 		meatspike must be spawned in."
-
-/datum/map_template/shuttle/admin/hospital
-	suffix = "hospital"
-	name = "NHV Asclepius"
-	description = "Nanostrasen Hospital ship, for medical assistance during disasters."
-
-/datum/map_template/shuttle/admin/admin
-	suffix = "admin"
-	name = "NTV Argos"
-	description = "Default Admin ship. An older ship used for special operations."
-
-/datum/map_template/shuttle/admin/armory
-	suffix = "armory"
-	name = "NRV Sparta"
-	description = "Armory Shuttle, with plenty of guns to hand out and some general supplies."
-
-/datum/map_template/shuttle/admin/skipjack
-	suffix = "skipjack"
-	name = "Vox Skipjack"
-	description = "Vox skipjack ship."

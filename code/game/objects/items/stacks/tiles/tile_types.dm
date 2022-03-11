@@ -21,25 +21,53 @@
 	pixel_x = rand(-3, 3)
 	pixel_y = rand(-3, 3) //randomize a little
 
-/obj/item/stack/tile/welder_act(mob/user, obj/item/I)
-	if(get_amount() < 4)
-		to_chat(user, "<span class='warning'>You need at least four tiles to do this!</span>")
-		return
-	. = TRUE
-	if(!I.use_tool(src, user, volume = I.tool_volume))
-		to_chat(user, "<span class='warning'>You can not reform this!</span>")
-		return
-	if (mineralType == "metal")
-		var/obj/item/stack/sheet/metal/new_item = new(user.loc)
-		user.visible_message("[user.name] shaped [src] into metal with the welding tool.", \
-					 "<span class='notice'>You shaped [src] into metal with the welding tool.</span>", \
-					 "<span class='italics'>You hear welding.</span>")
-		var/obj/item/stack/rods/R = src
-		src = null
-		var/replace = (user.get_inactive_hand()==R)
-		R.use(4)
-		if(!R && replace)
-			user.put_in_hands(new_item)
+/obj/item/stack/tile/attackby(obj/item/W, mob/user, params)
+	if(iswelder(W))
+		var/obj/item/weldingtool/WT = W
+
+		if(is_hot(W) && !mineralType)
+			to_chat(user, "<span class='warning'>You can not reform this!</span>")
+			return
+
+		if(get_amount() < 4)
+			to_chat(user, "<span class='warning'>You need at least four tiles to do this!</span>")
+			return
+
+		if(WT.remove_fuel(0,user))
+
+			if(mineralType == "plasma")
+				atmos_spawn_air(SPAWN_HEAT | SPAWN_TOXINS, 5)
+				user.visible_message("<span class='warning'>[user.name] sets the plasma tiles on fire!</span>", \
+									"<span class='warning'>You set the plasma tiles on fire!</span>")
+				qdel(src)
+				return
+
+			if (mineralType == "metal")
+				var/obj/item/stack/sheet/metal/new_item = new(user.loc)
+				user.visible_message("[user.name] shaped [src] into metal with the welding tool.", \
+							 "<span class='notice'>You shaped [src] into metal with the welding tool.</span>", \
+							 "<span class='italics'>You hear welding.</span>")
+				var/obj/item/stack/rods/R = src
+				src = null
+				var/replace = (user.get_inactive_hand()==R)
+				R.use(4)
+				if(!R && replace)
+					user.put_in_hands(new_item)
+
+			else
+				var/sheet_type = text2path("/obj/item/stack/sheet/mineral/[mineralType]")
+				var/obj/item/stack/sheet/mineral/new_item = new sheet_type(user.loc)
+				user.visible_message("[user.name] shaped [src] into a sheet with the welding tool.", \
+							 "<span class='notice'>You shaped [src] into a sheet with the welding tool.</span>", \
+							 "<span class='italics'>You hear welding.</span>")
+				var/obj/item/stack/rods/R = src
+				src = null
+				var/replace = (user.get_inactive_hand()==R)
+				R.use(4)
+				if (!R && replace)
+					user.put_in_hands(new_item)
+	else
+		return ..()
 
 //Grass
 /obj/item/stack/tile/grass
@@ -50,7 +78,7 @@
 	icon_state = "tile_grass"
 	origin_tech = "biotech=1"
 	turf_type = /turf/simulated/floor/grass
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 
 //Wood
 /obj/item/stack/tile/wood
@@ -61,12 +89,7 @@
 	icon_state = "tile-wood"
 	origin_tech = "biotech=1"
 	turf_type = /turf/simulated/floor/wood
-	merge_type = /obj/item/stack/tile/wood
-	resistance_flags = FLAMMABLE
-
-/obj/item/stack/tile/wood/cyborg
-	energy_type = /datum/robot_energy_storage/wood_tile
-	is_cyborg = TRUE
+	burn_state = FLAMMABLE
 
 //Carpets
 /obj/item/stack/tile/carpet
@@ -75,97 +98,12 @@
 	desc = "A piece of carpet. It is the same size as a floor tile"
 	icon_state = "tile-carpet"
 	turf_type = /turf/simulated/floor/carpet
-	resistance_flags = FLAMMABLE
-	var/fancy_table_type = /obj/structure/table/wood/fancy //Decides what table will be built with what carpet tile
-
-/obj/item/stack/tile/carpet/twenty
-	amount = 20
+	burn_state = FLAMMABLE
 
 /obj/item/stack/tile/carpet/black
 	name = "black carpet"
 	icon_state = "tile-carpet-black"
 	turf_type = /turf/simulated/floor/carpet/black
-	fancy_table_type = /obj/structure/table/wood/fancy/black
-
-/obj/item/stack/tile/carpet/black/twenty
-	amount = 20
-
-/obj/item/stack/tile/carpet/blue
-	name = "blue carpet"
-	icon_state = "tile-carpet-blue"
-	turf_type = /turf/simulated/floor/carpet/blue
-	fancy_table_type = /obj/structure/table/wood/fancy/blue
-
-/obj/item/stack/tile/carpet/blue/twenty
-	amount = 20
-
-/obj/item/stack/tile/carpet/cyan
-	name = "cyan carpet"
-	icon_state = "tile-carpet-cyan"
-	turf_type = /turf/simulated/floor/carpet/cyan
-	fancy_table_type = /obj/structure/table/wood/fancy/cyan
-
-/obj/item/stack/tile/carpet/cyan/twenty
-	amount = 20
-
-/obj/item/stack/tile/carpet/green
-	name = "green carpet"
-	icon_state = "tile-carpet-green"
-	turf_type = /turf/simulated/floor/carpet/green
-	fancy_table_type = /obj/structure/table/wood/fancy/green
-
-/obj/item/stack/tile/carpet/green/twenty
-	amount = 20
-
-/obj/item/stack/tile/carpet/orange
-	name = "orange carpet"
-	icon_state = "tile-carpet-orange"
-	turf_type = /turf/simulated/floor/carpet/orange
-	fancy_table_type = /obj/structure/table/wood/fancy/orange
-
-/obj/item/stack/tile/carpet/orange/twenty
-	amount = 20
-
-/obj/item/stack/tile/carpet/purple
-	name = "purple carpet"
-	icon_state = "tile-carpet-purple"
-	turf_type = /turf/simulated/floor/carpet/purple
-	fancy_table_type = /obj/structure/table/wood/fancy/purple
-
-/obj/item/stack/tile/carpet/purple/twenty
-	amount = 20
-
-/obj/item/stack/tile/carpet/red
-	name = "red carpet"
-	icon_state = "tile-carpet-red"
-	turf_type = /turf/simulated/floor/carpet/red
-	fancy_table_type = /obj/structure/table/wood/fancy/red
-
-/obj/item/stack/tile/carpet/red/twenty
-	amount = 20
-
-/obj/item/stack/tile/carpet/royalblack
-	name = "royal black carpet"
-	icon_state = "tile-carpet-royalblack"
-	turf_type = /turf/simulated/floor/carpet/royalblack
-	fancy_table_type = /obj/structure/table/wood/fancy/royalblack
-
-/obj/item/stack/tile/carpet/royalblack/ten
-	amount = 10
-/obj/item/stack/tile/carpet/royalblack/twenty
-	amount = 20
-
-/obj/item/stack/tile/carpet/royalblue
-	name = "royal blue carpet"
-	icon_state = "tile-carpet-royalblue"
-	turf_type = /turf/simulated/floor/carpet/royalblue
-	fancy_table_type = /obj/structure/table/wood/fancy/royalblue
-
-/obj/item/stack/tile/carpet/royalblue/ten
-	amount = 10
-
-/obj/item/stack/tile/carpet/royalblue/twenty
-	amount = 20
 
 //Plasteel
 /obj/item/stack/tile/plasteel
@@ -182,20 +120,14 @@
 	flags = CONDUCT
 	turf_type = /turf/simulated/floor/plasteel
 	mineralType = "metal"
-	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, RAD = 0, FIRE = 100, ACID = 70)
-	resistance_flags = FIRE_PROOF
-
-/obj/item/stack/tile/plasteel/cyborg
-	energy_type = /datum/robot_energy_storage/metal_tile
-	is_cyborg = TRUE
 
 //Light
 /obj/item/stack/tile/light
 	name = "light tiles"
 	gender = PLURAL
 	singular_name = "light floor tile"
-	desc = "A floor tile made of glass, with an integrated light. Use a multitool on it to change its color."
-	icon_state = "tile_white"
+	desc = "A floor tile, made out off glass. Use a multitool on it to change its color."
+	icon_state = "tile_light blue"
 	force = 3
 	throwforce = 5
 	attack_verb = list("bashed", "battered", "bludgeoned", "thrashed", "smashed")
@@ -208,7 +140,7 @@
 	desc = "A piece of carpet with a convincing star pattern."
 	icon_state = "tile_space"
 	turf_type = /turf/simulated/floor/fakespace
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 	merge_type = /obj/item/stack/tile/fakespace
 
 /obj/item/stack/tile/fakespace/loaded
@@ -235,20 +167,6 @@
 	icon_state = "tile_pod"
 	turf_type = /turf/simulated/floor/pod
 
-/obj/item/stack/tile/pod/light
-	name = "light pod floor tile"
-	singular_name = "light pod floor tile"
-	desc = "A lightly colored grooved floor tile."
-	icon_state = "tile_podlight"
-	turf_type = /turf/simulated/floor/pod
-
-/obj/item/stack/tile/pod/dark
-	name = "dark pod floor tile"
-	singular_name = "dark pod floor tile"
-	desc = "A darkly colored grooved floor tile."
-	icon_state = "tile_poddark"
-	turf_type = /turf/simulated/floor/pod/dark
-
 /obj/item/stack/tile/arcade_carpet
 	name = "arcade carpet"
 	singular_name = "arcade carpet"
@@ -256,7 +174,7 @@
 	icon_state = "tile_space"
 	turf_type = /turf/simulated/floor/carpet/arcade
 	merge_type = /obj/item/stack/tile/arcade_carpet
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 
 /obj/item/stack/tile/arcade_carpet/loaded
 	amount = 20

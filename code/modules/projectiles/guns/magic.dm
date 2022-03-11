@@ -18,16 +18,16 @@
 	origin_tech = null
 	clumsy_check = 0
 	trigger_guard = TRIGGER_GUARD_ALLOW_ALL // Has no trigger at all, uses magic instead
-	can_holster = FALSE // Nothing here is a gun, and therefore shouldn't really fit into a holster
 
 	lefthand_file = 'icons/mob/inhands/items_lefthand.dmi' //not really a gun and some toys use these inhands
 	righthand_file = 'icons/mob/inhands/items_righthand.dmi'
 
 /obj/item/gun/magic/afterattack(atom/target, mob/living/user, flag)
+	newshot()
 	if(no_den_usage)
 		var/area/A = get_area(user)
 		if(istype(A, /area/wizard_station))
-			to_chat(user, "<span class='warning'>You know better than to violate the security of The Den, best wait until you leave to use [src].</span>")
+			to_chat(user, "<span class='warning'>You know better than to violate the security of The Den, best wait until you leave to use [src].<span>")
 			return
 		else
 			no_den_usage = 0
@@ -37,13 +37,9 @@
 	return charges
 
 /obj/item/gun/magic/newshot(params)
-	if(charges && chambered && !chambered.BB)
+	if(charges && chambered)
 		chambered.newshot(params)
 	return
-
-/obj/item/gun/magic/process_fire(atom/target as mob|obj|turf, mob/living/user as mob|obj, message = 1, params, zone_override, bonus_spread = 0)
-	newshot()
-	return ..()
 
 /obj/item/gun/magic/process_chamber()
 	if(chambered && !chambered.BB) //if BB is null, i.e the shot has been fired...
@@ -55,12 +51,12 @@
 	charges = max_charges
 	chambered = new ammo_type(src)
 	if(can_charge)
-		START_PROCESSING(SSobj, src)
+		processing_objects.Add(src)
 
 
 /obj/item/gun/magic/Destroy()
 	if(can_charge)
-		STOP_PROCESSING(SSobj, src)
+		processing_objects.Remove(src)
 	return ..()
 
 
@@ -76,10 +72,10 @@
 	return
 
 /obj/item/gun/magic/shoot_with_empty_chamber(mob/living/user as mob|obj)
-	to_chat(user, "<span class='warning'>[src] whizzles quietly.</span>")
+	to_chat(user, "<span class='warning'>The [name] whizzles quietly.<span>")
 	return
 
 /obj/item/gun/magic/suicide_act(mob/user)
-	user.visible_message("<span class='suicide'>[user] is twisting [src] above [user.p_their()] head, releasing a magical blast! It looks like [user.p_theyre()] trying to commit suicide.</span>")
+	user.visible_message("<span class='suicide'>[user] is twisting the [name] above \his head, releasing a magical blast! It looks like \he's trying to commit suicide.</span>")
 	playsound(loc, fire_sound, 50, 1, -1)
 	return FIRELOSS

@@ -29,7 +29,7 @@
 	flags = CONDUCT
 	force = 5.0
 	throwforce = 7.0
-	w_class = WEIGHT_CLASS_NORMAL
+	w_class = WEIGHT_CLASS_SMALL
 	materials = list(MAT_METAL=50)
 	attack_verb = list("bludgeoned", "whacked", "disciplined", "thrashed", "Vaudevilled")
 
@@ -77,10 +77,6 @@
 	item_state = "gift"
 	w_class = WEIGHT_CLASS_BULKY
 
-/obj/item/gift/emp_act(severity)
-	..()
-	gift.emp_act(severity)
-
 /obj/item/kidanglobe
 	name = "Kidan homeworld globe"
 	icon = 'icons/obj/decorations.dmi'
@@ -93,25 +89,25 @@
 	icon_state = "lightning"
 	desc = "test lightning"
 
-/obj/item/lightning/New()
-	..()
-	icon_state = "1"
+	New()
+		icon = midicon
+		icon_state = "1"
 
-/obj/item/lightning/afterattack(atom/A as mob|obj|turf|area, mob/living/user as mob|obj, flag, params)
-	var/angle = get_angle(A, user)
-	//to_chat(world, angle)
-	angle = round(angle) + 45
-	if(angle > 180)
-		angle -= 180
-	else
-		angle += 180
+	afterattack(atom/A as mob|obj|turf|area, mob/living/user as mob|obj, flag, params)
+		var/angle = get_angle(A, user)
+//		to_chat(world, angle)
+		angle = round(angle) + 45
+		if(angle > 180)
+			angle -= 180
+		else
+			angle += 180
 
-	if(!angle)
-		angle = 1
-  //to_chat(world, "adjusted [angle]")
-	icon_state = "[angle]"
-	//to_chat(world, "[angle] [(get_dist(user, A) - 1)]")
-	user.Beam(A, "lightning", 'icons/obj/zap.dmi', 50, 15)
+		if(!angle)
+			angle = 1
+//		to_chat(world, "adjusted [angle]")
+		icon_state = "[angle]"
+//		to_chat(world, "[angle] [(get_dist(user, A) - 1)]")
+		user.Beam(A, "lightning", 'icons/obj/zap.dmi', 50, 15)
 
 /obj/item/newton
 	name = "newton cradle"
@@ -120,10 +116,11 @@
 	desc = "A device bored paper pushers use to remind themselves that time did not stop yet. Contains gravity."
 
 /obj/item/pai_cable
-	name = "data cable"
 	desc = "A flexible coated cable with a universal jack on one end."
+	name = "data cable"
 	icon = 'icons/obj/power.dmi'
 	icon_state = "wire1"
+
 	var/obj/machinery/machine
 
 /obj/item/phone

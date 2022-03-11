@@ -1,4 +1,4 @@
-GLOBAL_LIST_INIT(admin_verbs_show_debug_verbs, list(
+var/list/admin_verbs_show_debug_verbs = list(
 	/client/proc/camera_view,
 	/client/proc/sec_camera_report,
 	/client/proc/intercom_view,
@@ -14,11 +14,15 @@ GLOBAL_LIST_INIT(admin_verbs_show_debug_verbs, list(
 	/client/proc/cmd_admin_areatest,
 	/client/proc/cmd_admin_rejuvenate,
 	/datum/admins/proc/show_traitor_panel,
+	/client/proc/print_jobban_old,
+	/client/proc/print_jobban_old_filter,
 	/client/proc/forceEvent,
+	/client/proc/nanomapgen_DumpImage,
+	/client/proc/reload_nanoui_resources,
 	/client/proc/admin_redo_space_transitions,
 	/client/proc/make_turf_space_map,
 	/client/proc/vv_by_ref
-))
+)
 
 // Would be nice to make this a permanent admin pref so we don't need to click it each time
 /client/proc/enable_debug_verbs()
@@ -28,6 +32,6 @@ GLOBAL_LIST_INIT(admin_verbs_show_debug_verbs, list(
 	if(!check_rights(R_DEBUG))
 		return
 
-	verbs += GLOB.admin_verbs_show_debug_verbs
+	verbs += admin_verbs_show_debug_verbs
 
-	SSblackbox.record_feedback("tally", "admin_verb", 1, "Debug Verbs") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
+	feedback_add_details("admin_verb","mDV") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!

@@ -4,3 +4,7 @@
 	icon = 'icons/obj/machines/particle_accelerator.dmi'
 	icon_state = "power_box"
 	reference = "power_box"
+
+/obj/structure/particle_accelerator/power_box/update_icon()
+	..()
+	return

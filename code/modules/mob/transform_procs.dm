@@ -1,7 +1,7 @@
 /mob/living/carbon/human/proc/monkeyize()
 	var/mob/H = src
-	H.dna.SetSEState(GLOB.monkeyblock,1)
-	singlemutcheck(H, GLOB.monkeyblock, MUTCHK_FORCED)
+	H.dna.SetSEState(MONKEYBLOCK,1)
+	genemutcheck(H,MONKEYBLOCK,null,MUTCHK_FORCED)
 
 /mob/new_player/AIize()
 	spawning = 1
@@ -28,7 +28,7 @@
 
 	if(mind)
 		mind.transfer_to(O)
-		O.mind.set_original_mob(O)
+		O.mind.original = O
 	else
 		O.key = key
 
@@ -38,42 +38,35 @@
 
 	O.rename_self("AI",1)
 
-	INVOKE_ASYNC(GLOBAL_PROC, .proc/qdel, src) // To prevent the proc from returning null.
+	spawn()
+		qdel(src)
 	return O
 
 
 
-/**
-	For transforming humans into robots (cyborgs).
-
-	Arguments:
-	* cell_type: A type path of the cell the new borg should receive.
-	* connect_to_default_AI: TRUE if you want /robot/New() to handle connecting the borg to the AI with the least borgs.
-	* AI: A reference to the AI we want to connect to.
-*/
-/mob/living/carbon/human/proc/Robotize(cell_type = null, connect_to_default_AI = TRUE, mob/living/silicon/ai/AI = null)
+//human -> robot
+/mob/living/carbon/human/proc/Robotize()
 	if(notransform)
 		return
 	for(var/obj/item/W in src)
 		unEquip(W)
-
+	regenerate_icons()
 	notransform = 1
 	canmove = 0
 	icon = null
 	invisibility = 101
+	for(var/t in bodyparts)
+		qdel(t)
+	for(var/i in internal_organs)
+		qdel(i)
 
-	// Creating a new borg here will connect them to a default AI and notify that AI, if `connect_to_default_AI` is TRUE.
-	var/mob/living/silicon/robot/O = new /mob/living/silicon/robot(loc, connect_to_AI = connect_to_default_AI)
+	var/mob/living/silicon/robot/O = new /mob/living/silicon/robot( loc )
 
-	// If `AI` is passed in, we want to connect to that AI specifically.
-	if(AI)
-		O.lawupdate = TRUE
-		O.connect_to_ai(AI)
+	// cyborgs produced by Robotize get an automatic power cell
+	O.cell = new(O)
+	O.cell.maxcharge = 7500
+	O.cell.charge = 7500
 
-	if(!cell_type)
-		O.cell = new /obj/item/stock_parts/cell/high(O)
-	else
-		O.cell = new cell_type(O)
 
 	O.gender = gender
 	O.invisibility = 0
@@ -81,37 +74,34 @@
 	if(mind)		//TODO
 		mind.transfer_to(O)
 		if(O.mind.assigned_role == "Cyborg")
-			O.mind.set_original_mob(O)
+			O.mind.original = O
 		else if(mind && mind.special_role)
 			O.mind.store_memory("In case you look at this after being borged, the objectives are only here until I find a way to make them not show up for you, as I can't simply delete them without screwing up round-end reporting. --NeoFite")
 	else
 		O.key = key
 
-	O.forceMove(loc)
+	O.loc = loc
 	O.job = "Cyborg"
+	O.notify_ai(1)
 
 	if(O.mind && O.mind.assigned_role == "Cyborg")
-		var/obj/item/mmi/new_mmi
-		switch(O.mind.role_alt_title)
-			if("Robot")
-				new_mmi = new /obj/item/mmi/robotic_brain(O)
-				if(new_mmi.brainmob)
-					new_mmi.brainmob.name = O.name
-			if("Cyborg")
-				new_mmi = new /obj/item/mmi(O)
-			else
-				// This should never happen, but oh well
-				new_mmi = new /obj/item/mmi(O)
-		new_mmi.transfer_identity(src) //Does not transfer key/client.
-		// Replace the MMI.
-		QDEL_NULL(O.mmi)
-		O.mmi = new_mmi
+		if(O.mind.role_alt_title == "Android")
+			O.mmi = new /obj/item/mmi/posibrain(O)
+		else if(O.mind.role_alt_title == "Robot")
+			O.mmi = null //Robots do not have removable brains.
+		else
+			O.mmi = new /obj/item/mmi(O)
+
+		if(O.mmi) O.mmi.transfer_identity(src) //Does not transfer key/client.
+
+	callHook("borgify", list(O))
 
 	O.update_pipe_vision()
 
 	O.Namepick()
 
-	INVOKE_ASYNC(GLOBAL_PROC, .proc/qdel, src) // To prevent the proc from returning null.
+	spawn(0)//To prevent the proc from returning null.
+		qdel(src)
 	return O
 
 //human -> alien
@@ -143,40 +133,45 @@
 
 	to_chat(new_xeno, "<B>You are now an alien.</B>")
 	new_xeno.update_pipe_vision()
-	qdel(src)
+	spawn(0)//To prevent the proc from returning null.
+		qdel(src)
+	return
 
-/mob/living/carbon/human/proc/slimeize(reproduce as num)
+/mob/living/carbon/human/proc/slimeize(adult as num, reproduce as num)
 	if(notransform)
 		return
-	notransform = TRUE
-	canmove = FALSE
-	for(var/obj/item/I in src)
-		unEquip(I)
+	for(var/obj/item/W in src)
+		unEquip(W)
 	regenerate_icons()
+	notransform = 1
+	canmove = 0
 	icon = null
-	invisibility = INVISIBILITY_MAXIMUM
+	invisibility = 101
 	for(var/t in bodyparts)
 		qdel(t)
 
-	var/mob/living/simple_animal/slime/new_slime
+	var/mob/living/carbon/slime/new_slime
 	if(reproduce)
 		var/number = pick(14;2,3,4)	//reproduce (has a small chance of producing 3 or 4 offspring)
 		var/list/babies = list()
 		for(var/i=1,i<=number,i++)
-			var/mob/living/simple_animal/slime/M = new/mob/living/simple_animal/slime(loc)
-			M.set_nutrition(round(nutrition / number))
+			var/mob/living/carbon/slime/M = new/mob/living/carbon/slime(loc)
+			M.nutrition = round(nutrition/number)
 			step_away(M,src)
 			babies += M
 		new_slime = pick(babies)
 	else
-		new_slime = new /mob/living/simple_animal/slime(loc)
-	new_slime.a_intent = INTENT_HARM
+		new_slime = new /mob/living/carbon/slime(loc)
+		if(adult)
+			new_slime.is_adult = 1
+		else
 	new_slime.key = key
 
 	to_chat(new_slime, "<B>You are now a slime. Skreee!</B>")
 	new_slime.update_pipe_vision()
-	. = new_slime
-	qdel(src)
+	spawn(0)//To prevent the proc from returning null.
+		qdel(src)
+	return
 
 /mob/living/carbon/human/proc/corgize()
 	if(notransform)
@@ -191,12 +186,15 @@
 	for(var/t in bodyparts)	//this really should not be necessary
 		qdel(t)
 
-	var/mob/living/simple_animal/pet/dog/corgi/new_corgi = new /mob/living/simple_animal/pet/dog/corgi (loc)
+	var/mob/living/simple_animal/pet/corgi/new_corgi = new /mob/living/simple_animal/pet/corgi (loc)
+	new_corgi.a_intent = INTENT_HARM
 	new_corgi.key = key
 
 	to_chat(new_corgi, "<B>You are now a Corgi. Yap Yap!</B>")
 	new_corgi.update_pipe_vision()
-	qdel(src)
+	spawn(0)//To prevent the proc from returning null.
+		qdel(src)
+	return
 
 /mob/living/carbon/human/Animalize()
 
@@ -225,7 +223,9 @@
 
 	to_chat(new_mob, "You suddenly feel more... animalistic.")
 	new_mob.update_pipe_vision()
-	qdel(src)
+	spawn()
+		qdel(src)
+	return
 
 /mob/proc/Animalize()
 
@@ -242,7 +242,7 @@
 	qdel(src)
 
 
-/mob/living/carbon/human/proc/paize(name)
+/mob/living/carbon/human/proc/paize(var/name)
 	if(notransform)
 		return
 	for(var/obj/item/W in src)
@@ -266,4 +266,47 @@
 
 	to_chat(pai, "<B>You have become a pAI! Your name is [pai.name].</B>")
 	pai.update_pipe_vision()
-	qdel(src)
+	spawn(0)//To prevent the proc from returning null.
+		qdel(src)
+	return
+
+/mob/proc/safe_respawn(var/MP)
+	if(!MP)
+		return 0
+
+	if(!GAMEMODE_IS_NUCLEAR)
+		if(ispath(MP, /mob/living/simple_animal/pet/cat/Syndi))
+			return 0
+	if(ispath(MP, /mob/living/simple_animal/pet/cat))
+		return 1
+	if(ispath(MP, /mob/living/simple_animal/pet/corgi))
+		return 1
+	if(ispath(MP, /mob/living/simple_animal/crab))
+		return 1
+	if(ispath(MP, /mob/living/simple_animal/chicken))
+		return 1
+	if(ispath(MP, /mob/living/simple_animal/cow))
+		return 1
+	if(ispath(MP, /mob/living/simple_animal/parrot))
+		return 1
+	if(ispath(MP, /mob/living/simple_animal/pony))
+		return 1
+	if(!GAMEMODE_IS_NUCLEAR)
+		if(ispath(MP, /mob/living/simple_animal/pet/fox/Syndifox))
+			return 0
+	if(ispath(MP, /mob/living/simple_animal/pet/fox))
+		return 1
+	if(ispath(MP, /mob/living/simple_animal/chick))
+		return 1
+	if(ispath(MP, /mob/living/simple_animal/pet/pug))
+		return 1
+	if(ispath(MP, /mob/living/simple_animal/butterfly))
+		return 1
+
+	if(ispath(MP, /mob/living/simple_animal/borer) && !jobban_isbanned(src, ROLE_BORER) && !jobban_isbanned(src, "Syndicate"))
+		return 1
+
+	if(ispath(MP, /mob/living/simple_animal/diona) && !jobban_isbanned(src, ROLE_NYMPH))
+		return 1
+
+	return 0

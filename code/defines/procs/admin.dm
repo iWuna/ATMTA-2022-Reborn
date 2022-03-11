@@ -42,15 +42,12 @@
 	if(key)
 		if(C && C.holder && C.holder.fakekey && !include_name)
 			if(include_link)
-				. += "<a href='?priv_msg=[C.getStealthKey()];type=[type]'>"
+				. += "<a href='?priv_msg=[C.findStealthKey()];type=[type]'>"
 			. += "Administrator"
 		else
 			if(include_link && C)
-				. += "<a href='?priv_msg=[C.ckey];type=[type]'>"
+				. += "<a href='?priv_msg=\ref[C];type=[type]'>"
 			. += key
-			// See if the player is on the watchlist. Requires admin permissions.
-			if(check_rights(R_ADMIN, FALSE) && C && C.watchlisted)
-				. += "<font color='orange'><b>(W)</b></font>"
 
 		if(include_link)
 			if(C)	. += "</a>"
@@ -71,21 +68,19 @@
 	return .
 
 /proc/key_name_admin(whom)
-	if(whom)
-		var/datum/whom_datum = whom //As long as it's not null, will be close enough/has the proc UID() that is all that's needed
-		var/message = "[key_name(whom, 1)]([ADMIN_QUE(whom_datum,"?")])[isAntag(whom) ? "<font color='red'>(A)</font>" : ""][isLivingSSD(whom) ? "<span class='danger'>(SSD!)</span>" : ""] ([admin_jump_link(whom)])"
-		return message
+	var/message = "[key_name(whom, 1)](<A HREF='?_src_=holder;adminmoreinfo=\ref[whom]'>?</A>)[isAntag(whom) ? "<font color='red'>(A)</font>" : ""][isLivingSSD(whom) ? "<span class='danger'>(SSD!)</span>" : ""] ([admin_jump_link(whom)])"
+	return message
 
 /proc/key_name_mentor(whom)
 	// Same as key_name_admin, but does not include (?) or (A) for antags.
 	var/message = "[key_name(whom, 1)] [isLivingSSD(whom) ? "<span class='danger'>(SSD!)</span>" : ""] ([admin_jump_link(whom)])"
 	return message
 
-/proc/key_name_log(whom)
-	// Key_name_admin, but does not include (?) or jump link - For logging purpose to reduce clutter while figuring out who is SSD and/or antag when being attacked. Also remove formatting since it is not displayed
-	var/message = "[key_name(whom, 0)][isAntag(whom) ? "(ANTAG)" : ""][isLivingSSD(whom) ? "(SSD!)": ""]"
-	return message
 
-/proc/log_and_message_admins(message)
+/proc/log_and_message_admins(var/message as text)
 	log_admin("[key_name(usr)] " + message)
 	message_admins("[key_name_admin(usr)] " + message)
+
+/proc/admin_log_and_message_admins(var/message as text)
+	log_admin("[key_name(usr)] " + message)
+	message_admins("[key_name_admin(usr)] " + message, 1)

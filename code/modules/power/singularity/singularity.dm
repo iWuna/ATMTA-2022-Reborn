@@ -3,21 +3,22 @@
 	desc = "A gravitational singularity."
 	icon = 'icons/obj/singularity.dmi'
 	icon_state = "singularity_s1"
-	anchored = TRUE
-	density = TRUE
+	anchored = 1
+	density = 1
 	layer = MASSIVE_OBJ_LAYER
 	light_range = 6
-	appearance_flags = LONG_GLIDE
+	appearance_flags = 0
+	unacidable = 1 //Don't comment this out.
 	var/current_size = 1
 	var/allowed_size = 1
+	var/contained = 1 //Are we going to move around?
 	var/energy = 100 //How strong are we?
 	var/dissipate = 1 //Do we lose energy over time?
 	var/dissipate_delay = 10
 	var/dissipate_track = 0
 	var/dissipate_strength = 1 //How much energy do we lose?
-	var/move_self = TRUE //Do we move on our own?
+	var/move_self = 1 //Do we move on our own?
 	var/grav_pull = 4 //How many tiles out do we pull?
-	move_resist = INFINITY	//no, you don't get to push the singulo. Not even you OP wizard gateway statues
 	var/consume_range = 0 //How many tiles out do we eat
 	var/event_chance = 15 //Prob for event each tick
 	var/target = null //its target. moves towards the target if it has one
@@ -25,27 +26,26 @@
 	var/last_warning
 	var/consumedSupermatter = 0 //If the singularity has eaten a supermatter shard and can go to stage six
 	allow_spin = 0
-	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF | FREEZE_PROOF
+	burn_state = LAVA_PROOF
 
-/obj/singularity/Initialize(mapload, starting_energy = 50)
-	. = ..()
+/obj/singularity/New(loc, var/starting_energy = 50, var/temp = 0)
 	//CARN: admin-alert for chuckle-fuckery.
 	admin_investigate_setup()
 
-	energy = starting_energy
-
-	START_PROCESSING(SSobj, src)
-	GLOB.poi_list |= src
-	GLOB.singularities += src
-	for(var/obj/machinery/power/singularity_beacon/singubeacon in GLOB.machines)
+	src.energy = starting_energy
+	..()
+	processing_objects.Add(src)
+	poi_list |= src
+	singularities += src
+	for(var/obj/machinery/power/singularity_beacon/singubeacon in machines)
 		if(singubeacon.active)
 			target = singubeacon
 			break
 
 /obj/singularity/Destroy()
-	STOP_PROCESSING(SSobj, src)
-	GLOB.poi_list.Remove(src)
-	GLOB.singularities -= src
+	processing_objects.Remove(src)
+	poi_list.Remove(src)
+	singularities -= src
 	target = null
 	return ..()
 
@@ -75,7 +75,7 @@
 /obj/singularity/Process_Spacemove() //The singularity stops drifting for no man!
 	return 0
 
-/obj/singularity/blob_act(obj/structure/blob/B)
+/obj/singularity/blob_act(severity)
 	return
 
 /obj/singularity/ex_act(severity)
@@ -95,7 +95,6 @@
 
 
 /obj/singularity/bullet_act(obj/item/projectile/P)
-	qdel(P)
 	return 0 //Will there be an impact? Who knows.  Will we see it? No.
 
 
@@ -110,13 +109,9 @@
 
 
 /obj/singularity/process()
-	if(allowed_size >= STAGE_TWO)
-		// Start moving even before we reach "true" stage two.
-		// If we are stage one and are sufficiently energetic to be allowed to 2,
-		//  it might mean we are stuck in a corner somewere. So move around to try to expand.
-		move()
 	if(current_size >= STAGE_TWO)
-		radiation_pulse(src, min(5000, (energy * 4.5) + 1000), RAD_DISTANCE_COEFFICIENT * 0.1)
+		move()
+		pulse()
 		if(prob(event_chance))//Chance for it to run a special event TODO:Come up with one or two more that fit
 			event()
 	eat()
@@ -253,6 +248,7 @@
 
 
 /obj/singularity/proc/eat()
+	set background = BACKGROUND_ENABLED
 	for(var/tile in spiral_range_turfs(grav_pull, src))
 		var/turf/T = tile
 		if(!T || !isturf(loc))
@@ -268,27 +264,17 @@
 					X.singularity_pull(src, current_size)
 				else
 					consume(X)
-			if(TICK_CHECK)
-				return // You've eaten enough. Prevents weirdness like the singulo eating the containment on stage 2
+			CHECK_TICK
 
 
 /obj/singularity/proc/consume(atom/A)
 	var/gain = A.singularity_act(current_size)
 	src.energy += gain
-	if(istype(A, /obj/machinery/power/supermatter_crystal) && !consumedSupermatter)
+	if(istype(A, /obj/machinery/power/supermatter_shard) && !consumedSupermatter)
 		desc = "[initial(desc)] It glows fiercely with inner fire."
 		name = "supermatter-charged [initial(name)]"
 		consumedSupermatter = 1
-		set_light(10)
-	if(istype(A, /obj/singularity/narsie))
-		if(current_size == STAGE_SIX)
-			visible_message("<span class='userdanger'>[SSticker.cultdat?.entity_name] is consumed by [src]!</span>")
-			qdel(A)
-		else
-			visible_message("<span class='userdanger'>[SSticker.cultdat?.entity_name] strikes down [src]!</span>")
-			investigate_log("has been destroyed by Nar'Sie","singulo")
-			qdel(src)
-
+		light_range = 10
 	return
 
 
@@ -296,7 +282,7 @@
 	if(!move_self)
 		return 0
 
-	var/movement_dir = pick(GLOB.alldirs - last_failed_movement)
+	var/movement_dir = pick(alldirs - last_failed_movement)
 
 	if(force_move)
 		movement_dir = force_move
@@ -335,10 +321,10 @@
 	var/dir2 = 0
 	var/dir3 = 0
 	switch(direction)
-		if(NORTH, SOUTH)
+		if(NORTH||SOUTH)
 			dir2 = 4
 			dir3 = 8
-		if(EAST, WEST)
+		if(EAST||WEST)
 			dir2 = 1
 			dir3 = 2
 	var/turf/T2 = T
@@ -377,19 +363,32 @@
 
 
 /obj/singularity/proc/event()
-	var/numb = rand(1, 4)
+	var/numb = pick(1,2,3,4,5,6)
 	switch(numb)
-		if(1) //EMP
+		if(1)//EMP
 			emp_area()
-		if(2) //Stun mobs who lack optic scanners
+		if(2,3)//tox damage all carbon mobs in area
+			toxmob()
+		if(4)//Stun mobs who lack optic scanners
 			mezzer()
-		if(3, 4) //Sets all nearby mobs on fire
+		if(5,6) //Sets all nearby mobs on fire
 			if(current_size < STAGE_SIX)
 				return 0
 			combust_mobs()
 		else
 			return 0
 	return 1
+
+
+/obj/singularity/proc/toxmob()
+	var/toxrange = 10
+	var/radiation = 15
+	var/radiationmin = 3
+	if(energy>200)
+		radiation += round((energy-150)/10,1)
+		radiationmin = round((radiation/5),1)
+	for(var/mob/living/M in view(toxrange, src.loc))
+		M.apply_effect(rand(radiationmin,radiation), IRRADIATE)
 
 
 /obj/singularity/proc/combust_mobs()
@@ -412,18 +411,24 @@
 				if(istype(H.glasses, /obj/item/clothing/glasses/meson))
 					var/obj/item/clothing/glasses/meson/MS = H.glasses
 					if(MS.vision_flags == SEE_TURFS)
-						to_chat(H, "<span class='notice'>You look directly into [src], good thing you had your protective eyewear on!</span>")
+						to_chat(H, "<span class='notice'>You look directly into the [src.name], good thing you had your protective eyewear on!</span>")
 						return
 
 		M.apply_effect(3, STUN)
-		M.visible_message("<span class='danger'>[M] stares blankly at [src]!</span>", \
-						"<span class='userdanger'>You look directly into [src] and feel weak.</span>")
+		M.visible_message("<span class='danger'>[M] stares blankly at the [src.name]!</span>", \
+						"<span class='userdanger'>You look directly into the [src.name] and feel weak.</span>")
 	return
 
 
 /obj/singularity/proc/emp_area()
 	empulse(src, 8, 10)
 	return
+
+
+/obj/singularity/proc/pulse()
+	for(var/obj/machinery/power/rad_collector/R in rad_collectors)
+		if(R.z == z && get_dist(R, src) <= 15) // Better than using orange() every process
+			R.receive_pulse(energy)
 
 /obj/singularity/singularity_act()
 	var/gain = (energy/2)

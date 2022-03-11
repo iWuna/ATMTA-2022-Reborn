@@ -1,3 +1,21 @@
+/mob/living/carbon/brain/handle_mutations_and_radiation()
+	if(radiation)
+		if(radiation > 100)
+			if(!container)
+				to_chat(src, "<span class='danger'>You feel weak.</span>")
+			else
+				to_chat(src, "<span class='danger'>STATUS: CRITICAL AMOUNTS OF RADIATION DETECTED.</span>")
+
+		switch(radiation)
+
+			if(50 to 75)
+				if(prob(5))
+					if(!container)
+						to_chat(src, "<span class='danger'>You feel weak.</span>")
+					else
+						to_chat(src, "<span class='danger'>STATUS: DANGEROUS AMOUNTS OF RADIATION DETECTED.</span>")
+		..()
+
 /mob/living/carbon/brain/proc/handle_temperature_damage(body_part, exposed_temperature, exposed_intensity)
 	if(status_flags & GODMODE)
 		return
@@ -10,11 +28,20 @@
 		var/discomfort = min( abs(exposed_temperature - bodytemperature)*(exposed_intensity)/2000000, 1.0)
 		adjustFireLoss(5.0*discomfort)
 
-/mob/living/carbon/brain/Life()
-	. = ..()
-	if(.)
-		if(!container && (world.time - timeofhostdeath) > GLOB.configuration.general.revival_brain_life)
+/mob/living/carbon/brain/handle_regular_status_updates()
+	updatehealth()
+
+	if(stat == DEAD)
+		blinded = 1
+		SetSilence(0)
+	else
+		if(!container && (health < config.health_threshold_dead || ((world.time - timeofhostdeath) > config.revival_brain_life)))
 			death()
+			blinded = 1
+			SetSilence(0)
+			return 1
+
+		. = 1
 
 /mob/living/carbon/brain/breathe()
 	return

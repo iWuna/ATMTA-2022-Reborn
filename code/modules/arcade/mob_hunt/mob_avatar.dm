@@ -1,3 +1,4 @@
+
 /obj/effect/nanomob
 	name = "Nano-Mob Avatar"					//will be overridden by the mob datum name value when created
 	desc = "A wild Nano-Mob appeared! Hit it with your PDA with the game open to attempt to capture it!"
@@ -11,28 +12,16 @@
 	var/list/clients_encountered = list()		//tracks who has already interacted with us, so they can't attempt a second capture
 	var/image/avatar
 
-/obj/effect/nanomob/Initialize(mapload, datum/mob_hunt/new_info)
-	. = ..()
+/obj/effect/nanomob/New(loc, datum/mob_hunt/new_info)
+	..()
 	if(!new_info)
-		return INITIALIZE_HINT_QDEL
+		qdel(src)
+		return
 	mob_info = new_info
-	RegisterSignal(mob_info, COMSIG_PARENT_QDELETING, .proc/delete_wrapper)
 	update_self()
 	forceMove(mob_info.spawn_point)
 	if(!mob_info.is_trap)
 		addtimer(CALLBACK(src, .proc/despawn), mob_info.lifetime)
-
-/obj/effect/nanomob/Destroy()
-	SSmob_hunt.trap_spawns -= src
-	SSmob_hunt.normal_spawns -= src
-	mob_info = null // Can't delete this since multiple players can get the exact same /datum/mob_hunt. (This should be refactored)
-	clients_encountered.Cut()
-	QDEL_NULL(avatar)
-	return ..()
-
-/obj/effect/nanomob/proc/delete_wrapper()
-	SIGNAL_HANDLER
-	qdel(src)
 
 /obj/effect/nanomob/proc/update_self()
 	if(!mob_info)
@@ -53,7 +42,7 @@
 		attempt_capture(P, -20)		//attempting a melee capture reduces the mob's effective run_chance by 20% to balance the risk of triggering a trap mob
 		return 1
 
-/obj/effect/nanomob/hitby(atom/movable/AM, skipcatch, hitpush, blocked, datum/thrownthing/throwingdatum)
+/obj/effect/nanomob/hitby(atom/movable/AM)
 	if(istype(AM, /obj/item/pda))
 		var/obj/item/pda/P = AM
 		attempt_capture(P)			//attempting a ranged capture does not affect the mob's effective run_chance but does prevent you from being shocked by a trap mob
@@ -66,7 +55,7 @@
 	var/datum/data/pda/app/mob_hunter_game/client = P.current_app
 	var/total_catch_mod = client.catch_mod + catch_mod		//negative values decrease the chance of the mob running, positive values makes it more likely to flee
 	if(!client.connected)	//must be connected to attempt captures
-		P.atom_say("No server connection. Capture aborted.")
+		P.audible_message("[bicon(P)] No server connection. Capture aborted.", null, 4)
 		return
 
 	if(mob_info.is_trap)		//traps work even if you ran into them before, which is why this is before the clients_encountered check
@@ -90,7 +79,7 @@
 		return
 	else	//deal with the new hunter by either running away or getting caught
 		clients_encountered += client
-		var/message = null
+		var/message = "[bicon(P)] "
 		var/effective_run_chance = mob_info.run_chance + total_catch_mod
 		if((effective_run_chance > 0) && prob(effective_run_chance))
 			message += "Capture failed! [name] escaped [P.owner ? "from [P.owner]" : "from this hunter"]!"
@@ -102,36 +91,36 @@
 			else
 				message += "Capture error! Try again."
 				clients_encountered -= client		//if the capture registration failed somehow, let them have another chance with this mob
-		P.atom_say(message)
+		P.audible_message(message, null, 4)
 
 /obj/effect/nanomob/proc/despawn()
-	if(SSmob_hunt)
+	if(mob_hunt_server)
 		if(mob_info.is_trap)
-			SSmob_hunt.trap_spawns -= src
+			mob_hunt_server.trap_spawns -= src
 		else
-			SSmob_hunt.normal_spawns -= src
+			mob_hunt_server.normal_spawns -= src
 	qdel(src)
 
 /obj/effect/nanomob/proc/reveal()
-	if(!SSmob_hunt)
+	if(!mob_hunt_server)
 		return
 	var/list/show_to = list()
-	for(var/A in SSmob_hunt.connected_clients)
-		if((A in clients_encountered) || !SSmob_hunt.connected_clients[A])
+	for(var/A in mob_hunt_server.connected_clients)
+		if((A in clients_encountered) || !mob_hunt_server.connected_clients[A])
 			continue
-		show_to |= SSmob_hunt.connected_clients[A]
+		show_to |= mob_hunt_server.connected_clients[A]
 	display_alt_appearance("nanomob_avatar", show_to)
 
 /obj/effect/nanomob/proc/conceal(list/hide_from)
-	if(!SSmob_hunt)
+	if(!mob_hunt_server)
 		return
 	var/list/hiding_from = list()
 	if(hide_from)
 		hiding_from = hide_from
 	else
-		for(var/A in SSmob_hunt.connected_clients)
-			if((A in clients_encountered) && SSmob_hunt.connected_clients[A])
-				hiding_from |= SSmob_hunt.connected_clients[A]
+		for(var/A in mob_hunt_server.connected_clients)
+			if((A in clients_encountered) && mob_hunt_server.connected_clients[A])
+				hiding_from |= mob_hunt_server.connected_clients[A]
 	hide_alt_appearance("nanomob_avatar", hiding_from)
 
 //		BATTLE MOB AVATARS
@@ -142,6 +131,11 @@
 	invisibility = 0
 	icon_state = "placeholder"
 	var/obj/machinery/computer/mob_battle_terminal/my_terminal
+
+/obj/effect/nanomob/battle/New(loc, datum/mob_hunt/new_info)
+	if(new_info)
+		mob_info = new_info
+		update_self()
 
 /obj/effect/nanomob/battle/update_self()
 	if(!mob_info)

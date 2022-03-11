@@ -23,7 +23,6 @@
 	var/bottling = 0
 
 /obj/machinery/bottler/New()
-	. = ..()
 	if(!available_recipes)
 		available_recipes = list()
 		acceptable_items = list()
@@ -41,6 +40,15 @@
 				qdel(recipe)
 
 /obj/machinery/bottler/attackby(obj/item/O, mob/user, params)
+	if(iswrench(O))		//This being before the canUnequip check allows borgs to (un)wrench bottlers in case they need move them to fix stuff
+		playsound(src, O.usesound, 50, 1)
+		if(anchored)
+			anchored = 0
+			to_chat(user, "<span class='alert'>[src] can now be moved.</span>")
+		else
+			anchored = 1
+			to_chat(user, "<span class='alert'>[src] is now secured.</span>")
+		return 1
 	if(!user.canUnEquip(O, 0))
 		to_chat(user, "<span class='warning'>[O] is stuck to your hand, you can't seem to put it down!</span>")
 		return 0
@@ -83,16 +91,7 @@
 	else		//If it doesn't qualify in the above checks, we don't want it. Inform the person so they (ideally) stop trying to put the nuke disc in.
 		to_chat(user, "<span class='warning'>You aren't sure this is able to be processed by the machine.</span>")
 		return 0
-
-/obj/machinery/bottler/wrench_act(mob/user, obj/item/I)
-	. = TRUE
-	if(!I.use_tool(src, user, 0, volume = I.tool_volume))
-		return
-	anchored = !anchored
-	if(anchored)
-		WRENCH_ANCHOR_MESSAGE
-	else
-		WRENCH_UNANCHOR_MESSAGE
+	//..()
 
 /obj/machinery/bottler/proc/insert_item(obj/item/O, mob/user)
 	if(!O || !user)
@@ -114,7 +113,7 @@
 		O.forceMove(src)
 	updateUsrDialog()
 
-/obj/machinery/bottler/proc/eject_items(slot)
+/obj/machinery/bottler/proc/eject_items(var/slot)
 	var/obj/item/O = null
 	if(!slot)
 		for(var/i = 1, i <= slots.len, i++)
@@ -206,7 +205,7 @@
 		containers[con_type] = min(containers[con_type], max_define)
 		S.use(sheets_to_use)
 	else
-		visible_message("<span class='warning'>[src] rejects [S] because it already is fully stocked with [con_type]s.</span>")
+		visible_message("<span class='warning'>[src] rejects the [S] because it already is fully stocked with [con_type]s.</span>")
 
 /obj/machinery/bottler/proc/select_recipe()
 	for(var/datum/bottler_recipe/recipe in available_recipes)
@@ -235,8 +234,8 @@
 	if(containers[con_type])
 		//empties aren't sealed, so let's open it quietly
 		drink_container = new drink_container()
-		drink_container.canopened = TRUE
-		drink_container.container_type |= OPENCONTAINER
+		drink_container.canopened = 1
+		drink_container.flags |= OPENCONTAINER
 		drink_container.forceMove(loc)
 		containers[con_type]--
 

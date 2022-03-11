@@ -13,8 +13,8 @@
 /datum/game_mode/revolution
 	name = "revolution"
 	config_tag = "revolution"
-	restricted_jobs = list("Security Officer", "Warden", "Detective", "Internal Affairs Agent", "AI", "Cyborg","Captain", "Head of Personnel", "Head of Security", "Chief Engineer", "Research Director", "Chief Medical Officer", "Blueshield", "Nanotrasen Representative", "Magistrate")
-	required_players = 20
+	restricted_jobs = list("Security Officer", "Warden", "Detective", "Internal Affairs Agent", "AI", "Cyborg","Captain", "Head of Personnel", "Head of Security", "Chief Engineer", "Research Director", "Chief Medical Officer", "Blueshield", "Nanotrasen Representative", "Security Pod Pilot", "Magistrate", "Brig Physician")
+	required_players = 10
 	required_enemies = 1
 	recommended_enemies = 3
 
@@ -38,7 +38,7 @@
 /datum/game_mode/revolution/pre_setup()
 	possible_revolutionaries = get_players_for_role(ROLE_REV)
 
-	if(GLOB.configuration.gamemode.prevent_mindshield_antags)
+	if(config.protect_roles_from_antagonist)
 		restricted_jobs += protected_jobs
 
 
@@ -51,9 +51,9 @@
 		lenin.restricted_roles = restricted_jobs
 
 	if(head_revolutionaries.len < required_enemies)
-		return FALSE
+		return 0
 
-	return TRUE
+	return 1
 
 
 /datum/game_mode/revolution/post_setup()
@@ -72,13 +72,16 @@
 		for(var/datum/mind/head_mind in heads)
 			mark_for_death(rev_mind, head_mind)
 
-		addtimer(CALLBACK(src, .proc/equip_revolutionary, rev_mind.current), rand(10, 100))
+		spawn(rand(10,100))
+		//	equip_traitor(rev_mind.current, 1) //changing how revs get assigned their uplink so they can get PDA uplinks. --NEO
+		//	Removing revolutionary uplinks.	-Pete
+			equip_revolutionary(rev_mind.current)
 
 	for(var/datum/mind/rev_mind in head_revolutionaries)
 		greet_revolutionary(rev_mind)
 	modePlayer += head_revolutionaries
-	if(SSshuttle)
-		SSshuttle.emergencyNoEscape = 1
+	if(shuttle_master)
+		shuttle_master.emergencyNoEscape = 1
 	..()
 
 
@@ -87,9 +90,9 @@
 	if(check_counter >= 5)
 		if(!finished)
 			check_heads()
-			SSticker.mode.check_win()
+			ticker.mode.check_win()
 		check_counter = 0
-	return FALSE
+	return 0
 
 
 /datum/game_mode/proc/forge_revolutionary_objectives(datum/mind/rev_mind)
@@ -110,7 +113,6 @@
 		to_chat(rev_mind.current, "<B>Objective #[obj_count]</B>: [objective.explanation_text]")
 		rev_mind.special_role = SPECIAL_ROLE_HEAD_REV
 		obj_count++
-	to_chat(rev_mind.current, "<span class='motd'>For more information, check the wiki page: ([GLOB.configuration.url.wiki_url]/index.php/Revolution)</span>")
 
 /////////////////////////////////////////////////////////////////////////////////
 //This are equips the rev heads with their gear, and makes the clown not clumsy//
@@ -122,10 +124,8 @@
 	if(mob.mind)
 		if(mob.mind.assigned_role == "Clown")
 			to_chat(mob, "Your training has allowed you to overcome your clownish nature, allowing you to wield weapons without harming yourself.")
-			mob.dna.SetSEState(GLOB.clumsyblock, FALSE)
-			singlemutcheck(mob, GLOB.clumsyblock, MUTCHK_FORCED)
-			var/datum/action/innate/toggle_clumsy/A = new
-			A.Grant(mob)
+			mob.mutations.Remove(CLUMSY)
+
 
 	var/obj/item/flash/T = new(mob)
 	var/obj/item/toy/crayon/spraycan/R = new(mob)
@@ -214,16 +214,16 @@
 //Checks if the round is over//
 ///////////////////////////////
 /datum/game_mode/revolution/check_finished()
-	if(GLOB.configuration.gamemode.disable_certain_round_early_end)
+	if(config.continuous_rounds)
 		if(finished != 0)
-			SSshuttle.emergencyNoEscape = 0
-			if(SSshuttle.emergency.mode == SHUTTLE_STRANDED)
-				SSshuttle.emergency.mode = SHUTTLE_DOCKED
-				SSshuttle.emergency.timer = world.time
-				GLOB.command_announcement.Announce("Hostile enviroment resolved. You have 3 minutes to board the Emergency Shuttle.", null, 'sound/AI/eshuttle_dock.ogg')
+			shuttle_master.emergencyNoEscape = 0
+			if(shuttle_master.emergency.mode == SHUTTLE_STRANDED)
+				shuttle_master.emergency.mode = SHUTTLE_DOCKED
+				shuttle_master.emergency.timer = world.time
+				command_announcement.Announce("Hostile enviroment resolved. You have 3 minutes to board the Emergency Shuttle.", null, 'sound/AI/shuttledock.ogg')
 		return ..()
 	if(finished != 0)
-		return TRUE
+		return 1
 	else
 		return ..()
 
@@ -231,7 +231,7 @@
 //Deals with converting players to the revolution//
 ///////////////////////////////////////////////////
 /datum/game_mode/proc/add_revolutionary(datum/mind/rev_mind)
-	if(rev_mind.assigned_role in GLOB.command_positions)
+	if(rev_mind.assigned_role in command_positions)
 		return 0
 	var/mob/living/carbon/human/H = rev_mind.current//Check to see if the potential rev is implanted
 	if(ismindshielded(H))
@@ -246,7 +246,6 @@
 	rev_mind.current.Stun(5)
 	to_chat(rev_mind.current, "<span class='danger'><FONT size = 3> You are now a revolutionary! Help your cause. Do not harm your fellow freedom fighters. You can identify your comrades by the red \"R\" icons, and your leaders by the blue \"R\" icons. Help them kill the heads to win the revolution!</FONT></span>")
 	rev_mind.current.create_attack_log("<font color='red'>Has been converted to the revolution!</font>")
-	rev_mind.current.create_log(CONVERSION_LOG, "converted to the revolution")
 	rev_mind.special_role = SPECIAL_ROLE_REV
 	update_rev_icons_added(rev_mind)
 	if(jobban_isbanned(rev_mind.current, ROLE_REV) || jobban_isbanned(rev_mind.current, ROLE_SYNDICATE))
@@ -265,10 +264,10 @@
 		revolutionaries -= rev_mind
 		rev_mind.special_role = null
 		rev_mind.current.create_attack_log("<font color='red'>Has renounced the revolution!</font>")
-		rev_mind.current.create_log(CONVERSION_LOG, "renounced the revolution")
+
 		if(beingborged)
 			to_chat(rev_mind.current, "<span class='danger'><FONT size = 3>The frame's firmware detects and deletes your neural reprogramming! You remember nothing[remove_head ? "." : " but the name of the one who flashed you."]</FONT></span>")
-			message_admins("[key_name_admin(rev_mind.current)] [ADMIN_QUE(rev_mind.current,"?")] ([ADMIN_FLW(rev_mind.current,"FLW")]) has been borged while being a [remove_head ? "leader" : " member"] of the revolution.")
+			message_admins("[key_name_admin(rev_mind.current)] <A HREF='?_src_=holder;adminmoreinfo=\ref[rev_mind.current]'>?</A> (<A HREF='?_src_=holder;adminplayerobservefollow=\ref[rev_mind.current]'>FLW</A>) has been borged while being a [remove_head ? "leader" : " member"] of the revolution.")
 
 		else
 			rev_mind.current.Paralyse(5)
@@ -280,13 +279,13 @@
 				to_chat(M, "The frame beeps contentedly, purging the hostile memory engram from the MMI before initalizing it.")
 
 			else
-				to_chat(M, "[rev_mind.current] looks like [rev_mind.current.p_they()] just remembered [rev_mind.current.p_their()] real allegiance!")
+				to_chat(M, "[rev_mind.current] looks like they just remembered their real allegiance!")
 
 /////////////////////////////////////
 //Adds the rev hud to a new convert//
 /////////////////////////////////////
 /datum/game_mode/proc/update_rev_icons_added(datum/mind/rev_mind)
-	var/datum/atom_hud/antag/revhud = GLOB.huds[ANTAG_HUD_REV]
+	var/datum/atom_hud/antag/revhud = huds[ANTAG_HUD_REV]
 	revhud.join_hud(rev_mind.current)
 	set_antag_hud(rev_mind.current, ((rev_mind in head_revolutionaries) ? "hudheadrevolutionary" : "hudrevolutionary"))
 
@@ -294,7 +293,7 @@
 //Removes the hud from deconverted revs//
 /////////////////////////////////////////
 /datum/game_mode/proc/update_rev_icons_removed(datum/mind/rev_mind)
-	var/datum/atom_hud/antag/revhud = GLOB.huds[ANTAG_HUD_REV]
+	var/datum/atom_hud/antag/revhud = huds[ANTAG_HUD_REV]
 	revhud.leave_hud(rev_mind.current)
 	set_antag_hud(rev_mind.current, null)
 
@@ -305,9 +304,9 @@
 	for(var/datum/mind/rev_mind in head_revolutionaries)
 		for(var/datum/objective/mutiny/objective in rev_mind.objectives)
 			if(!(objective.check_completion()))
-				return FALSE
+				return 0
 
-	return TRUE
+		return 1
 
 /////////////////////////////
 //Checks for a head victory//
@@ -317,28 +316,37 @@
 		var/turf/T = get_turf(rev_mind.current)
 		if((rev_mind) && (rev_mind.current) && (rev_mind.current.stat != DEAD) && rev_mind.current.client && T && is_station_level(T.z))
 			if(ishuman(rev_mind.current))
-				return FALSE
-	return TRUE
+				return 0
+	return 1
 
 //////////////////////////////////////////////////////////////////////
 //Announces the end of the game with all relavent information stated//
 //////////////////////////////////////////////////////////////////////
 /datum/game_mode/revolution/declare_completion()
+	var/karma_reward = 0
 	if(finished == 1)
-		SSticker.mode_result = "revolution win - heads killed"
+		feedback_set_details("round_end_result","win - heads killed")
 		to_chat(world, "<span class='redtext'>The heads of staff were killed or exiled! The revolutionaries win!</span>")
+		for(var/datum/mind/headrev in head_revolutionaries)
+			karma_reward = 3
+			to_chat(world, "[headrev.key] earned [karma_reward] karma points for being a Head of Revolution! Viva [headrev.key]!")
+			sql_report_objective_karma(headrev.key, karma_reward)
+		for(var/datum/mind/rev in revolutionaries)
+			karma_reward = 1
+			to_chat(world, "[rev.key] earned [karma_reward] karma point for being a part of Revolution!")
+			sql_report_objective_karma(rev.key, karma_reward)
 	else if(finished == 2)
-		SSticker.mode_result = "revolution loss - rev heads killed"
+		feedback_set_details("round_end_result","loss - rev heads killed")
 		to_chat(world, "<span class='redtext'>The heads of staff managed to stop the revolution!</span>")
 	..()
-	return TRUE
+	return 1
 
 /datum/game_mode/proc/auto_declare_completion_revolution()
 	var/list/targets = list()
 	if(head_revolutionaries.len || GAMEMODE_IS_REVOLUTION)
 		var/num_revs = 0
 		var/num_survivors = 0
-		for(var/mob/living/carbon/survivor in GLOB.alive_mob_list)
+		for(var/mob/living/carbon/survivor in living_mob_list)
 			if(survivor.ckey)
 				num_survivors++
 				if(survivor.mind)
@@ -370,68 +378,64 @@
 		text += "<br>"
 		to_chat(world, text)
 
-/datum/game_mode/revolution/set_scoreboard_vars()
-	var/datum/scoreboard/scoreboard = SSticker.score
+/datum/game_mode/revolution/set_scoreboard_gvars()
 	var/foecount = 0
-
-	for(var/datum/mind/M in SSticker.mode.head_revolutionaries)
+	for(var/datum/mind/M in ticker.mode.head_revolutionaries)
 		foecount++
 		if(!M || !M.current)
-			scoreboard.score_ops_killed++
+			score_opkilled++
 			continue
 
 		if(M.current.stat == DEAD)
-			scoreboard.score_ops_killed++
+			score_opkilled++
 
 		else if(M.current.restrained())
-			scoreboard.score_arrested++
+			score_arrested++
 
-	if(foecount == scoreboard.score_arrested)
-		scoreboard.all_arrested = TRUE
+	if(foecount == score_arrested)
+		score_allarrested = 1
 
-	for(var/I in GLOB.human_list)
-		var/mob/living/carbon/human/H = I
-		if(H.stat == DEAD && H.mind?.assigned_role)
-			if(H.mind.assigned_role in list("Captain", "Head of Security", "Head of Personnel", "Chief Engineer", "Research Director"))
-				scoreboard.score_dead_command++
+	for(var/mob/living/carbon/human/player in world)
+		if(player.mind)
+			var/role = player.mind.assigned_role
+			if(role in list("Captain", "Head of Security", "Head of Personnel", "Chief Engineer", "Research Director"))
+				if(player.stat == DEAD)
+					score_deadcommand++
 
 
-	var/arrestpoints = scoreboard.score_arrested * 1000
-	var/killpoints = scoreboard.score_ops_killed * 500
-	var/comdeadpts = scoreboard.score_dead_command * 500
-	if(scoreboard.score_greentext)
-		scoreboard.crewscore -= 10000
+	var/arrestpoints = score_arrested * 1000
+	var/killpoints = score_opkilled * 500
+	var/comdeadpts = score_deadcommand * 500
+	if(score_traitorswon)
+		score_crewscore -= 10000
 
-	scoreboard.crewscore += arrestpoints
-	scoreboard.crewscore += killpoints
-	scoreboard.crewscore -= comdeadpts
+	score_crewscore += arrestpoints
+	score_crewscore += killpoints
+	score_crewscore -= comdeadpts
 
 
 /datum/game_mode/revolution/get_scoreboard_stats()
-	var/datum/scoreboard/scoreboard = SSticker.score
 	var/foecount = 0
 	var/comcount = 0
 	var/revcount = 0
 	var/loycount = 0
-	for(var/datum/mind/M in SSticker.mode:head_revolutionaries)
+	for(var/datum/mind/M in ticker.mode:head_revolutionaries)
 		if(M.current && M.current.stat != DEAD)
 			foecount++
-	for(var/datum/mind/M in SSticker.mode:revolutionaries)
+	for(var/datum/mind/M in ticker.mode:revolutionaries)
 		if(M.current && M.current.stat != DEAD)
 			revcount++
-	for(var/thing in GLOB.human_list)
-		var/mob/living/carbon/human/player = thing
+	for(var/mob/living/carbon/human/player in world)
 		if(player.mind)
 			var/role = player.mind.assigned_role
 			if(role in list("Captain", "Head of Security", "Head of Personnel", "Chief Engineer", "Research Director"))
 				if(player.stat != DEAD)
 					comcount++
 			else
-				if(player.mind in SSticker.mode.revolutionaries) continue
+				if(player.mind in ticker.mode.revolutionaries) continue
 				loycount++
 
-	for(var/beepboop in GLOB.silicon_mob_list)
-		var/mob/living/silicon/X = beepboop
+	for(var/mob/living/silicon/X in world)
 		if(X.stat != DEAD)
 			loycount++
 
@@ -445,12 +449,12 @@
 	dat += "<b>Number of Surviving Loyal Crew:</b> [loycount]<br>"
 
 	dat += "<br>"
-	dat += "<b>Revolution Heads Arrested:</b> [scoreboard.score_arrested] ([scoreboard.score_arrested * 1000] Points)<br>"
-	dat += "<b>All Revolution Heads Arrested:</b> [scoreboard.all_arrested ? "Yes" : "No"] (Score tripled)<br>"
+	dat += "<b>Revolution Heads Arrested:</b> [score_arrested] ([score_arrested * 1000] Points)<br>"
+	dat += "<b>All Revolution Heads Arrested:</b> [score_allarrested ? "Yes" : "No"] (Score tripled)<br>"
 
-	dat += "<b>Revolution Heads Slain:</b> [scoreboard.score_ops_killed] ([scoreboard.score_ops_killed * 500] Points)<br>"
-	dat += "<b>Command Staff Slain:</b> [scoreboard.score_dead_command] (-[scoreboard.score_dead_command * 500] Points)<br>"
-	dat += "<b>Revolution Successful:</b> [scoreboard.score_greentext ? "Yes" : "No"] (-[scoreboard.score_greentext * 10000] Points)<br>"
+	dat += "<b>Revolution Heads Slain:</b> [score_opkilled] ([score_opkilled * 500] Points)<br>"
+	dat += "<b>Command Staff Slain:</b> [score_deadcommand] (-[score_deadcommand * 500] Points)<br>"
+	dat += "<b>Revolution Successful:</b> [score_traitorswon ? "Yes" : "No"] (-[score_traitorswon * 10000] Points)<br>"
 	dat += "<HR>"
 
 	return dat

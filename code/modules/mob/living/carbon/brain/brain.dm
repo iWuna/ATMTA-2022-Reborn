@@ -7,8 +7,9 @@
 	icon_state = "brain1"
 
 /mob/living/carbon/brain/New()
-	..()
+	create_reagents(330)
 	add_language("Galactic Common")
+	..()
 
 /mob/living/carbon/brain/Destroy()
 	if(key)				//If there is a mob connected to this thing. Have to check key twice to avoid false death reporting.
@@ -40,7 +41,7 @@
 			return 1
 	if(istype(other, /mob/living/carbon/human))
 		return 1
-	if(istype(other, /mob/living/simple_animal/slime))
+	if(istype(other, /mob/living/carbon/slime))
 		return 1
 	return ..()
 
@@ -61,15 +62,15 @@
 /mob/living/carbon/brain/ex_act() //you cant blow up brainmobs because it makes transfer_to() freak out when borgs blow up.
 	return
 
-/mob/living/carbon/brain/blob_act(obj/structure/blob/B)
+/mob/living/carbon/brain/blob_act()
 	return
 
 /mob/living/carbon/brain/on_forcemove(atom/newloc)
 	if(container)
-		container.forceMove(newloc)
+		container.loc = newloc
 	else //something went very wrong.
 		CRASH("Brainmob without container.")
-	forceMove(container)
+	loc = container
 
 /*
 This will return true if the brain has a container that leaves it less helpless than a naked brain
@@ -83,17 +84,18 @@ I'm using this for Stat to give it a more nifty interface to work with
 	if(container)
 		var/obj/item/mmi/M = container
 		if(istype(M) && M.held_brain)
-			return M.held_brain.dna.species.name
+			return M.held_brain.dna.get_species_name()
 		else
 			return "Artificial Life"
 	if(istype(loc, /obj/item/organ/internal/brain))
 		var/obj/item/organ/internal/brain/B = loc
-		return B.dna.species.name
+		return B.dna.get_species_name()
 
 /mob/living/carbon/brain/Stat()
 	..()
 	if(has_synthetic_assistance())
 		statpanel("Status")
+		show_stat_station_time()
 		show_stat_emergency_shuttle_eta()
 
 		if(client.statpanel == "Status")
@@ -101,18 +103,13 @@ I'm using this for Stat to give it a more nifty interface to work with
 			if(istype(src.loc, /obj/mecha))
 				var/obj/mecha/M = src.loc
 				stat("Exosuit Charge:", "[istype(M.cell) ? "[M.cell.charge] / [M.cell.maxcharge]" : "No cell detected"]")
-				stat("Exosuit Integrity", "[!M.obj_integrity ? "0" : "[(M.obj_integrity / M.max_integrity) * 100]"]%")
+				stat("Exosuit Integrity", "[!M.health ? "0" : "[(M.health / initial(M.health)) * 100]"]%")
 
 /mob/living/carbon/brain/can_safely_leave_loc()
 	return 0 //You're not supposed to be ethereal jaunting, brains
 
-/mob/living/carbon/brain/can_hear()
-	. = TRUE
+/mob/living/carbon/brain/SetEarDamage() // no ears to damage or heal
+	return
 
-/mob/living/carbon/brain/update_runechat_msg_location()
-	if(ismecha(loc))
-		runechat_msg_location = loc.UID()
-	else if(container)
-		runechat_msg_location = container.UID()
-	else
-		return ..()
+/mob/living/carbon/brain/SetEarDeaf()
+	return

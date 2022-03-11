@@ -128,10 +128,12 @@
 					TYPE_POISON,
 					TYPE_FIGHTING)
 	area_blacklist = list(/area/medical,
+						/area/security/medbay,
 						/area/janitor)
 	area_whitelist = list(/area/medical/virology,
 						/area/toxins,
 						/area/medical/research,
+						/area/medical/research_shuttle_dock,
 						/area/crew_quarters/hor,
 						/area/maintenance/asmaint2)
 
@@ -162,6 +164,7 @@
 					TYPE_PSYCHIC)
 	area_blacklist = list(/area/toxins,
 						/area/medical/research,
+						/area/medical/research_shuttle_dock,
 						/area/crew_quarters/hor,
 						/area/maintenance/asmaint2,
 						/area/teleporter,
@@ -204,7 +207,10 @@
 					TYPE_FIGHTING)
 	immunity = list(TYPE_GROUND)
 	area_blacklist = list(/area/maintenance)
-	area_whitelist = list(/area/hallway)
+	area_whitelist = list(/area/hallway,
+						/area/escapepodbay,
+						/area/engine/mechanic_workshop,
+						/area/security/podbay)
 
 /datum/mob_type/bluespace
 	name = "Bluespace"

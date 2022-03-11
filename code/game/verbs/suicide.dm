@@ -1,7 +1,7 @@
 /mob/var/suiciding = 0
 
 /mob/living/carbon/human/proc/do_suicide(damagetype, byitem)
-	var/threshold = check_death_method() ? ((HEALTH_THRESHOLD_CRIT + HEALTH_THRESHOLD_DEAD) / 2) : (HEALTH_THRESHOLD_DEAD - 50)
+	var/threshold = (config.health_threshold_crit + config.health_threshold_dead) / 2
 	var/dmgamt = maxHealth - threshold
 
 	var/damage_mod = 1
@@ -24,24 +24,24 @@
 
 	//Do dmgamt damage divided by the number of damage types applied.
 	if(damagetype & BRUTELOSS)
-		adjustBruteLoss(dmgamt / damage_mod, FALSE)
+		adjustBruteLoss(dmgamt / damage_mod)
 
 	if(damagetype & FIRELOSS)
-		adjustFireLoss(dmgamt / damage_mod, FALSE)
+		adjustFireLoss(dmgamt / damage_mod)
 
 	if(damagetype & TOXLOSS)
-		adjustToxLoss(dmgamt / damage_mod, FALSE)
+		adjustToxLoss(dmgamt / damage_mod)
 
 	if(damagetype & OXYLOSS)
-		adjustOxyLoss(dmgamt / damage_mod, FALSE)
+		adjustOxyLoss(dmgamt / damage_mod)
 
 	// Failing that...
 	if(!(damagetype & BRUTELOSS) && !(damagetype & FIRELOSS) && !(damagetype & TOXLOSS) && !(damagetype & OXYLOSS))
-		if(HAS_TRAIT(src, TRAIT_NOBREATH))
+		if(NO_BREATHE in species.species_traits)
 			// the ultimate fallback
-			take_overall_damage(max(dmgamt - getToxLoss() - getFireLoss() - getBruteLoss() - getOxyLoss(), 0), 0, updating_health = FALSE)
+			take_overall_damage(max(dmgamt - getToxLoss() - getFireLoss() - getBruteLoss() - getOxyLoss(), 0), 0)
 		else
-			adjustOxyLoss(max(dmgamt - getToxLoss() - getFireLoss() - getBruteLoss() - getOxyLoss(), 0), FALSE)
+			adjustOxyLoss(max(dmgamt - getToxLoss() - getFireLoss() - getBruteLoss() - getOxyLoss(), 0))
 
 	var/obj/item/organ/external/affected = get_organ("head")
 	if(affected)
@@ -52,14 +52,11 @@
 /mob/living/carbon/human/verb/suicide()
 	set hidden = 1
 
-	be_suicidal()
-
-/mob/living/carbon/human/proc/be_suicidal(forced = FALSE)
 	if(stat == DEAD)
 		to_chat(src, "You're already dead!")
 		return
 
-	if(!SSticker)
+	if(!ticker)
 		to_chat(src, "You can't commit suicide before the game starts!")
 		return
 
@@ -72,43 +69,25 @@
 		to_chat(src, "You're already committing suicide! Be patient!")
 		return
 
+	var/confirm = alert("Are you sure you want to commit suicide?", "Confirm Suicide", "Yes", "No")
 
-	var/confirm = null
-	if(!forced)
-		confirm = alert("Are you sure you want to commit suicide?", "Confirm Suicide", "Yes", "No")
-
-	if(forced || (confirm == "Yes"))
-		suiciding = TRUE
-		create_log(ATTACK_LOG, "Attempted suicide")
+	if(confirm == "Yes")
+		suiciding = 1
 		var/obj/item/held_item = get_active_hand()
 		if(held_item)
 			var/damagetype = held_item.suicide_act(src)
 			if(damagetype)
 				if(damagetype & SHAME)
 					adjustStaminaLoss(200)
-					suiciding = FALSE
-					return
-				if(damagetype & OBLITERATION) // Does it gib or something? Don't deal damage
+					suiciding = 0
 					return
 				do_suicide(damagetype, held_item)
 				return
-		else
-			for(var/obj/O in orange(1, src))
-				if(O.suicidal_hands)
-					continue
-				var/damagetype = O.suicide_act(src)
-				if(damagetype)
-					if(damagetype & SHAME)
-						adjustStaminaLoss(200)
-						suiciding = FALSE
-						return
-					if(damagetype & OBLITERATION)
-						return
-					do_suicide(damagetype, O)
-					return
 
-		to_chat(viewers(src), "<span class='danger'>[src] [replacetext(pick(dna.species.suicide_messages), "their", p_their())] It looks like [p_theyre()] trying to commit suicide.</span>")
+		to_chat(viewers(src), "<span class=danger>[src] [pick(species.suicide_messages)] It looks like they're trying to commit suicide.</span>")
 		do_suicide(0)
+
+		updatehealth()
 
 /mob/living/carbon/brain/verb/suicide()
 	set hidden = 1
@@ -117,7 +96,7 @@
 		to_chat(src, "You're already dead!")
 		return
 
-	if(!SSticker)
+	if(!ticker)
 		to_chat(src, "You can't commit suicide before the game starts!")
 		return
 
@@ -150,9 +129,10 @@
 
 	if(confirm == "Yes")
 		suiciding = 1
-		to_chat(viewers(src), "<span class='danger'>[src] is powering down. It looks like [p_theyre()] trying to commit suicide.</span>")
+		to_chat(viewers(src), "<span class='danger'>[src] is powering down. It looks like \he's trying to commit suicide.</span>")
 		//put em at -175
 		adjustOxyLoss(max(maxHealth * 2 - getToxLoss() - getFireLoss() - getBruteLoss() - getOxyLoss(), 0))
+		updatehealth()
 
 /mob/living/silicon/robot/verb/suicide()
 	set hidden = 1
@@ -169,9 +149,10 @@
 
 	if(confirm == "Yes")
 		suiciding = 1
-		to_chat(viewers(src), "<span class='danger'>[src] is powering down. It looks like [p_theyre()] trying to commit suicide.</span>")
+		to_chat(viewers(src), "<span class='danger'>[src] is powering down. It looks like \he's trying to commit suicide.</span>")
 		//put em at -175
 		adjustOxyLoss(max(maxHealth * 2 - getToxLoss() - getFireLoss() - getBruteLoss() - getOxyLoss(), 0))
+		updatehealth()
 
 /mob/living/silicon/pai/verb/suicide()
 	set category = "pAI Commands"
@@ -205,12 +186,13 @@
 
 	if(confirm == "Yes")
 		suiciding = 1
-		to_chat(viewers(src), "<span class='danger'>[src] is thrashing wildly! It looks like [p_theyre()] trying to commit suicide.</span>")
+		to_chat(viewers(src), "<span class='danger'>[src] is thrashing wildly! It looks like \he's trying to commit suicide.</span>")
 		//put em at -175
 		adjustOxyLoss(max(175 - getFireLoss() - getBruteLoss() - getOxyLoss(), 0))
+		updatehealth()
 
 
-/mob/living/simple_animal/slime/verb/suicide()
+/mob/living/carbon/slime/verb/suicide()
 	set hidden = 1
 	if(stat == 2)
 		to_chat(src, "You're already dead!")
@@ -224,25 +206,9 @@
 
 	if(confirm == "Yes")
 		suiciding = 1
-		setOxyLoss(100, FALSE)
-		adjustBruteLoss(100 - getBruteLoss(), FALSE)
-		setToxLoss(100, FALSE)
-		setCloneLoss(100, FALSE)
+		setOxyLoss(100)
+		adjustBruteLoss(100 - getBruteLoss())
+		setToxLoss(100)
+		setCloneLoss(100)
 
 		updatehealth()
-
-/mob/living/simple_animal/mouse/verb/suicide()
-	set hidden = 1
-	if(stat == DEAD)
-		to_chat(src, "You're already dead!")
-		return
-	if(suiciding)
-		to_chat(src, "You're already committing suicide! Be patient!")
-		return
-
-	var/confirm = alert("Are you sure you want to commit suicide?", "Confirm Suicide", "Yes", "No")
-
-	if(confirm == "Yes")
-		suiciding = TRUE
-		visible_message("<span class='danger'>[src] is playing dead permanently! It looks like [p_theyre()] trying to commit suicide.</span>")
-		adjustOxyLoss(max(100 - getBruteLoss(100), 0))

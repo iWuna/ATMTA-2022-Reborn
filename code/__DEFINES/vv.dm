@@ -19,4 +19,3 @@
 #define VV_NULL "NULL"
 #define VV_RESTORE_DEFAULT "Restore to Default"
 #define VV_MARKED_DATUM "Marked Datum"
-#define VV_REGEX "Regex"

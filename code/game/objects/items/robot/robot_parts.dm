@@ -14,7 +14,7 @@
 	..(newloc)
 	if(model_info && model)
 		model_info = model
-		var/datum/robolimb/R = GLOB.all_robolimbs[model]
+		var/datum/robolimb/R = all_robolimbs[model]
 		if(R)
 			name = "[R.company] [initial(name)]"
 			desc = "[R.desc]"
@@ -24,7 +24,7 @@
 		name = "robot [initial(name)]"
 
 /obj/item/robot_parts/attack_self(mob/user)
-	var/choice = input(user, "Select the company appearance for this limb.", "Limb Company Selection") as null|anything in GLOB.selectable_robolimbs
+	var/choice = input(user, "Select the company appearance for this limb.", "Limb Company Selection") as null|anything in selectable_robolimbs
 	if(!choice)
 		return
 	if(loc != user)
@@ -136,7 +136,7 @@
 	if(l_arm && r_arm)
 		if(l_leg && r_leg)
 			if(chest && head)
-				SSblackbox.record_feedback("amount", "cyborg_frames_built", 1)
+				feedback_inc("cyborg_frames_built",1)
 				return 1
 	return 0
 
@@ -226,63 +226,61 @@
 				to_chat(user, "<span class='warning'>Sticking an empty [M] into the frame would sort of defeat the purpose.</span>")
 				return
 
-			if(jobban_isbanned(M.brainmob, "Cyborg") || jobban_isbanned(M.brainmob, "nonhumandept"))
-				to_chat(user, "<span class='warning'>This [W] is not fit to serve as a cyborg!</span>")
-				return
-
 			if(!M.brainmob.key)
-				var/ghost_can_reenter = FALSE
+				var/ghost_can_reenter = 0
 				if(M.brainmob.mind)
-					for(var/mob/dead/observer/G in GLOB.player_list)
+					for(var/mob/dead/observer/G in player_list)
 						if(G.can_reenter_corpse && G.mind == M.brainmob.mind)
-							ghost_can_reenter = TRUE
-							if(M.next_possible_ghost_ping < world.time)
-								G.notify_cloning("Somebody is trying to borg you! Re-enter your corpse if you want to be borged!", 'sound/voice/liveagain.ogg', src)
-								M.next_possible_ghost_ping = world.time + 30 SECONDS // Avoid spam
+							ghost_can_reenter = 1
+							break
+					for(var/mob/living/simple_animal/S in player_list)
+						if(S in respawnable_list)
+							ghost_can_reenter = 1
 							break
 				if(!ghost_can_reenter)
 					to_chat(user, "<span class='notice'>[M] is completely unresponsive; there's no point.</span>")
-				else
-					to_chat(user, "<span class='warning'>[M] is currently inactive. Try again later.</span>")
-				return
+					return
 
 			if(M.brainmob.stat == DEAD)
 				to_chat(user, "<span class='warning'>Sticking a dead [M] into the frame would sort of defeat the purpose.</span>")
 				return
 
-			if(M.brainmob.mind in SSticker.mode.head_revolutionaries)
-				to_chat(user, "<span class='warning'>The frame's firmware lets out a shrill sound, and flashes 'Abnormal Memory Engram'. It refuses to accept [M].</span>")
+			if(M.brainmob.mind in ticker.mode.head_revolutionaries)
+				to_chat(user, "<span class='warning'>The frame's firmware lets out a shrill sound, and flashes 'Abnormal Memory Engram'. It refuses to accept the [M].</span>")
 				return
 
+			if(jobban_isbanned(M.brainmob, "Cyborg") || jobban_isbanned(M.brainmob,"nonhumandept"))
+				to_chat(user, "<span class='warning'>This [W] does not seem to fit.</span>")
+				return
 
-			var/datum/ai_laws/laws_to_give
-			if(M.syndiemmi)
-				aisync = FALSE
-				lawsync = FALSE
-				laws_to_give = new /datum/ai_laws/syndicate_override
-
-			if(!aisync)
-				lawsync = FALSE
-
-			var/mob/living/silicon/robot/O = new /mob/living/silicon/robot(get_turf(loc), unfinished = 1, ai_to_sync_to = forced_ai)
+			var/mob/living/silicon/robot/O = new /mob/living/silicon/robot(get_turf(loc), unfinished = 1)
 			if(!O)
 				return
 
 			user.drop_item()
 
-			var/datum/job_objective/make_cyborg/task = user.mind.findJobTask(/datum/job_objective/make_cyborg)
+			/*var/datum/job_objective/make_cyborg/task = user.mind.findJobTask(/datum/job_objective/make_cyborg)
 			if(istype(task))
-				task.unit_completed()
+				task.unit_completed()*/
+
+			if(M.syndiemmi)
+				aisync = 0
+				lawsync = 0
+				O.laws = new /datum/ai_laws/syndicate_override
 
 			O.invisibility = 0
 			//Transfer debug settings to new mob
 			O.custom_name = created_name
 			O.rename_character(O.real_name, O.get_default_name())
 			O.locked = panel_locked
-
-			if(laws_to_give)
-				O.laws = laws_to_give
-			else if(!lawsync)
+			if(!aisync)
+				lawsync = 0
+				O.connected_ai = null
+			else
+				O.notify_ai(1)
+				if(forced_ai)
+					O.connected_ai = forced_ai
+			if(!lawsync && !M.syndiemmi)
 				O.lawupdate = 0
 				O.make_laws()
 
@@ -295,16 +293,20 @@
 
 			O.job = "Cyborg"
 
-			var/datum/robot_component/cell_component = O.components["power cell"]
-			cell_component.install(chest.cell)
+			O.cell = chest.cell
 			chest.cell.forceMove(O)
 			chest.cell = null
-
 			M.forceMove(O) //Should fix cybros run time erroring when blown up. It got deleted before, along with the frame.
+			// Since we "magically" installed a cell, we also have to update the correct component.
+			if(O.cell)
+				var/datum/robot_component/cell_component = O.components["power cell"]
+				cell_component.wrapped = O.cell
+				cell_component.installed = 1
 			O.mmi = W
 			O.Namepick()
 
-			SSblackbox.record_feedback("amount", "cyborg_birth", 1)
+			feedback_inc("cyborg_birth",1)
+			callHook("borgify", list(O))
 
 			forceMove(O)
 			O.robot_suit = src

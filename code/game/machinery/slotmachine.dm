@@ -12,17 +12,6 @@
 	var/resultlvl = null
 
 /obj/machinery/slot_machine/attack_hand(mob/user as mob)
-	ui_interact(user)
-
-/obj/machinery/slot_machine/ui_interact(mob/user, ui_key = "main", datum/tgui/ui = null, force_open = 0, datum/tgui/master_ui = null, datum/ui_state/state = GLOB.default_state)
-	ui = SStgui.try_update_ui(user, src, ui_key, ui, force_open)
-	if(!ui)
-		ui = new(user, src, ui_key, "SlotMachine", name, 350, 200, master_ui, state)
-		ui.open()
-
-/obj/machinery/slot_machine/ui_data(mob/user)
-	var/list/data = list()
-	// Get account
 	account = user.get_worn_id_account()
 	if(!account)
 		if(istype(user.get_active_hand(), /obj/item/card/id))
@@ -30,77 +19,99 @@
 		else
 			account = null
 
+	ui_interact(user)
 
-	// Send data
+/obj/machinery/slot_machine/ui_interact(mob/user, ui_key = "main", var/datum/nanoui/ui = null, var/force_open = 1)
+	ui = SSnanoui.try_update_ui(user, src, ui_key, ui, force_open)
+	if(!ui)
+		ui = new(user, src, ui_key, "slotmachine.tmpl", name, 350, 200)
+		ui.open()
+		ui.set_auto_update(1)
+
+/obj/machinery/slot_machine/ui_data(mob/user, ui_key = "main", datum/topic_state/state = default_state)
+	var/data[0]
+
 	data["working"] = working
 	data["money"] = account ? account.money : null
 	data["plays"] = plays
 	data["result"] = result
 	data["resultlvl"] = resultlvl
+
 	return data
 
-/obj/machinery/slot_machine/ui_act(action, params)
-	if(..())
-		return
+/obj/machinery/slot_machine/Topic(href, href_list)
 	add_fingerprint(usr)
 
-	if(action == "spin")
-		if(working)
-			return
-		if(!account || account.money < 50)
-			return
-		if(!account.charge(50, null, "Bet", "Slot Machine", "Slot Machine"))
-			return
-		plays++
-		working = TRUE
-		icon_state = "slots-on"
-		playsound(src.loc, 'sound/machines/ding.ogg', 50, 1)
-		addtimer(CALLBACK(src, .proc/spin_slots, usr.name), 25)
-
-/obj/machinery/slot_machine/proc/spin_slots(userName)
-	switch(rand(1,5000))
-		if(1)
-			atom_say("JACKPOT! [userName] has won ten thousand credits!")
-			GLOB.event_announcement.Announce("Congratulations to [userName] on winning the Jackpot of TEN THOUSAND CREDITS!", "Jackpot Winner")
-			result = "JACKPOT! You win ten thousand credits!"
-			resultlvl = "teal"
-			win_money(10000, 'sound/goonstation/misc/airraid_loop.ogg')
-		if(2 to 20)
-			atom_say("Big Winner! [userName] has won a thousand credits!")
-			result = "You win a thousand credits!"
-			resultlvl = "green"
-			win_money(1000, 'sound/goonstation/misc/klaxon.ogg')
-		if(21 to 100)
-			atom_say("Winner! [userName] has won five hundred credits!")
-			result = "You win five hundred credits!"
-			resultlvl = "green"
-			win_money(500, 'sound/goonstation/misc/bell.ogg')
-		if(101 to 500)
-			atom_say("Winner! [userName] has won two hundred credits!")
-			result = "You win two hundred credits!"
-			resultlvl = "green"
-			win_money(200)
-		if(501 to 1000)
-			atom_say("Winner! [userName] has won fifty credits!")
-			result = "You win fifty credits!"
-			resultlvl = "green"
-			win_money(50)
-		else
-			result = "No luck!"
-			resultlvl = "orange"
-	working = FALSE
-	icon_state = "slots-off"
-	SStgui.update_uis(src) // Push a UI update
+	if(href_list["ops"])
+		var/operation = text2num(href_list["ops"])
+		if(operation == 1) // Play
+			if(working == 1)
+				return
+			if(!account || account.money < 100)
+				return
+			if(!account.charge(100, transaction_purpose = "Bet", dest_name = name))
+				return
+			plays += 1
+			working = 1
+			icon_state = "slots-on"
+			var/roll = rand(1,4050)
+			playsound(src.loc, 'sound/machines/ding.ogg', 50, 1)
+			spawn(25)
+				if(roll == 1)
+					visible_message("<b>[src]</b> says, 'JACKPOT! [usr.name] has won a MILLION CREDITS!'")
+					event_announcement.Announce("Congratulations to [usr.name] on winning the Jackpot of ONE MILLION CREDITS!", "Jackpot Winner")
+					result = "JACKPOT! You win one million credits!"
+					resultlvl = "highlight"
+					win_money(1000000, 'sound/goonstation/misc/airraid_loop.ogg')
+				else if(roll > 1 && roll <= 5)
+					visible_message("<b>[src]</b> says, 'Big Winner! [usr.name] has won a hundred thousand credits!'")
+					event_announcement.Announce("Congratulations to [usr.name] on winning a hundred thousand credits!", "Big Winner")
+					result = "Big Winner! You win a hundred thousand credits!"
+					resultlvl = "good"
+					win_money(100000, 'sound/goonstation/misc/klaxon.ogg')
+				else if(roll > 5 && roll <= 50)
+					visible_message("<b>[src]</b> says, 'Big Winner! [usr.name] has won ten thousand credits!'")
+					result = "You win ten thousand credits!"
+					resultlvl = "good"
+					win_money(10000, 'sound/goonstation/misc/klaxon.ogg')
+				else if(roll > 50 && roll <= 100)
+					visible_message("<b>[src]</b> says, 'Winner! [usr.name] has won a thousand credits!'")
+					result = "You win a thousand credits!"
+					resultlvl = "good"
+					win_money(1000, 'sound/goonstation/misc/bell.ogg')
+				else if(roll > 100 && roll <= 200)
+					visible_message("<b>[src]</b> says, 'Winner! [usr.name] has won a hundred credits!'")
+					result = "You win a hundred credits!"
+					resultlvl = "good"
+					win_money(100, 'sound/goonstation/misc/bell.ogg')
+				else if(roll > 200 && roll <= 300)
+					visible_message("<b>[src]</b> says, 'Winner! [usr.name] has won fifty credits!'")
+					result = "You win fifty credits!"
+					resultlvl = "good"
+					win_money(50)
+				else if(roll > 300 && roll <= 600)
+					visible_message("<b>[src]</b> says, 'Winner! [usr.name] has won ten credits!'")
+					result = "You win ten credits!"
+					resultlvl = "good"
+					win_money(10)
+				else
+					result = "<span class='warning'>No luck!</span>"
+					resultlvl = "average"
+				working = 0
+				icon_state = "slots-off"
 
 /obj/machinery/slot_machine/proc/win_money(amt, sound='sound/machines/ping.ogg')
 	if(sound)
 		playsound(loc, sound, 55, 1)
+
 	if(!account)
 		return
-	account.credit(amt, "Slot Winnings", "Slot Machine", account.owner_name)
+	account.money += amt
 
-/obj/machinery/slot_machine/wrench_act(mob/user, obj/item/I)
-	. = TRUE
-	if(!I.tool_use_check(user, 0))
-		return
-	default_unfasten_wrench(user, I)
+	var/datum/transaction/T = new()
+	T.target_name = account.owner_name
+	T.purpose = "Slot Winnings"
+	T.amount = "[amt]"
+	T.date = current_date_string
+	T.time = station_time_timestamp()
+	account.transaction_log.Add(T)

@@ -26,10 +26,8 @@ field_generator power level display
 	icon_state = "Field_Gen"
 	anchored = 0
 	density = 1
-	use_power = NO_POWER_USE
-	max_integrity = 500
-	//100% immune to lasers and energy projectiles since it absorbs their energy.
-	armor = list(MELEE = 25, BULLET = 10, LASER = 100, ENERGY = 100, BOMB = 0, BIO = 0, RAD = 0, FIRE = 50, ACID = 70)
+	use_power = 0
+	armor = list(melee = 25, bullet = 10, laser = 100, energy = 100, bomb = 0, bio = 0, rad = 0)
 	var/const/num_power_levels = 6	// Total number of power level icon has
 	var/power_level = 0
 	var/active = FG_OFFLINE
@@ -50,8 +48,8 @@ field_generator power level display
 		overlays += "+p[power_level]"
 
 
-/obj/machinery/field/generator/Initialize(mapload)
-	. = ..()
+/obj/machinery/field/generator/New()
+	..()
 	fields = list()
 	connected_gens = list()
 
@@ -64,11 +62,11 @@ field_generator power level display
 	if(state == FG_WELDED)
 		if(get_dist(src, user) <= 1)//Need to actually touch the thing to turn it on
 			if(active >= FG_CHARGING)
-				to_chat(user, "<span class='warning'>You are unable to turn off [src] once it is online!</span>")
+				to_chat(user, "<span class='warning'>You are unable to turn off the [name] once it is online!</span>")
 				return 1
 			else
-				user.visible_message("[user] turns on [src].", \
-					"<span class='notice'>You turn on [src].</span>", \
+				user.visible_message("[user.name] turns on the [name].", \
+					"<span class='notice'>You turn on the [name].</span>", \
 					"<span class='italics'>You hear heavy droning.</span>")
 				turn_on()
 				investigate_log("<font color='green'>activated</font> by [user.key].","singulo")
@@ -100,51 +98,54 @@ field_generator power level display
 					"<span class='italics'>You hear ratchet.</span>")
 				anchored = 0
 			if(FG_WELDED)
-				to_chat(user, "<span class='warning'>[src] needs to be unwelded from the floor!</span>")
+				to_chat(user, "<span class='warning'>The [name] needs to be unwelded from the floor!</span>")
+
+	else if(istype(W, /obj/item/weldingtool))
+		var/obj/item/weldingtool/WT = W
+		switch(state)
+			if(FG_UNSECURED)
+				to_chat(user, "<span class='warning'>The [name] needs to be wrenched to the floor!</span>")
+
+			if(FG_SECURED)
+				if(WT.remove_fuel(0,user))
+					playsound(loc, WT.usesound, 50, 1)
+					user.visible_message("[user.name] starts to weld the [name] to the floor.", \
+						"<span class='notice'>You start to weld \the [src] to the floor...</span>", \
+						"<span class='italics'>You hear welding.</span>")
+					if(do_after(user, 20 * WT.toolspeed, target = src))
+						if(!src || !WT.isOn())
+							return
+						state = FG_WELDED
+						to_chat(user, "<span class='notice'>You weld the field generator to the floor.</span>")
+
+			if(FG_WELDED)
+				if(WT.remove_fuel(0,user))
+					playsound(loc, WT.usesound, 50, 1)
+					user.visible_message("[user.name] starts to cut the [name] free from the floor.", \
+						"<span class='notice'>You start to cut \the [src] free from the floor...</span>", \
+						"<span class='italics'>You hear welding.</span>")
+					if(do_after(user, 20 * WT.toolspeed, target = src))
+						if(!src || !WT.isOn())
+							return
+						state = FG_SECURED
+						to_chat(user, "<span class='notice'>You cut \the [src] free from the floor.</span>")
+
 	else
 		return ..()
 
 
-/obj/machinery/field/generator/welder_act(mob/user, obj/item/I)
-	. = TRUE
-	if(state == FG_UNSECURED)
-		to_chat(user, "<span class='warning'>[src] needs to be wrenched to the floor!</span>")
-		return
-	if(!I.tool_use_check(user, 0))
-		return
-	if(state == FG_SECURED)
-		WELDER_ATTEMPT_FLOOR_WELD_MESSAGE
-	else if(state == FG_WELDED)
-		WELDER_ATTEMPT_FLOOR_SLICE_MESSAGE
-	if(I.use_tool(src, user, 20, volume = I.tool_volume))
-		if(state == FG_SECURED)
-			WELDER_FLOOR_WELD_SUCCESS_MESSAGE
-			state = FG_WELDED
-		else if(state == FG_WELDED)
-			WELDER_FLOOR_SLICE_SUCCESS_MESSAGE
-			state = FG_SECURED
-
 /obj/machinery/field/generator/emp_act()
 	return 0
 
-/obj/machinery/field/generator/attack_animal(mob/living/simple_animal/M)
-	if(M.environment_smash & ENVIRONMENT_SMASH_RWALLS && active == FG_OFFLINE && state != FG_UNSECURED)
-		state = FG_UNSECURED
-		anchored = FALSE
-		M.visible_message("<span class='warning'>[M] rips [src] free from its moorings!</span>")
-	else
-		..()
-	if(!anchored)
-		step(src, get_dir(M, src))
 
-/obj/machinery/field/generator/blob_act(obj/structure/blob/B)
+/obj/machinery/field/generator/blob_act()
 	if(active)
 		return 0
 	else
 		..()
 
 /obj/machinery/field/generator/bullet_act(obj/item/projectile/Proj)
-	if(Proj.flag != BULLET && !Proj.nodamage)
+	if(Proj.flag != "bullet")
 		power = min(power + Proj.damage, field_generator_max_power)
 		check_power_level()
 	return 0
@@ -188,7 +189,7 @@ field_generator power level display
 		check_power_level()
 		return 1
 	else
-		visible_message("<span class='danger'>[src] shuts down!</span>", "<span class='italics'>You hear something shutting down.</span>")
+		visible_message("<span class='danger'>The [name] shuts down!</span>", "<span class='italics'>You hear something shutting down.</span>")
 		turn_off()
 		investigate_log("ran out of power and <font color='red'>deactivated</font>","singulo")
 		power = 0
@@ -286,7 +287,7 @@ field_generator power level display
 			fields += CF
 			G.fields += CF
 			for(var/mob/living/L in T)
-				CF.Crossed(L, null)
+				CF.Crossed(L)
 
 	connected_gens |= G
 	G.connected_gens |= src
@@ -310,25 +311,15 @@ field_generator power level display
 	//This is here to help fight the "hurr durr, release singulo cos nobody will notice before the
 	//singulo eats the evidence". It's not fool-proof but better than nothing.
 	//I want to avoid using global variables.
-	INVOKE_ASYNC(src, .proc/admin_alert)
-
-/obj/machinery/field/generator/proc/admin_alert()
-	var/temp = TRUE //stops spam
-	for(var/thing in GLOB.singularities)
-		var/obj/singularity/O = thing
-		if(O.last_warning && temp && atoms_share_level(O, src))
-			if((world.time - O.last_warning) > 50) //to stop message-spam
-				temp = FALSE
-				// To the person who asks "Hey affected, why are you using this massive operator when you can use AREACOORD?" Well, ill tell you
-				// get_area_name is fucking broken and uses a for(x in world) search
-				// It doesnt even work, is expensive, and returns 0
-				// Im not refactoring one thing which could risk breaking all admin location logs
-				// Fight me
-				// [src ? "[get_location_name(src, TRUE)] [COORD(src)]" : "nonexistent location"] [ADMIN_JMP(src)] works much better and actually works at all
-				// Oh and yes, this exact comment was pasted from the exact same thing I did to tcomms code. Dont at me.
-				message_admins("A singularity exists and a containment field has failed on the same Z-Level. Singulo location: [O ? "[get_location_name(O, TRUE)] [COORD(O)]" : "nonexistent location"] [ADMIN_JMP(O)] | Field generator location: [src ? "[get_location_name(src, TRUE)] [COORD(src)]" : "nonexistent location"] [ADMIN_JMP(src)]")
-				investigate_log("has <font color='red'>failed</font> whilst a singulo exists.","singulo")
-		O.last_warning = world.time
+	spawn(1)
+		var/temp = 1 //stops spam
+		for(var/obj/singularity/O in singularities)
+			if(O.last_warning && temp)
+				if((world.time - O.last_warning) > 50) //to stop message-spam
+					temp = 0
+					message_admins("A singulo exists and a containment field has failed. Location: [get_area(src)] (<A HREF='?_src_=holder;adminplayerobservecoodjump=1;X=[x];Y=[y];Z=[z]'>JMP</A>)",1)
+					investigate_log("has <font color='red'>failed</font> whilst a singulo exists.","singulo")
+			O.last_warning = world.time
 
 /obj/machinery/field/generator/shock_field(mob/living/user)
 	if(fields.len)

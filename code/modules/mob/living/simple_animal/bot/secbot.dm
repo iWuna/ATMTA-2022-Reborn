@@ -1,5 +1,5 @@
 /mob/living/simple_animal/bot/secbot
-	name = "\improper Securitron"
+	name = "Securitron"
 	desc = "A little security robot.  He looks less than thrilled."
 	icon = 'icons/obj/aibots.dmi'
 	icon_state = "secbot0"
@@ -90,7 +90,7 @@
 		prev_access = access_card.access
 
 	//SECHUD
-	var/datum/atom_hud/secsensor = GLOB.huds[DATA_HUD_SECURITY_ADVANCED]
+	var/datum/atom_hud/secsensor = huds[DATA_HUD_SECURITY_ADVANCED]
 	secsensor.add_hud_to(src)
 	permanent_huds |= secsensor
 
@@ -111,71 +111,61 @@
 	last_found = world.time
 
 /mob/living/simple_animal/bot/secbot/set_custom_texts()
+
 	text_hack = "You overload [name]'s target identification system."
 	text_dehack = "You reboot [name] and restore the target identification."
 	text_dehack_fail = "[name] refuses to accept your authority!"
 
-/mob/living/simple_animal/bot/secbot/show_controls(mob/M)
-	ui_interact(M)
+/mob/living/simple_animal/bot/secbot/get_controls(mob/user)
+	var/dat
+	dat += hack(user)
+	dat += showpai(user)
+	dat += text({"
+<TT><B>Securitron v1.6 controls</B></TT><BR><BR>
+Status: []<BR>
+Behaviour controls are [locked ? "locked" : "unlocked"]<BR>
+Maintenance panel panel is [open ? "opened" : "closed"]"},
 
-/mob/living/simple_animal/bot/secbot/ui_interact(mob/user, ui_key = "main", datum/tgui/ui = null, force_open = TRUE, datum/tgui/master_ui = null, datum/ui_state/state = GLOB.default_state)
-	ui = SStgui.try_update_ui(user, src, ui_key, ui, force_open)
-	if(!ui)
-		ui = new(user, src, ui_key, "BotSecurity", name, 500, 500)
-		ui.open()
+"<A href='?src=[UID()];power=1'>[on ? "On" : "Off"]</A>" )
 
-/mob/living/simple_animal/bot/secbot/ui_data(mob/user)
-	var/list/data = list(
-		"locked" = locked, // controls, locked or not
-		"noaccess" = topic_denied(user), // does the current user have access? admins, silicons etc can still access bots with locked controls
-		"maintpanel" = open,
-		"on" = on,
-		"autopatrol" = auto_patrol,
-		"painame" = paicard ? paicard.pai.name : null,
-		"canhack" = canhack(user),
-		"emagged" = emagged, // this is an int, NOT a boolean
-		"remote_disabled" = remote_disabled, // -- STUFF BELOW HERE IS SPECIFIC TO THIS BOT
-		"check_id" = idcheck,
-		"check_weapons" = weaponscheck,
-		"check_warrant" = check_records,
-		"arrest_mode" = arrest_type, // detain or arrest
-		"arrest_declare" = declare_arrests // announce arrests on radio
-	)
-	return data
+	if(!locked || issilicon(user) || user.can_admin_interact())
+		dat += text({"<BR>
+Arrest Unidentifiable Persons: []<BR>
+Arrest for Unauthorized Weapons: []<BR>
+Arrest for Warrant: []<BR>
+Operating Mode: []<BR>
+Report Arrests[]<BR>
+Auto Patrol: []"},
 
-/mob/living/simple_animal/bot/secbot/ui_act(action, params)
-	if (..())
-		return
-	if(topic_denied(usr))
-		to_chat(usr, "<span class='warning'>[src]'s interface is not responding!</span>")
-		return
-	add_fingerprint(usr)
-	. = TRUE
-	switch(action)
-		if("power")
-			if(on)
-				turn_off()
-			else
-				turn_on()
-		if("autopatrol")
-			auto_patrol = !auto_patrol
-			bot_reset()
-		if("hack")
-			handle_hacking(usr)
-		if("disableremote")
-			remote_disabled = !remote_disabled
-		if("authweapon")
-			weaponscheck = !weaponscheck
-		if("authid")
+"<A href='?src=[UID()];operation=idcheck'>[idcheck ? "Yes" : "No"]</A>",
+"<A href='?src=[UID()];operation=weaponscheck'>[weaponscheck ? "Yes" : "No"]</A>",
+"<A href='?src=[UID()];operation=ignorerec'>[check_records ? "Yes" : "No"]</A>",
+"<A href='?src=[UID()];operation=switchmode'>[arrest_type ? "Detain" : "Arrest"]</A>",
+"<A href='?src=[UID()];operation=declarearrests'>[declare_arrests ? "Yes" : "No"]</A>",
+"<A href='?src=[UID()];operation=patrol'>[auto_patrol ? "On" : "Off"]</A>" )
+
+	return	dat
+
+/mob/living/simple_animal/bot/secbot/Topic(href, href_list)
+	if(..())
+		return 1
+
+	switch(href_list["operation"])
+		if("idcheck")
 			idcheck = !idcheck
-		if("authwarrant")
+			update_controls()
+		if("weaponscheck")
+			weaponscheck = !weaponscheck
+			update_controls()
+		if("ignorerec")
 			check_records = !check_records
-		if("arrtype")
+			update_controls()
+		if("switchmode")
 			arrest_type = !arrest_type
-		if("arrdeclare")
+			update_controls()
+		if("declarearrests")
 			declare_arrests = !declare_arrests
-		if("ejectpai")
-			ejectpai()
+			update_controls()
 
 /mob/living/simple_animal/bot/secbot/proc/retaliate(mob/living/carbon/human/H)
 	threatlevel = H.assess_threat(src)
@@ -185,7 +175,7 @@
 		mode = BOT_HUNT
 
 /mob/living/simple_animal/bot/secbot/attack_hand(mob/living/carbon/human/H)
-	if(H.a_intent == INTENT_HARM || H.a_intent == INTENT_DISARM)
+	if(H.a_intent == INTENT_HARM)
 		retaliate(H)
 	return ..()
 
@@ -227,7 +217,7 @@
 		..()
 
 
-/mob/living/simple_animal/bot/secbot/hitby(atom/movable/AM, skipcatch = FALSE, hitpush = TRUE, blocked = FALSE, datum/thrownthing/throwingdatum)
+/mob/living/simple_animal/bot/secbot/hitby(atom/movable/AM, skipcatch = 0, hitpush = 1, blocked = 0)
 	if(istype(AM, /obj/item))
 		var/obj/item/I = AM
 		if(I.throwforce < src.health && I.thrownby && ishuman(I.thrownby))
@@ -241,10 +231,9 @@
 	playsound(loc, 'sound/weapons/cablecuff.ogg', 30, 1, -2)
 	C.visible_message("<span class='danger'>[src] is trying to put zipties on [C]!</span>",\
 						"<span class='userdanger'>[src] is trying to put zipties on you!</span>")
-	INVOKE_ASYNC(src, .proc/cuff_callback, C)
-
-/mob/living/simple_animal/bot/secbot/proc/cuff_callback(mob/living/carbon/C)
-	if(do_after(src, 60, target = C))
+	spawn(60)
+		if( !Adjacent(C) || !isturf(C.loc) ) //if he's in a closet or not adjacent, we cancel cuffing.
+			return
 		if(!C.handcuffed)
 			C.handcuffed = new /obj/item/restraints/handcuffs/cable/zipties/used(C)
 			C.update_handcuffed()
@@ -258,13 +247,20 @@
 	icon_state = "[base_icon]-c"
 	spawn(2)
 		icon_state = "[base_icon][on]"
-	var/threat = C.assess_threat(src)
-	if(ishuman(C) && harmbaton) // Bots with harmbaton enabled become shitcurity. - Dave
-		C.apply_damage(10, BRUTE)
-	C.SetStuttering(5)
-	C.Stun(5)
-	C.Weaken(5)
-	add_attack_logs(src, C, "stunned")
+	var/threat = 5
+	if(istype(C, /mob/living/carbon/human))
+		C.stuttering = 5
+		if(harmbaton) // Bots with harmbaton enabled become shitcurity. - Dave
+			C.apply_damage(10, BRUTE)
+		C.Stun(5)
+		C.Weaken(5)
+		var/mob/living/carbon/human/H = C
+		threat = H.assess_threat(src)
+	else
+		C.Weaken(5)
+		C.stuttering = 5
+		C.Stun(5)
+	add_attack_logs(src, C, "Stunned by [src]")
 	if(declare_arrests)
 		var/area/location = get_area(src)
 		speak("[arrest_type ? "Detaining" : "Arresting"] level [threat] scumbag <b>[C]</b> in [location].", radio_channel)
@@ -422,34 +418,41 @@
 			break
 		else
 			continue
-/mob/living/simple_animal/bot/secbot/proc/check_for_weapons(obj/item/slot_item)
+/mob/living/simple_animal/bot/secbot/proc/check_for_weapons(var/obj/item/slot_item)
 	if(slot_item && slot_item.needs_permit)
 		return 1
 	return 0
 
 /mob/living/simple_animal/bot/secbot/explode()
+
 	walk_to(src,0)
 	visible_message("<span class='userdanger'>[src] blows apart!</span>")
 	var/turf/Tsec = get_turf(src)
+
 	var/obj/item/secbot_assembly/Sa = new /obj/item/secbot_assembly(Tsec)
 	Sa.build_step = 1
 	Sa.overlays += "hs_hole"
 	Sa.created_name = name
 	new /obj/item/assembly/prox_sensor(Tsec)
 	new /obj/item/melee/baton(Tsec)
+
 	if(prob(50))
-		drop_part(robot_arm, Tsec)
-	do_sparks(3, 1, src)
+		new /obj/item/robot_parts/l_arm(Tsec)
+
+	var/datum/effect_system/spark_spread/s = new /datum/effect_system/spark_spread
+	s.set_up(3, 1, src)
+	s.start()
+
 	new /obj/effect/decal/cleanable/blood/oil(loc)
 	..()
 
-/mob/living/simple_animal/bot/secbot/attack_alien(mob/living/carbon/alien/user as mob)
+/mob/living/simple_animal/bot/secbot/attack_alien(var/mob/living/carbon/alien/user as mob)
 	..()
 	if(!isalien(target))
 		target = user
 		mode = BOT_HUNT
 
-/mob/living/simple_animal/bot/secbot/Crossed(atom/movable/AM, oldloc)
+/mob/living/simple_animal/bot/secbot/Crossed(atom/movable/AM)
 	if(ismob(AM) && target)
 		var/mob/living/carbon/C = AM
 		if(!istype(C) || !C || in_range(src, target))
@@ -466,4 +469,4 @@
 	..()
 
 /obj/machinery/bot_core/secbot
-	req_access = list(ACCESS_SECURITY)
+	req_access = list(access_security)

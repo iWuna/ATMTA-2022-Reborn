@@ -2,16 +2,11 @@
 	name = "critter crate"
 	desc = "A crate designed for safe transport of animals. Only openable from the the outside."
 	icon_state = "critter"
-	icon_opened = "critter_open"
+	icon_opened = "critteropen"
 	icon_closed = "critter"
-	open_door_sprite = null
 	var/already_opened = 0
 	var/content_mob = null
 	var/amount = 1
-	open_sound = 'sound/machines/wooden_closet_open.ogg'
-	close_sound = 'sound/machines/wooden_closet_close.ogg'
-	open_sound_volume = 25
-	close_sound_volume = 50
 
 /obj/structure/closet/critter/can_open()
 	if(welded)
@@ -38,19 +33,16 @@
 
 /obj/structure/closet/critter/corgi
 	name = "corgi crate"
-	content_mob = /mob/living/simple_animal/pet/dog/corgi
+	content_mob = /mob/living/simple_animal/pet/corgi
 
-/obj/structure/closet/critter/corgi/populate_contents()
+/obj/structure/closet/critter/corgi/New()
 	if(prob(50))
-		content_mob = /mob/living/simple_animal/pet/dog/corgi/Lisa
+		content_mob = /mob/living/simple_animal/pet/corgi/Lisa
+	..()
 
 /obj/structure/closet/critter/cow
 	name = "cow crate"
 	content_mob = /mob/living/simple_animal/cow
-
-/obj/structure/closet/critter/pig
-	name = "pig crate"
-	content_mob = /mob/living/simple_animal/pig
 
 /obj/structure/closet/critter/goat
 	name = "goat crate"
@@ -64,33 +56,32 @@
 	name = "chicken crate"
 	content_mob = /mob/living/simple_animal/chick
 
-/obj/structure/closet/critter/chick/populate_contents()
+/obj/structure/closet/critter/chick/New()
 	amount = rand(1, 3)
+	..()
 
 /obj/structure/closet/critter/cat
 	name = "cat crate"
 	content_mob = /mob/living/simple_animal/pet/cat
 
-/obj/structure/closet/critter/cat/populate_contents()
+/obj/structure/closet/critter/cat/New()
 	if(prob(50))
 		content_mob = /mob/living/simple_animal/pet/cat/Proc
+	..()
 
 /obj/structure/closet/critter/pug
 	name = "pug crate"
-	content_mob = /mob/living/simple_animal/pet/dog/pug
+	content_mob = /mob/living/simple_animal/pet/pug
 
 /obj/structure/closet/critter/fox
 	name = "fox crate"
-	content_mob = /mob/living/simple_animal/pet/dog/fox
+	content_mob = /mob/living/simple_animal/pet/fox
 
 /obj/structure/closet/critter/butterfly
-	name = "butterfly crate"
+	name = "butterflies crate"
 	content_mob = /mob/living/simple_animal/butterfly
+	amount = 50
 
 /obj/structure/closet/critter/deer
 	name = "deer crate"
 	content_mob = /mob/living/simple_animal/deer
-
-/obj/structure/closet/critter/bunny
-	name = "bunny crate"
-	content_mob = /mob/living/simple_animal/bunny

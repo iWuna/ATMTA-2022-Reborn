@@ -5,8 +5,6 @@
 	var/mappath = null
 	var/mapfile = null
 	var/loaded = 0 // Times loaded this round
-	/// Do we exclude this from CI checks? If so, set this to the templates pathtype itself to avoid it getting passed down
-	var/ci_exclude = null // DO NOT SET THIS IF YOU DO NOT KNOW WHAT YOU ARE DOING
 
 /datum/map_template/New(path = null, map = null, rename = null)
 	if(path)
@@ -19,7 +17,7 @@
 		name = rename
 
 /datum/map_template/proc/preload_size(path)
-	var/bounds = GLOB.maploader.load_map(file(path), 1, 1, 1, shouldCropMap = FALSE, measureOnly = TRUE)
+	var/bounds = maploader.load_map(file(path), 1, 1, 1, cropMap = 0, measureOnly = 1)
 	if(bounds)
 		width = bounds[MAP_MAXX] // Assumes all templates are rectangular, have a single Z level, and begin at 1,1,1
 		height = bounds[MAP_MAXY]
@@ -50,8 +48,8 @@
 	// This system will metaphorically snap in half (not postpone init everywhere)
 	// if given a multi-z template
 	// it might need to be adapted for that when that time comes
-	GLOB.space_manager.add_dirt(placement.z)
-	var/list/bounds = GLOB.maploader.load_map(get_file(), min_x, min_y, placement.z, shouldCropMap = TRUE)
+	space_manager.add_dirt(placement.z)
+	var/list/bounds = maploader.load_map(get_file(), min_x, min_y, placement.z, cropMap = 1)
 	if(!bounds)
 		return 0
 	if(bot_left == null || top_right == null)
@@ -60,10 +58,10 @@
 	if(ST_bot_left == null || ST_top_right == null)
 		log_runtime(EXCEPTION("One of the smoothing corners is bust"), src)
 
-	GLOB.space_manager.remove_dirt(placement.z)
 	late_setup_level(
 		block(bot_left, top_right),
 		block(ST_bot_left, ST_top_right))
+	space_manager.remove_dirt(placement.z)
 
 	log_game("[name] loaded at [min_x],[min_y],[placement.z]")
 	return 1
@@ -110,18 +108,22 @@
 	for(var/map in flist(path))
 		if(cmptext(copytext(map, length(map) - 3), ".dmm"))
 			var/datum/map_template/T = new(path = "[path][map]", rename = "[map]")
-			GLOB.map_templates[T.name] = T
+			map_templates[T.name] = T
 
-	if(GLOB.configuration.ruins.enable_space_ruins) // so we don't unnecessarily clutter start-up
+	if(!config.disable_space_ruins) // so we don't unnecessarily clutter start-up
 		preloadRuinTemplates()
 	preloadShelterTemplates()
 	preloadShuttleTemplates()
+	preloadVRTemplates()
 
 /proc/preloadRuinTemplates()
-	// Merge the active lists together
-	var/list/space_ruins = GLOB.configuration.ruins.active_space_ruins.Copy()
-	var/list/lava_ruins = GLOB.configuration.ruins.active_lava_ruins.Copy()
-	var/list/all_ruins = space_ruins | lava_ruins
+	// Still supporting bans by filename
+	var/list/banned
+	if(fexists("config/spaceRuinBlacklist.txt"))
+		banned = generateMapList("config/spaceRuinBlacklist.txt")
+	else
+		banned = generateMapList("config/example/spaceRuinBlacklist.txt")
+	//banned += generateMapList("config/lavaRuinBlacklist.txt")
 
 	for(var/item in subtypesof(/datum/map_template/ruin))
 		var/datum/map_template/ruin/ruin_type = item
@@ -130,17 +132,18 @@
 			continue
 		var/datum/map_template/ruin/R = new ruin_type()
 
-		// If not in the active list, skip it
-		if(!(R.mappath in all_ruins))
+		if(banned.Find(R.mappath))
 			continue
 
-		GLOB.map_templates[R.name] = R
-		GLOB.ruins_templates[R.name] = R
+		map_templates[R.name] = R
+		ruins_templates[R.name] = R
 
+		/*
 		if(istype(R, /datum/map_template/ruin/lavaland))
-			GLOB.lava_ruins_templates[R.name] = R
+			lava_ruins_templates[R.name] = R
+		*/
 		if(istype(R, /datum/map_template/ruin/space))
-			GLOB.space_ruins_templates[R.name] = R
+			space_ruins_templates[R.name] = R
 
 /proc/preloadShelterTemplates()
 	for(var/item in subtypesof(/datum/map_template/shelter))
@@ -149,8 +152,8 @@
 			continue
 		var/datum/map_template/shelter/S = new shelter_type()
 
-		GLOB.shelter_templates[S.shelter_id] = S
-		GLOB.map_templates[S.shelter_id] = S
+		shelter_templates[S.shelter_id] = S
+		map_templates[S.shelter_id] = S
 
 /proc/preloadShuttleTemplates()
 	for(var/item in subtypesof(/datum/map_template/shuttle))
@@ -160,5 +163,16 @@
 
 		var/datum/map_template/shuttle/S = new shuttle_type()
 
-		GLOB.shuttle_templates[S.shuttle_id] = S
-		GLOB.map_templates[S.shuttle_id] = S
+		shuttle_templates[S.shuttle_id] = S
+		map_templates[S.shuttle_id] = S
+
+/proc/preloadVRTemplates()
+	for(var/item in subtypesof(/datum/map_template/vr))
+		var/datum/map_template/vr/vr_type = item
+		if(!initial(vr_type.suffix))
+			continue
+
+		var/datum/map_template/vr/V = new vr_type()
+
+		vr_templates[V.id] = V
+		map_templates[V.id] = V

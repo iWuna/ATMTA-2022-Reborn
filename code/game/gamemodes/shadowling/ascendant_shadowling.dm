@@ -12,7 +12,7 @@
 	speed = 0
 	var/phasing = 0
 	see_in_dark = 8
-	lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE
+	see_invisible = SEE_INVISIBLE_MINIMUM
 
 	universal_speak = 1
 
@@ -38,7 +38,7 @@
 		icon_state = "NurnKal"
 		icon_living = "NurnKal"
 
-/mob/living/simple_animal/ascendant_shadowling/Process_Spacemove(movement_dir = 0)
+/mob/living/simple_animal/ascendant_shadowling/Process_Spacemove(var/movement_dir = 0)
 	return 1 //copypasta from carp code
 
 /mob/living/simple_animal/ascendant_shadowling/ex_act(severity)
@@ -47,9 +47,9 @@
 /mob/living/simple_animal/ascendant_shadowling/singularity_act()
 	return 0 //Well hi, fellow god! How are you today?
 
-/mob/living/simple_animal/ascendant_shadowling/proc/announce(text, size = 4, new_sound = null)
+/mob/living/simple_animal/ascendant_shadowling/proc/announce(var/text, var/size = 4, var/new_sound = null)
 	var/message = "<font size=[size]><span class='shadowling'><b>\"[text]\"</font></span>"
-	for(var/mob/M in GLOB.player_list)
+	for(var/mob/M in player_list)
 		if(!isnewplayer(M) && M.client)
 			to_chat(M, message)
 			if(new_sound)

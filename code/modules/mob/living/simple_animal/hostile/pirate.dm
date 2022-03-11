@@ -1,11 +1,9 @@
 /mob/living/simple_animal/hostile/pirate
 	name = "Pirate"
 	desc = "Does what he wants cause a pirate is free."
-	icon = 'icons/mob/simple_human.dmi'
 	icon_state = "piratemelee"
 	icon_living = "piratemelee"
-	icon_dead = "piratemelee_dead" // Does not actually exist. del_on_death.
-	mob_biotypes = MOB_ORGANIC | MOB_HUMANOID
+	icon_dead = "piratemelee_dead"
 	speak_chance = 0
 	turns_per_move = 5
 	response_help = "pushes the"
@@ -25,23 +23,22 @@
 	atmos_requirements = list("min_oxy" = 5, "max_oxy" = 0, "min_tox" = 0, "max_tox" = 1, "min_co2" = 0, "max_co2" = 0, "min_n2" = 0, "max_n2" = 0)
 	unsuitable_atmos_damage = 15
 	speak_emote = list("yarrs")
-	loot = list(/obj/effect/mob_spawn/human/corpse/pirate,
+	loot = list(/obj/effect/landmark/mobcorpse/pirate,
 			/obj/item/melee/energy/sword/pirate)
 	del_on_death = 1
 	faction = list("pirate")
 	sentience_type = SENTIENCE_OTHER
-	footstep_type = FOOTSTEP_MOB_SHOE
 
 /mob/living/simple_animal/hostile/pirate/ranged
 	name = "Pirate Gunner"
 	icon_state = "pirateranged"
 	icon_living = "pirateranged"
-	icon_dead = "piratemelee_dead" // Does not actually exist. del_on_death.
+	icon_dead = "piratemelee_dead"
 	projectilesound = 'sound/weapons/laser.ogg'
 	ranged = 1
-	rapid = 2
+	rapid = 1
 	retreat_distance = 5
 	minimum_distance = 5
 	projectiletype = /obj/item/projectile/beam
-	loot = list(/obj/effect/mob_spawn/human/corpse/pirate/ranged,
+	loot = list(/obj/effect/landmark/mobcorpse/pirate/ranged,
 				/obj/item/gun/energy/laser)

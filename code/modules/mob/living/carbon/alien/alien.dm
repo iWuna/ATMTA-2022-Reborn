@@ -1,48 +1,44 @@
+#define HEAT_DAMAGE_LEVEL_1 2 //Amount of damage applied when your body temperature just passes the 360.15k safety point
+#define HEAT_DAMAGE_LEVEL_2 3 //Amount of damage applied when your body temperature passes the 400K point
+#define HEAT_DAMAGE_LEVEL_3 8 //Amount of damage applied when your body temperature passes the 1000K point
+
 /mob/living/carbon/alien
 	name = "alien"
 	voice_name = "alien"
 	speak_emote = list("hisses")
-	bubble_icon = "alien"
 	icon = 'icons/mob/alien.dmi'
 	gender = NEUTER
 	dna = null
-	alien_talk_understand = TRUE
-
-	var/nightvision = FALSE
-	see_in_dark = 4
-
+	alien_talk_understand = 1
+	nightvision = 1
 	var/obj/item/card/id/wear_id = null // Fix for station bounced radios -- Skie
-	var/has_fine_manipulation = FALSE
-	var/move_delay_add = FALSE // movement delay to add
+	var/has_fine_manipulation = 0
+	var/move_delay_add = 0 // movement delay to add
 
 	status_flags = CANPARALYSE|CANPUSH
 	var/heal_rate = 5
 
-	var/large = FALSE
+	var/large = 0
 	var/heat_protection = 0.5
-	var/leaping = FALSE
+	var/leaping = 0
 	ventcrawler = 2
 	var/list/alien_organs = list()
-	var/death_message = "lets out a waning guttural screech, green blood bubbling from its maw..."
-	var/death_sound = 'sound/voice/hiss6.ogg'
 
 /mob/living/carbon/alien/New()
-	..()
-	create_reagents(1000)
 	verbs += /mob/living/verb/mob_sleep
 	verbs += /mob/living/verb/lay_down
 	alien_organs += new /obj/item/organ/internal/brain/xeno
 	alien_organs += new /obj/item/organ/internal/xenos/hivenode
-	alien_organs += new /obj/item/organ/internal/ears
 	for(var/obj/item/organ/internal/I in alien_organs)
 		I.insert(src)
+	..()
 
 /mob/living/carbon/alien/get_default_language()
 	if(default_language)
 		return default_language
-	return GLOB.all_languages["Xenomorph"]
+	return all_languages["Xenomorph"]
 
-/mob/living/carbon/alien/say_quote(message, datum/language/speaking = null)
+/mob/living/carbon/alien/say_quote(var/message, var/datum/language/speaking = null)
 	var/verb = "hisses"
 	var/ending = copytext(message, length(message))
 
@@ -57,19 +53,27 @@
 
 
 /mob/living/carbon/alien/adjustToxLoss(amount)
-	return STATUS_UPDATE_NONE
+	return
 
 /mob/living/carbon/alien/adjustFireLoss(amount) // Weak to Fire
 	if(amount > 0)
-		return ..(amount * 2)
+		..(amount * 2)
 	else
-		return ..(amount)
+		..(amount)
+	return
 
 
 /mob/living/carbon/alien/check_eye_prot()
 	return 2
 
-/mob/living/carbon/alien/handle_environment(datum/gas_mixture/environment)
+/mob/living/carbon/alien/updatehealth()
+	if(status_flags & GODMODE)
+		health = maxHealth
+		stat = CONSCIOUS
+		return
+	health = maxHealth - getOxyLoss() - getFireLoss() - getBruteLoss() - getCloneLoss()
+
+/mob/living/carbon/alien/handle_environment(var/datum/gas_mixture/environment)
 
 	if(!environment)
 		return
@@ -108,6 +112,12 @@
 	else
 		clear_alert("alien_fire")
 
+/mob/living/carbon/alien/handle_fire()//Aliens on fire code
+	if(..())
+		return
+	bodytemperature += BODYTEMP_HEATING_MAX //If you're on fire, you heat up!
+	return
+
 /mob/living/carbon/alien/IsAdvancedToolUser()
 	return has_fine_manipulation
 
@@ -124,10 +134,6 @@
 		// add some movement delay
 		move_delay_add = min(move_delay_add + round(amount / 2), 10) // a maximum delay of 10
 
-/mob/living/carbon/alien/movement_delay()
-	. = ..()
-	. += move_delay_add + GLOB.configuration.movement.alien_delay //move_delay_add is used to slow aliens with stuns
-
 /mob/living/carbon/alien/getDNA()
 	return null
 
@@ -140,19 +146,17 @@
 
 	if(!nightvision)
 		see_in_dark = 8
-		lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE
-		nightvision = TRUE
+		see_invisible = SEE_INVISIBLE_MINIMUM
+		nightvision = 1
 		usr.hud_used.nightvisionicon.icon_state = "nightvision1"
-	else if(nightvision)
-		see_in_dark = initial(see_in_dark)
-		lighting_alpha = initial(lighting_alpha)
-		nightvision = FALSE
+	else if(nightvision == 1)
+		see_in_dark = 4
+		see_invisible = 45
+		nightvision = 0
 		usr.hud_used.nightvisionicon.icon_state = "nightvision0"
 
-	update_sight()
 
-
-/mob/living/carbon/alien/assess_threat(mob/living/simple_animal/bot/secbot/judgebot, lasercolor)
+/mob/living/carbon/alien/assess_threat(var/mob/living/simple_animal/bot/secbot/judgebot, var/lasercolor)
 	if(judgebot.emagged == 2)
 		return 10 //Everyone is a criminal!
 	var/threatcount = 0
@@ -164,11 +168,11 @@
 	//Lasertag bullshit
 	if(lasercolor)
 		if(lasercolor == "b")//Lasertag turrets target the opposing team, how great is that? -Sieve
-			if((istype(r_hand,/obj/item/gun/energy/laser/tag/red)) || (istype(l_hand,/obj/item/gun/energy/laser/tag/red)))
+			if((istype(r_hand,/obj/item/gun/energy/laser/redtag)) || (istype(l_hand,/obj/item/gun/energy/laser/redtag)))
 				threatcount += 4
 
 		if(lasercolor == "r")
-			if((istype(r_hand,/obj/item/gun/energy/laser/tag/blue)) || (istype(l_hand,/obj/item/gun/energy/laser/tag/blue)))
+			if((istype(r_hand,/obj/item/gun/energy/laser/bluetag)) || (istype(l_hand,/obj/item/gun/energy/laser/bluetag)))
 				threatcount += 4
 
 		return threatcount
@@ -192,8 +196,8 @@ Des: Gives the client of the alien an image on each infected mob.
 ----------------------------------------*/
 /mob/living/carbon/alien/proc/AddInfectionImages()
 	if(client)
-		for(var/mob/living/C in GLOB.mob_list)
-			if(HAS_TRAIT(C, TRAIT_XENO_HOST))
+		for(var/mob/living/C in mob_list)
+			if(C.status_flags & XENO_HOST)
 				var/obj/item/organ/internal/body_egg/alien_embryo/A = C.get_int_organ(/obj/item/organ/internal/body_egg/alien_embryo)
 				if(A)
 					var/I = image('icons/mob/alien.dmi', loc = C, icon_state = "infected[A.stage]")
@@ -217,8 +221,7 @@ Des: Removes all infected images from the alien.
 
 /mob/living/carbon/alien/proc/updatePlasmaDisplay()
 	if(hud_used) //clientless aliens
-		hud_used.alien_plasma_display.maptext = "<div align='center' valign='middle' style='position:relative; top:0px; left:6px'> <font face='Small Fonts' color='magenta'>[getPlasma()]</font></div>"
-		hud_used.alien_plasma_display.maptext_x = -3
+		hud_used.alien_plasma_display.maptext = "<div align='center' valign='middle' style='position:relative; top:0px; left:6px'> <font color='magenta'>[getPlasma()]</font></div>"
 
 /mob/living/carbon/alien/larva/updatePlasmaDisplay()
 	return
@@ -226,32 +229,39 @@ Des: Removes all infected images from the alien.
 /mob/living/carbon/alien/can_use_vents()
 	return
 
+#undef HEAT_DAMAGE_LEVEL_1
+#undef HEAT_DAMAGE_LEVEL_2
+#undef HEAT_DAMAGE_LEVEL_3
+
+/mob/living/carbon/alien/handle_footstep(turf/T)
+	if(..())
+		if(T.footstep_sounds["xeno"])
+			var/S = pick(T.footstep_sounds["xeno"])
+			if(S)
+				if(m_intent == MOVE_INTENT_RUN)
+					if(!(step_count % 2)) //every other turf makes a sound
+						return 0
+
+				var/range = -(world.view - 2)
+				range -= 0.666 //-(7 - 2) = (-5) = -5 | -5 - (0.666) = -5.666 | (7 + -5.666) = 1.334 | 1.334 * 3 = 4.002 | range(4.002) = range(4)
+				var/volume = 5
+
+				if(m_intent == MOVE_INTENT_WALK)
+					return 0 //silent when walking
+
+				if(buckled || lying || throwing)
+					return 0 //people flying, lying down or sitting do not step
+
+				if(!has_gravity(src))
+					if(step_count % 3) //this basically says, every three moves make a noise
+						return 0       //1st - none, 1%3==1, 2nd - none, 2%3==2, 3rd - noise, 3%3==0
+
+				playsound(T, S, volume, 1, range)
+				return 1
+	return 0
+
 /mob/living/carbon/alien/getTrail()
 	if(getBruteLoss() < 200)
 		return pick("xltrails_1", "xltrails_2")
 	else
 		return pick("xttrails_1", "xttrails_2")
-
-/mob/living/carbon/alien/update_sight()
-	if(!client)
-		return
-	if(stat == DEAD)
-		grant_death_vision()
-		return
-
-	see_invisible = initial(see_invisible)
-	sight = SEE_MOBS
-	if(nightvision)
-		see_in_dark = 8
-		lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE
-	else
-		see_in_dark = initial(see_in_dark)
-		lighting_alpha = initial(lighting_alpha)
-
-	if(client.eye != src)
-		var/atom/A = client.eye
-		if(A.update_remote_sight(src)) //returns 1 if we override all other sight updates.
-			return
-
-	SEND_SIGNAL(src, COMSIG_MOB_UPDATE_SIGHT)
-	sync_lighting_plane_alpha()

@@ -3,7 +3,7 @@
 	desc = "An alarm which monitors host vital signs and transmits a radio message upon death."
 	var/mobname = "Will Robinson"
 	activated = 0
-	var/static/list/stealth_areas = typecacheof(list(/area/syndicate_mothership, /area/shuttle/syndicate_elite))
+	var/static/list/stealth_areas = typecacheof(list(/area/syndicate_station, /area/syndicate_mothership, /area/shuttle/syndicate_elite))
 
 /obj/item/implant/death_alarm/get_data()
 	var/dat = {"<b>Implant Specifications:</b><BR>
@@ -18,10 +18,20 @@
 	return dat
 
 /obj/item/implant/death_alarm/Destroy()
-	UnregisterSignal(imp_in, COMSIG_MOB_DEATH)
+	processing_objects.Remove(src)
 	return ..()
 
-/obj/item/implant/death_alarm/activate(cause) // Death signal sends name followed by the gibbed / not gibbed check
+/obj/item/implant/death_alarm/process()
+	if(!implanted)
+		return
+	var/mob/M = imp_in
+
+	if(isnull(M)) // If the mob got gibbed
+		activate()
+	else if(M.stat == DEAD)
+		activate("death")
+
+/obj/item/implant/death_alarm/activate(var/cause)
 	var/mob/M = imp_in
 	var/area/t = get_area(M)
 
@@ -29,18 +39,18 @@
 	a.follow_target = M
 
 	switch(cause)
-		if("gib")
-			a.autosay("[mobname] has died-zzzzt in-in-in...", "[mobname]'s Death Alarm")
-			qdel(src)
-		if("emp")
-			var/name = prob(50) ? t.name : pick(SSmapping.teleportlocs)
-			a.autosay("[mobname] has died in [name]!", "[mobname]'s Death Alarm")
-		else
+		if("death")
 			if(is_type_in_typecache(t, stealth_areas))
 				//give the syndies a bit of stealth
 				a.autosay("[mobname] has died in Space!", "[mobname]'s Death Alarm")
 			else
 				a.autosay("[mobname] has died in [t.name]!", "[mobname]'s Death Alarm")
+			qdel(src)
+		if("emp")
+			var/name = prob(50) ? t.name : pick(teleportlocs)
+			a.autosay("[mobname] has died in [name]!", "[mobname]'s Death Alarm")
+		else
+			a.autosay("[mobname] has died-zzzzt in-in-in...", "[mobname]'s Death Alarm")
 			qdel(src)
 
 	qdel(a)
@@ -51,18 +61,12 @@
 /obj/item/implant/death_alarm/implant(mob/target)
 	if(..())
 		mobname = target.real_name
-		RegisterSignal(target, COMSIG_MOB_DEATH, /obj/item/implant/death_alarm.proc/check_gibbed_activate)
+		processing_objects.Add(src)
 		return 1
 	return 0
 
-/obj/item/implant/death_alarm/proc/check_gibbed_activate(datum/source, gibbed)
-	if(gibbed)
-		activate("gib")
-	else
-		activate("death")
-
 /obj/item/implant/death_alarm/removed(mob/target)
 	if(..())
-		UnregisterSignal(target, COMSIG_MOB_DEATH)
+		processing_objects.Remove(src)
 		return 1
 	return 0

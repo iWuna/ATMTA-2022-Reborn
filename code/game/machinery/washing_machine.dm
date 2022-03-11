@@ -199,20 +199,16 @@
 	/*if(istype(W,/obj/item/screwdriver))
 		panel = !panel
 		to_chat(user, "<span class='notice'>you [panel ? </span>"open" : "close"] the [src]'s maintenance panel")*/
-	if(default_unfasten_wrench(user, W))
-		power_change()
-		return
 	if(istype(W,/obj/item/toy/crayon) ||istype(W,/obj/item/stamp))
 		if( state in list(	1, 3, 6 ) )
 			if(!crayon)
 				user.drop_item()
 				crayon = W
 				crayon.loc = src
-				update_icon()
 			else
-				return ..()
+				..()
 		else
-			return ..()
+			..()
 	else if(istype(W,/obj/item/grab))
 		if( (state == 1) && hacked)
 			var/obj/item/grab/G = W
@@ -220,9 +216,8 @@
 				G.affecting.loc = src
 				qdel(G)
 				state = 3
-			update_icon()
 		else
-			return ..()
+			..()
 	else if(istype(W,/obj/item/stack/sheet/hairlesshide) || \
 		istype(W,/obj/item/clothing/under) || \
 		istype(W,/obj/item/clothing/mask) || \
@@ -272,9 +267,6 @@
 		if( istype(W,/obj/item/clothing/gloves/furgloves ) )
 			to_chat(user, "This item does not fit.")
 			return
-		if(istype(W, /obj/item/clothing/gloves/color/black/krav_maga/sec))
-			to_chat(user, "<span class='warning'>Washing these gloves would fry the electronics!</span>")
-			return
 		if(W.flags & NODROP) //if "can't drop" item
 			to_chat(user, "<span class='notice'>\The [W] is stuck to your hand, you cannot put it in the washing machine!</span>")
 			return
@@ -288,9 +280,9 @@
 				to_chat(user, "<span class='notice'>You can't put the item in right now.</span>")
 		else
 			to_chat(user, "<span class='notice'>The washing machine is full.</span>")
-		update_icon()
 	else
-		return ..()
+		..()
+	update_icon()
 
 /obj/machinery/washing_machine/attack_hand(mob/user as mob)
 	switch(state)
@@ -309,7 +301,7 @@
 			crayon = null
 			state = 1
 		if(5)
-			to_chat(user, "<span class='warning'>[src] is busy.</span>")
+			to_chat(user, "<span class='warning'>The [src] is busy.</span>")
 		if(6)
 			state = 7
 		if(7)
@@ -325,7 +317,3 @@
 
 
 	update_icon()
-
-/obj/machinery/washing_machine/deconstruct(disassembled = TRUE)
-	new /obj/item/stack/sheet/metal(drop_location(), 2)
-	qdel(src)

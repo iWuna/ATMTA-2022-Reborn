@@ -16,20 +16,20 @@
 /datum/surgery/implant_removal/can_start(mob/user, mob/living/carbon/human/target)
 	if(!istype(target))
 		return 0
-	var/obj/item/organ/external/affected = target.get_organ(user.zone_selected)
+	var/obj/item/organ/external/affected = target.get_organ(user.zone_sel.selecting)
 	if(!affected)
 		return 0
-	if(affected.is_robotic())
+	if(affected.status & ORGAN_ROBOT)
 		return 0
 	return 1
 
 /datum/surgery/implant_removal/synth/can_start(mob/user, mob/living/carbon/human/target)
 	if(!istype(target))
 		return 0
-	var/obj/item/organ/external/affected = target.get_organ(user.zone_selected)
+	var/obj/item/organ/external/affected = target.get_organ(user.zone_sel.selecting)
 	if(!affected)
 		return 0
-	if(!affected.is_robotic())
+	if(!(affected.status & ORGAN_ROBOT))
 		return 0
 
 	return 1
@@ -45,7 +45,7 @@
 	I = locate(/obj/item/implant) in target
 	user.visible_message("[user] starts poking around inside [target]'s [affected.name] with \the [tool].", \
 	"You start poking around inside [target]'s [affected.name] with \the [tool]." )
-	target.custom_pain("The pain in your [affected.name] is living hell!")
+	target.custom_pain("The pain in your [affected.name] is living hell!",1)
 	..()
 
 /datum/surgery_step/extract_implant/end_step(mob/living/user, mob/living/carbon/human/target, target_zone, obj/item/tool,datum/surgery/surgery)

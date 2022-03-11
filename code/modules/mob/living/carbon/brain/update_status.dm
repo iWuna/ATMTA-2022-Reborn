@@ -1,16 +1,8 @@
-/mob/living/carbon/brain/update_stat(reason = "none given")
+/mob/living/carbon/brain/update_stat()
 	if(status_flags & GODMODE)
 		return
 		// if(health <= min_health)
-	if(stat == DEAD)
-		if(container && health > HEALTH_THRESHOLD_DEAD)
-			update_revive()
-			create_debug_log("revived, trigger reason: [reason]")
-			return
-	else
-		if(!container || health <= HEALTH_THRESHOLD_DEAD && check_death_method())
-			// Considered "dead" without any external apparatus
+	if(health <= config.health_threshold_dead)
+		if(stat != DEAD)
 			death()
-			create_debug_log("died, trigger reason: [reason]")
-			return
 			// Put brain(organ) damaging code here

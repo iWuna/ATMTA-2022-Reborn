@@ -1,18 +1,18 @@
-/mob/proc/handle_autohiss(message, datum/language/L)
+/mob/living/proc/handle_autohiss(message, datum/language/L)
 	return message // no autohiss at this level
 
 /mob/living/carbon/human/handle_autohiss(message, datum/language/L)
-	if(!client || client.prefs.active_character.autohiss_mode == AUTOHISS_OFF) // no need to process if there's no client or they have autohiss off
+	if(!client || client.prefs.autohiss_mode == AUTOHISS_OFF) // no need to process if there's no client or they have autohiss off
 		return message
-	return dna.species.handle_autohiss(message, L, client.prefs.active_character.autohiss_mode)
+	return species.handle_autohiss(message, L, client.prefs.autohiss_mode)
 
 /client/verb/toggle_autohiss()
 	set name = "Toggle Auto-Accent"
 	set desc = "Toggle automatic accents for your species"
 	set category = "OOC"
 
-	prefs.active_character.autohiss_mode = (prefs.active_character.autohiss_mode + 1) % AUTOHISS_NUM
-	switch(prefs.active_character.autohiss_mode)
+	prefs.autohiss_mode = (prefs.autohiss_mode + 1) % AUTOHISS_NUM
+	switch(prefs.autohiss_mode)
 		if(AUTOHISS_OFF)
 			to_chat(src, "Auto-hiss is now OFF.")
 		if(AUTOHISS_BASIC)
@@ -20,7 +20,7 @@
 		if(AUTOHISS_FULL)
 			to_chat(src, "Auto-hiss is now FULL.")
 		else
-			prefs.active_character.autohiss_mode = AUTOHISS_OFF
+			prefs.autohiss_mode = AUTOHISS_OFF
 			to_chat(src, "Auto-hiss is now OFF.")
 
 /datum/species
@@ -30,43 +30,33 @@
 
 /datum/species/unathi
 	autohiss_basic_map = list(
-			"s" = list("ss", "sss", "ssss")
+			"ρ" = list("ρ", "ρ-ρ-ρ", "ρ-ρ-ρ-ρ")
 		)
 	autohiss_extra_map = list(
-			"x" = list("ks", "kss", "ksss")
+			"κρ" = list("κρ", "κρ-ρ", "κρ-ρ-ρ")
 		)
 	autohiss_exempt = list("Sinta'unathi")
 
 /datum/species/tajaran
 	autohiss_basic_map = list(
-			"r" = list("rr", "rrr", "rrrr")
+			"π" = list("π-π", "π-π-π", "π-π-π-π")
 		)
 	autohiss_exempt = list("Siik'tajr")
 
 /datum/species/plasmaman
 	autohiss_basic_map = list(
-			"s" = list("ss", "sss", "ssss")
+			"ρ" = list("ρ-ρ", "ρ-ρ-ρ", "ρ-ρ-ρ-ρ")
 		)
 
 /datum/species/kidan
 	autohiss_basic_map = list(
-			"z" = list("zz", "zzz", "zzzz"),
-			"v" = list("vv", "vvv", "vvvv")
+			"η" = list("η-η", "η-η-η", "η-η-η-η"),
+			"β" = list("β-β", "β-β-β", "ββ-ββ")
 		)
 	autohiss_extra_map = list(
-			"s" = list("z", "zs", "zzz", "zzsz")
+			"ρ" = list("η", "ηρ", "η-η-η", "η-ηρη")
 		)
 	autohiss_exempt = list("Chittin")
-
-/datum/species/drask
-	autohiss_basic_map = list(
-			"o" = list ("oo", "ooo"),
-			"u" = list ("uu", "uuu")
-		)
-	autohiss_extra_map = list(
-			"m" = list ("mm", "mmm")
-		)
-	autohiss_exempt = list("Orluum")
 
 
 /datum/species/proc/handle_autohiss(message, datum/language/lang, mode)

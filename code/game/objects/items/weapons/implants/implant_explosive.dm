@@ -3,8 +3,6 @@
 	desc = "And boom goes the weasel."
 	icon_state = "explosive"
 	origin_tech = "materials=2;combat=3;biotech=4;syndicate=4"
-	actions_types = list(/datum/action/item_action/hands_free/activate/always)
-	var/detonating = FALSE
 	var/weak = 2
 	var/medium = 0.8
 	var/heavy = 0.4
@@ -22,25 +20,21 @@
 				"}
 	return dat
 
-/obj/item/implant/explosive/trigger(emote, mob/source, force)
-	if(force && emote == "deathgasp")
+/obj/item/implant/explosive/trigger(emote, mob/source)
+	if(emote == "deathgasp")
 		activate("death")
 
 /obj/item/implant/explosive/activate(cause)
-	if(!cause || !imp_in)
-		return FALSE
+	if(!cause || !imp_in)	return 0
 	if(cause == "action_button" && alert(imp_in, "Are you sure you want to activate your microbomb implant? This will cause you to explode!", "Microbomb Implant Confirmation", "Yes", "No") != "Yes")
-		return FALSE
-	if(detonating)
-		return FALSE
+		return 0
 	heavy = round(heavy)
 	medium = round(medium)
 	weak = round(weak)
-	detonating = TRUE
-	to_chat(imp_in, "<span class='danger'>You activate your microbomb implant.</span>")
+	to_chat(imp_in, "<span class='notice'>You activate your microbomb implant.</span>")
 //If the delay is short, just blow up already jeez
 	if(delay <= 7)
-		explosion(src, heavy, medium, weak, weak, flame_range = weak)
+		explosion(src,heavy,medium,weak,weak, flame_range = weak)
 		if(imp_in)
 			imp_in.gib()
 		qdel(src)
@@ -141,7 +135,6 @@
 	desc = "An alarm which monitors host vital signs, transmitting a radio message and dusting the corpse on death."
 	icon = 'icons/effects/blood.dmi'
 	icon_state = "remains"
-	actions_types = list(/datum/action/item_action/hands_free/activate/always)
 
 /obj/item/implant/dust/get_data()
 	var/dat = {"<b>Implant Specifications:</b><BR>
@@ -155,8 +148,8 @@
 				"}
 	return dat
 
-/obj/item/implant/dust/trigger(emote, mob/source, force)
-	if(force && emote == "deathgasp")
+/obj/item/implant/dust/trigger(emote, mob/source)
+	if(emote == "deathgasp")
 		activate("death")
 
 /obj/item/implant/dust/activate(cause)

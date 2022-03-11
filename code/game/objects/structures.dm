@@ -1,37 +1,52 @@
 /obj/structure
 	icon = 'icons/obj/structures.dmi'
 	pressure_resistance = 8
-	max_integrity = 300
-	face_while_pulling = TRUE
 	var/climbable
 	var/mob/climber
 	var/broken = FALSE
 
+/obj/structure/blob_act()
+	if(prob(50))
+		qdel(src)
+
+/obj/structure/ex_act(severity)
+	switch(severity)
+		if(1.0)
+			qdel(src)
+			return
+		if(2.0)
+			if(prob(50))
+				qdel(src)
+				return
+		if(3.0)
+			return
+
+/obj/structure/mech_melee_attack(obj/mecha/M)
+	if(M.damtype == "brute")
+		M.occupant_message("<span class='danger'>You hit [src].</span>")
+		visible_message("<span class='danger'>[src] has been hit by [M.name].</span>")
+		return 1
+	return 0
+
 /obj/structure/New()
 	..()
-	if(smoothing_flags & (SMOOTH_CORNERS|SMOOTH_BITMASK))
-		if(SSticker && SSticker.current_state == GAME_STATE_PLAYING)
-			QUEUE_SMOOTH(src)
-			QUEUE_SMOOTH_NEIGHBORS(src)
-		if(smoothing_flags & SMOOTH_CORNERS)
-			icon_state = ""
+	if(smooth)
+		if(ticker && ticker.current_state == GAME_STATE_PLAYING)
+			smooth_icon(src)
+			smooth_icon_neighbors(src)
+		icon_state = ""
 	if(climbable)
 		verbs += /obj/structure/proc/climb_on
-	if(SSticker)
-		GLOB.cameranet.updateVisibility(src)
-
-/obj/structure/Initialize(mapload)
-	if(!armor)
-		armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, RAD = 0, FIRE = 50, ACID = 50)
-	return ..()
+	if(ticker)
+		cameranet.updateVisibility(src)
 
 /obj/structure/Destroy()
-	if(SSticker)
-		GLOB.cameranet.updateVisibility(src)
-	if(smoothing_flags & (SMOOTH_CORNERS|SMOOTH_BITMASK))
+	if(ticker)
+		cameranet.updateVisibility(src)
+	if(smooth)
 		var/turf/T = get_turf(src)
 		spawn(0)
-			QUEUE_SMOOTH_NEIGHBORS(T)
+			smooth_icon_neighbors(T)
 	return ..()
 
 /obj/structure/proc/climb_on()
@@ -43,50 +58,52 @@
 
 	do_climb(usr)
 
-/obj/structure/MouseDrop_T(atom/movable/C, mob/user as mob)
+/obj/structure/MouseDrop_T(var/atom/movable/C, mob/user as mob)
 	if(..())
 		return
 	if(C == user)
 		do_climb(user)
 
-/obj/structure/proc/density_check()
-	for(var/obj/O in orange(0, src))
-		if(O.density && !istype(O, /obj/machinery/door/window)) //Ignores windoors, as those already block climbing, otherwise a windoor on the opposite side of a table would prevent climbing.
-			return O
-	var/turf/T = get_turf(src)
-	if(T.density)
-		return T
-	return null
 
-/obj/structure/proc/do_climb(mob/living/user)
+/obj/structure/proc/do_climb(var/mob/living/user)
+
 	if(!can_touch(user) || !climbable)
-		return FALSE
-	var/blocking_object = density_check()
-	if(blocking_object)
-		to_chat(user, "<span class='warning'>You cannot climb [src], as it is blocked by \a [blocking_object]!</span>")
-		return FALSE
+		return
 
+	for(var/obj/O in range(0, src))
+		if(O.density == 1 && O != src && !istype(O, /obj/machinery/door/window)) //Ignores windoors, as those already block climbing, otherwise a windoor on the opposite side of a table would prevent climbing.
+			to_chat(user, "<span class='warning'>You cannot climb [src], as it is blocked by \a [O]!</span>")
+			return
+	for(var/turf/T in range(0, src))
+		if(T.density == 1)
+			to_chat(user, "<span class='warning'>You cannot climb [src], as it is blocked by \a [T]!</span>")
+			return
 	var/turf/T = src.loc
-	if(!T || !istype(T)) return FALSE
+	if(!T || !istype(T)) return
+
+	var/obj/machinery/door/poddoor/shutters/S = locate() in T.contents
+	if(S && S.density) return
 
 	usr.visible_message("<span class='warning'>[user] starts climbing onto \the [src]!</span>")
 	climber = user
 	if(!do_after(user, 50, target = src))
 		climber = null
-		return FALSE
+		return
 
 	if(!can_touch(user) || !climbable)
 		climber = null
-		return FALSE
+		return
 
-	var/old_loc = usr.loc
+	S = locate() in T.contents
+	if(S && S.density)
+		climber = null
+		return
+
 	usr.loc = get_turf(src)
-	usr.Moved(old_loc, get_dir(old_loc, usr.loc), FALSE)
 	if(get_turf(user) == get_turf(src))
 		usr.visible_message("<span class='warning'>[user] climbs onto \the [src]!</span>")
 
 	climber = null
-	return TRUE
 
 /obj/structure/proc/structure_shaken()
 
@@ -130,9 +147,10 @@
 				H.adjustBruteLoss(damage)
 
 			H.UpdateDamageIcon()
+			H.updatehealth()
 	return
 
-/obj/structure/proc/can_touch(mob/user)
+/obj/structure/proc/can_touch(var/mob/user)
 	if(!user)
 		return 0
 	if(!Adjacent(user))
@@ -140,7 +158,7 @@
 	if(user.restrained() || user.buckled)
 		to_chat(user, "<span class='notice'>You need your hands and legs free for this.</span>")
 		return 0
-	if(user.stat || user.paralysis || user.sleeping || user.lying || user.IsWeakened())
+	if(user.stat || user.paralysis || user.sleeping || user.lying || user.weakened)
 		return 0
 	if(issilicon(user))
 		to_chat(user, "<span class='notice'>You need hands for this.</span>")
@@ -148,15 +166,15 @@
 	return 1
 
 /obj/structure/examine(mob/user)
-	. = ..()
+	..()
 	if(!(resistance_flags & INDESTRUCTIBLE))
-		if(resistance_flags & ON_FIRE)
-			. += "<span class='warning'>It's on fire!</span>"
+		if(burn_state == ON_FIRE)
+			to_chat(user, "<span class='warning'>It's on fire!</span>")
 		if(broken)
-			. += "<span class='notice'>It appears to be broken.</span>"
+			to_chat(user, "<span class='notice'>It appears to be broken.</span>")
 		var/examine_status = examine_status(user)
 		if(examine_status)
-			. += examine_status
+			to_chat(user, examine_status)
 
 /obj/structure/proc/examine_status(mob/user) //An overridable proc, mostly for falsewalls.
 	var/healthpercent = (obj_integrity/max_integrity) * 100
@@ -168,12 +186,3 @@
 		if(0 to 25)
 			if(!broken)
 				return  "<span class='warning'>It's falling apart!</span>"
-
-/obj/structure/proc/prevents_buckled_mobs_attacking()
-	return FALSE
-
-/obj/structure/zap_act(power, zap_flags)
-	if(zap_flags & ZAP_OBJ_DAMAGE)
-		take_damage(power / 8000, BURN, ENERGY)
-	power -= power / 2000 //walls take a lot out of ya
-	. = ..()

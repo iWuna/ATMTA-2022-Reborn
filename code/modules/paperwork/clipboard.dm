@@ -12,7 +12,7 @@
 	var/obj/item/pen/containedpen
 	var/obj/item/toppaper
 	slot_flags = SLOT_BELT
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 
 /obj/item/clipboard/New()
 	..()
@@ -38,11 +38,10 @@
 			toppaper = locate(/obj/item/paper_bundle) in src
 
 /obj/item/clipboard/examine(mob/user)
-	. = ..()
-	if(in_range(user, src) && toppaper)
-		. += toppaper.examine(user)
+	if(..(user, 1) && toppaper)
+		toppaper.examine(user)
 
-/obj/item/clipboard/proc/penPlacement(mob/user, obj/item/pen/P, placing)
+obj/item/clipboard/proc/penPlacement(mob/user, obj/item/pen/P, placing)
 	if(placing)
 		if(containedpen)
 			to_chat(user, "<span class='warning'>There's already a pen in [src]!</span>")
@@ -84,7 +83,7 @@
 	if(containedpen)
 		overlays += "clipboard_pen"
 	overlays += "clipboard_over"
-	..()
+	return
 
 /obj/item/clipboard/attackby(obj/item/W, mob/user)
 	if(isPaperwork(W)) //If it's a photo, paper bundle, or piece of paper, place it on the clipboard.
@@ -115,8 +114,6 @@
 	else if(istype(W, /obj/item/stamp) && toppaper) //We can stamp the topmost piece of paper
 		toppaper.attackby(W, user)
 		update_icon()
-	else
-		return ..()
 
 /obj/item/clipboard/attack_self(mob/user)
 	showClipboard(user)
@@ -132,13 +129,13 @@
 		else
 			penPlacement(usr, containedpen, FALSE)
 	else if(href_list["remove"])
-		var/obj/item/P = locate(href_list["remove"]) in src
+		var/obj/item/P = locate(href_list["remove"])
 		if(isPaperwork(P))
 			usr.put_in_hands(P)
 			to_chat(usr, "<span class='notice'>You remove [P] from [src].</span>")
 			checkTopPaper() //So we don't accidentally make the top sheet not be on the clipboard
 	else if(href_list["viewOrWrite"])
-		var/obj/item/P = locate(href_list["viewOrWrite"]) in src
+		var/obj/item/P = locate(href_list["viewOrWrite"])
 		if(!isPaperwork(P))
 			return
 		if(is_pen(I) && isPaperwork(P) != PHOTO) //Because you can't write on photos that aren't in your hand
@@ -149,7 +146,7 @@
 			var/obj/item/photo/Ph = P
 			Ph.show(usr)
 	else if(href_list["topPaper"])
-		var/obj/item/P = locate(href_list["topPaper"]) in src
+		var/obj/item/P = locate(href_list["topPaper"])
 		if(P == toppaper)
 			return
 		to_chat(usr, "<span class='notice'>You flick the pages so that [P] is on top.</span>")

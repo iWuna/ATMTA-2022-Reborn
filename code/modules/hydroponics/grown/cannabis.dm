@@ -1,5 +1,3 @@
-
-      
 // Cannabis
 /obj/item/seeds/cannabis
 	name = "pack of cannabis seeds"
@@ -16,8 +14,10 @@
 	icon_dead = "cannabis-dead" // Same for the dead icon
 	genes = list(/datum/plant_gene/trait/repeated_harvest)
 	mutatelist = list(/obj/item/seeds/cannabis/rainbow,
-						/obj/item/seeds/cannabis/white)
-	reagents_add = list("thc" = 0.15, "cbd" = 0.15)
+						/obj/item/seeds/cannabis/death,
+						/obj/item/seeds/cannabis/white,
+						/obj/item/seeds/cannabis/ultimate)
+	reagents_add = list("thc" = 0.15)
 
 
 /obj/item/seeds/cannabis/rainbow
@@ -27,9 +27,8 @@
 	species = "megacannabis"
 	plantname = "Rainbow Weed"
 	product = /obj/item/reagent_containers/food/snacks/grown/cannabis/rainbow
-	mutatelist = list(/obj/item/seeds/cannabis/death,
-						/obj/item/seeds/cannabis/ultimate)
-	reagents_add = list("lsd" = 0.15, "thc" = 0.15, "cbd" = 0.15)
+	mutatelist = list()
+	reagents_add = list("lsd" = 0.15, "thc" = 0.15)
 	rarity = 40
 
 /obj/item/seeds/cannabis/death
@@ -40,7 +39,7 @@
 	plantname = "Deathweed"
 	product = /obj/item/reagent_containers/food/snacks/grown/cannabis/death
 	mutatelist = list()
-	reagents_add = list("cyanide" = 0.35, "thc" = 0.15, "cbd" = 0.15)
+	reagents_add = list("cyanide" = 0.35, "thc" = 0.15)
 	rarity = 40
 
 /obj/item/seeds/cannabis/white
@@ -50,9 +49,8 @@
 	species = "whitecannabis"
 	plantname = "Lifeweed"
 	product = /obj/item/reagent_containers/food/snacks/grown/cannabis/white
-	mutatelist = list(/obj/item/seeds/cannabis/death,
-						/obj/item/seeds/cannabis/ultimate)
-	reagents_add = list("omnizine" = 0.35, "thc" = 0.15, "cbd" = 0.15)
+	mutatelist = list()
+	reagents_add = list("omnizine" = 0.35, "thc" = 0.15)
 	rarity = 40
 
 
@@ -64,24 +62,24 @@
 	plantname = "Omega Weed"
 	product = /obj/item/reagent_containers/food/snacks/grown/cannabis/ultimate
 	mutatelist = list()
-	reagents_add = list("lsd" = 0.05,
-						"suicider" = 0.05,
-						"space_drugs" = 0.05,
-						"mercury" = 0.05,
-						"lithium" = 0.05,
-						"ephedrine" = 0.05,
-						"haloperidol" = 0.05,
-						"methamphetamine" = 0.05,
-						"thc" = 0.05,
-						"cbd" = 0.05,
-						"psilocybin" = 0.05,
-						"hairgrownium" = 0.05,
-						"ectoplasm" = 0.05,
-						"bath_salts" = 0.05,
-						"itching_powder" = 0.05,
-						"crank" = 0.05,
-						"krokodil" = 0.05,
-						"histamine" = 0.05)
+	reagents_add = list("lsd" = 0.15,
+						"suicider" = 0.15,
+						"space_drugs" = 0.15,
+						"mercury" = 0.15,
+						"lithium" = 0.15,
+						"atropine" = 0.15,
+						"ephedrine" = 0.15,
+						"haloperidol" = 0.15,
+						"methamphetamine" = 0.15,
+						"thc" = 0.15,
+						"psilocybin" = 0.15,
+						"hairgrownium" = 0.15,
+						"ectoplasm" = 0.15,
+						"bath_salts" = 0.15,
+						"itching_powder" = 0.15,
+						"crank" = 0.15,
+						"krokodil" = 0.15,
+						"histamine" = 0.15)
 	rarity = 69
 
 
@@ -95,8 +93,6 @@
 	icon_state = "cannabis"
 	filling_color = "#00FF00"
 	bitesize_mod = 2
-	tastes = list("cannabis" = 1)
-	wine_power = 0.2
 
 
 /obj/item/reagent_containers/food/snacks/grown/cannabis/rainbow
@@ -104,25 +100,22 @@
 	name = "rainbow cannabis leaf"
 	desc = "Is it supposed to be glowing like that...?"
 	icon_state = "megacannabis"
-	wine_power = 0.6
 
 /obj/item/reagent_containers/food/snacks/grown/cannabis/death
 	seed = /obj/item/seeds/cannabis/death
 	name = "death cannabis leaf"
 	desc = "Looks a bit dark. Oh well."
 	icon_state = "blackcannabis"
-	wine_power = 0.4
 
 /obj/item/reagent_containers/food/snacks/grown/cannabis/white
 	seed = /obj/item/seeds/cannabis/white
 	name = "white cannabis leaf"
 	desc = "It feels smooth and nice to the touch."
 	icon_state = "whitecannabis"
-	wine_power = 0.1
 
 /obj/item/reagent_containers/food/snacks/grown/cannabis/ultimate
 	seed = /obj/item/seeds/cannabis/ultimate
 	name = "omega cannibas leaf"
 	desc = "You feel dizzy looking at it. What the fuck?"
 	icon_state = "ocannabis"
-	wine_power = 0.9
+	volume = 420

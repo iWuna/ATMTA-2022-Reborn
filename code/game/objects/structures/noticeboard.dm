@@ -5,7 +5,6 @@
 	icon_state = "nboard00"
 	density = 0
 	anchored = 1
-	max_integrity = 150
 	var/notices = 0
 
 /obj/structure/noticeboard/Initialize()
@@ -18,7 +17,7 @@
 	icon_state = "nboard0[notices]"
 
 //attaching papers!!
-/obj/structure/noticeboard/attackby(obj/item/O as obj, mob/user as mob, params)
+/obj/structure/noticeboard/attackby(var/obj/item/O as obj, var/mob/user as mob, params)
 	if(istype(O, /obj/item/paper))
 		if(notices < 5)
 			O.add_fingerprint(user)
@@ -30,8 +29,6 @@
 			to_chat(user, "<span class='notice'>You pin the paper to the noticeboard.</span>")
 		else
 			to_chat(user, "<span class='notice'>You reach to pin your paper to the board but hesitate. You are certain your paper will not be seen among the many others already attached.</span>")
-		return
-	return ..()
 
 /obj/structure/noticeboard/attack_hand(user as mob)
 	var/dat = "<B>Noticeboard</B><BR>"
@@ -40,10 +37,6 @@
 	user << browse("<HEAD><TITLE>Notices</TITLE></HEAD>[dat]","window=noticeboard")
 	onclose(user, "noticeboard")
 
-/obj/structure/noticeboard/deconstruct(disassembled = TRUE)
-	if(!(flags & NODECONSTRUCT))
-		new /obj/item/stack/sheet/metal (loc, 1)
-	qdel(src)
 
 /obj/structure/noticeboard/Topic(href, href_list)
 	..()
@@ -78,5 +71,10 @@
 	if(href_list["read"])
 		var/obj/item/paper/P = locate(href_list["read"])
 		if((P && P.loc == src))
-			P.show_content(usr)
+			if(!( istype(usr, /mob/living/carbon/human) ))
+				usr << browse("<HTML><HEAD><TITLE>[P.name]</TITLE></HEAD><BODY><TT>[stars(P.info)]</TT></BODY></HTML>", "window=[P.name]")
+				onclose(usr, "[P.name]")
+			else
+				usr << browse("<HTML><HEAD><TITLE>[P.name]</TITLE></HEAD><BODY><TT>[P.info]</TT></BODY></HTML>", "window=[P.name]")
+				onclose(usr, "[P.name]")
 	return

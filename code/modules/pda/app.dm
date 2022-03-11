@@ -2,6 +2,7 @@
 /datum/data/pda
 	var/icon = "tasks"		//options comes from http://fontawesome.io/icons/
 	var/notify_icon = "exclamation-circle"
+	var/notify_silent = 0
 	var/hidden = 0				// program not displayed in main menu
 	var/category = "General"	// the category to list it in on the main menu
 	var/obj/item/pda/pda	// if this is null, and the app is running code, something's gone wrong
@@ -32,11 +33,11 @@
 		else
 			L = get(pda, /mob/living/silicon)
 
-		if(L && L.stat != UNCONSCIOUS) // Awake or dead people can see their messages
+		if(L)
 			to_chat(L, "[bicon(pda)] [message]")
-			SStgui.update_user_uis(L, pda) // Update the receiving user's PDA UI so that they can see the new message
+			SSnanoui.update_user_uis(L, pda) // Update the receiving user's PDA UI so that they can see the new message
 
-	if(!pda.silent)
+	if(!notify_silent)
 		pda.play_ringtone()
 
 	if(blink && !(src in pda.notifying_programs))
@@ -48,6 +49,8 @@
 		pda.notifying_programs -= src
 		if(!pda.notifying_programs.len)
 			pda.overlays -= image('icons/obj/pda.dmi', "pda-r")
+
+/datum/data/pda/proc/
 
 // An app has a button on the home screen and its own UI
 /datum/data/pda/app
@@ -66,12 +69,9 @@
 	if(pda.current_app)
 		pda.current_app.stop()
 	pda.current_app = src
-	if(!pda.silent)
-		playsound(pda, 'sound/machines/terminal_select.ogg', 15, TRUE)
-	return TRUE
+	return 1
 
-/datum/data/pda/app/proc/update_ui(mob/user, list/data)
-	return
+/datum/data/pda/app/proc/update_ui(mob/user as mob, list/data)
 
 
 // Utilities just have a button on the home screen, but custom code when clicked
@@ -80,6 +80,7 @@
 	icon = "gear"
 	size = 1
 	category = "Utilities"
+
 
 /datum/data/pda/utility/scanmode
 	var/base_name
@@ -100,12 +101,8 @@
 		name = "Disable [base_name]"
 
 	pda.update_shortcuts()
-	if(!pda.silent)
-		playsound(pda, 'sound/machines/terminal_select.ogg', 15, TRUE)
-	return TRUE
+	return 1
 
-/datum/data/pda/utility/scanmode/proc/scan_mob(mob/living/C, mob/living/user)
-	return
+/datum/data/pda/utility/scanmode/proc/scan_mob(mob/living/C as mob, mob/living/user as mob)
 
-/datum/data/pda/utility/scanmode/proc/scan_atom(atom/A, mob/user)
-	return
+/datum/data/pda/utility/scanmode/proc/scan_atom(atom/A as mob|obj|turf|area, mob/user as mob)

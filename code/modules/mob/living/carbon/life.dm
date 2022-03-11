@@ -1,39 +1,24 @@
 /mob/living/carbon/Life(seconds, times_fired)
 	set invisibility = 0
+	set background = BACKGROUND_ENABLED
 
 	if(notransform)
 		return
-
-	if(damageoverlaytemp)
-		damageoverlaytemp = 0
-		update_damage_hud()
-
-	if(stat != DEAD)
-		handle_organs()
-
-	//stuff in the stomach
-	if(LAZYLEN(stomach_contents))
-		handle_stomach(times_fired)
-
-	. = ..()
-
-	if(QDELETED(src))
+	if(!loc)
 		return
 
-	if(.) //not dead
+	if(..())
+		. = 1
 		handle_blood()
+		for(var/obj/item/organ/internal/O in internal_organs)
+			O.on_life()
 
-	if(LAZYLEN(processing_patches))
-		handle_patches()
-	if(mind)
-		handle_changeling()
+	handle_changeling()
 	handle_wetness(times_fired)
 
 	// Increase germ_level regularly
-	handle_germs()
-
-	if(stat != DEAD)
-		return TRUE
+	if(germ_level < GERM_LEVEL_AMBIENT && prob(30))	//if you're just standing there, you shouldn't get more germs beyond an ambient level
+		germ_level++
 
 
 ///////////////
@@ -42,12 +27,12 @@
 
 //Start of a breath chain, calls breathe()
 /mob/living/carbon/handle_breathing(times_fired)
-	if(times_fired % 2 == 1)
-		breathe() //Breathe every other tick, unless suffocating
+	if(times_fired % 4 == 2 || failed_last_breath)
+		breathe() //Breathe per 4 ticks, unless suffocating
 	else
 		if(istype(loc, /obj/))
 			var/obj/location_as_object = loc
-			location_as_object.handle_internal_lifeform(src, 0)
+			location_as_object.handle_internal_lifeform(src,0)
 
 //Second link in a breath chain, calls check_breath()
 /mob/living/carbon/proc/breathe()
@@ -62,13 +47,13 @@
 
 	var/datum/gas_mixture/breath
 
-	if(health <= HEALTH_THRESHOLD_CRIT && check_death_method())
+	if(health <= config.health_threshold_crit)
 		AdjustLoseBreath(1)
 
 	//Suffocate
 	if(losebreath > 0)
 		AdjustLoseBreath(-1)
-		if(prob(75))
+		if(prob(10))
 			emote("gasp")
 		if(istype(loc, /obj/))
 			var/obj/loc_as_obj = loc
@@ -81,7 +66,7 @@
 
 			if(isobj(loc)) //Breathe from loc as object
 				var/obj/loc_as_obj = loc
-				breath = loc_as_obj.handle_internal_lifeform(src, BREATH_VOLUME)
+				breath = loc_as_obj.handle_internal_lifeform(src, BREATH_MOLES)
 
 			else if(isturf(loc)) //Breathe from loc as turf
 				var/breath_moles = 0
@@ -92,7 +77,7 @@
 		else //Breathe from loc as obj again
 			if(istype(loc, /obj/))
 				var/obj/loc_as_obj = loc
-				loc_as_obj.handle_internal_lifeform(src, 0)
+				loc_as_obj.handle_internal_lifeform(src,0)
 
 	check_breath(breath)
 
@@ -112,6 +97,7 @@
 	//CRIT
 	if(!breath || (breath.total_moles() == 0) || !lungs)
 		adjustOxyLoss(1)
+		failed_last_breath = TRUE
 		throw_alert("not_enough_oxy", /obj/screen/alert/not_enough_oxy)
 		return FALSE
 
@@ -126,7 +112,7 @@
 	var/O2_partialpressure = (breath.oxygen/breath.total_moles())*breath_pressure
 	var/Toxins_partialpressure = (breath.toxins/breath.total_moles())*breath_pressure
 	var/CO2_partialpressure = (breath.carbon_dioxide/breath.total_moles())*breath_pressure
-	var/SA_partialpressure = (breath.sleeping_agent/breath.total_moles())*breath_pressure
+
 
 	//OXYGEN
 	if(O2_partialpressure < safe_oxy_min) //Not enough oxygen
@@ -135,12 +121,15 @@
 		if(O2_partialpressure > 0)
 			var/ratio = 1 - O2_partialpressure/safe_oxy_min
 			adjustOxyLoss(min(5*ratio, 3))
+			failed_last_breath = TRUE
 			oxygen_used = breath.oxygen*ratio
 		else
 			adjustOxyLoss(3)
+			failed_last_breath = TRUE
 		throw_alert("not_enough_oxy", /obj/screen/alert/not_enough_oxy)
 
 	else //Enough oxygen
+		failed_last_breath = FALSE
 		adjustOxyLoss(-5)
 		oxygen_used = breath.oxygen
 		clear_alert("not_enough_oxy")
@@ -166,20 +155,22 @@
 	//TOXINS/PLASMA
 	if(Toxins_partialpressure > safe_tox_max)
 		var/ratio = (breath.toxins/safe_tox_max) * 10
-		adjustToxLoss(clamp(ratio, MIN_TOXIC_GAS_DAMAGE, MAX_TOXIC_GAS_DAMAGE))
+		adjustToxLoss(Clamp(ratio, MIN_TOXIC_GAS_DAMAGE, MAX_TOXIC_GAS_DAMAGE))
 		throw_alert("too_much_tox", /obj/screen/alert/too_much_tox)
 	else
 		clear_alert("too_much_tox")
 
 	//TRACE GASES
-	if(breath.sleeping_agent)
-		if(SA_partialpressure > SA_para_min)
-			Paralyse(3)
-			if(SA_partialpressure > SA_sleep_min)
-				AdjustSleeping(2, bound_lower = 0, bound_upper = 10)
-		else if(SA_partialpressure > 0.01)
-			if(prob(20))
-				emote(pick("giggle","laugh"))
+	if(breath.trace_gases.len)
+		for(var/datum/gas/sleeping_agent/SA in breath.trace_gases)
+			var/SA_partialpressure = (SA.moles/breath.total_moles())*breath_pressure
+			if(SA_partialpressure > SA_para_min)
+				Paralyse(3)
+				if(SA_partialpressure > SA_sleep_min)
+					AdjustSleeping(2, bound_lower = 0, bound_upper = 10)
+			else if(SA_partialpressure > 0.01)
+				if(prob(20))
+					emote(pick("giggle","laugh"))
 
 	//BREATH TEMPERATURE
 	handle_breath_temperature(breath)
@@ -204,11 +195,6 @@
 		else
 			update_action_buttons_icon()
 
-/mob/living/carbon/proc/handle_organs()
-	for(var/thing in internal_organs)
-		var/obj/item/organ/internal/O = thing
-		O.on_life()
-
 /mob/living/carbon/handle_diseases()
 	for(var/thing in viruses)
 		var/datum/disease/D = thing
@@ -226,42 +212,86 @@
 	return
 
 /mob/living/carbon/handle_mutations_and_radiation()
-	radiation -= min(radiation, RAD_LOSS_PER_TICK)
-	if(radiation > RAD_MOB_SAFE)
-		adjustToxLoss(log(radiation - RAD_MOB_SAFE) * RAD_TOX_COEFFICIENT)
+	if(radiation)
+
+		switch(radiation)
+			if(0 to 50)
+				radiation--
+				if(prob(25))
+					adjustToxLoss(1)
+					updatehealth()
+
+			if(50 to 75)
+				radiation -= 2
+				adjustToxLoss(1)
+				if(prob(5))
+					radiation -= 5
+				updatehealth()
+
+			if(75 to 100)
+				radiation -= 3
+				adjustToxLoss(3)
+				updatehealth()
+
+		radiation = Clamp(radiation, 0, 100)
+
 
 /mob/living/carbon/handle_chemicals_in_body()
-	reagents.metabolize(src)
+	if(reagents)
+		reagents.metabolize(src)
 
 
 /mob/living/carbon/proc/handle_wetness(times_fired)
 	if(times_fired % 20==2) //dry off a bit once every 20 ticks or so
 		wetlevel = max(wetlevel - 1,0)
 
-/mob/living/carbon/proc/handle_stomach(times_fired)
-	for(var/thing in stomach_contents)
-		var/mob/living/M = thing
+/mob/living/carbon/handle_stomach(times_fired)
+	for(var/mob/living/M in stomach_contents)
 		if(M.loc != src)
-			LAZYREMOVE(stomach_contents, M)
+			stomach_contents.Remove(M)
 			continue
 		if(stat != DEAD)
 			if(M.stat == DEAD)
-				LAZYREMOVE(stomach_contents, M)
+				stomach_contents.Remove(M)
 				qdel(M)
 				continue
 			if(times_fired % 3 == 1)
 				M.adjustBruteLoss(5)
-				adjust_nutrition(10)
+				nutrition += 10
+
+//This updates the health and status of the mob (conscious, unconscious, dead)
+/mob/living/carbon/handle_regular_status_updates()
+
+	if(..()) //alive
+
+		if(health <= config.health_threshold_dead)
+			death()
+			return
+
+		if(getOxyLoss() > 50 || health <= config.health_threshold_crit)
+			Paralyse(3)
+			stat = UNCONSCIOUS
+
+		if(sleeping)
+			stat = UNCONSCIOUS
+
+		return 1
+
+/mob/living/carbon/proc/CheckStamina()
+	if(staminaloss)
+		var/total_health = (health - staminaloss)
+		if(total_health <= config.health_threshold_softcrit && !stat)
+			to_chat(src, "<span class='notice'>You're too exhausted to keep going...</span>")
+			Weaken(5)
+			setStaminaLoss(health - 2)
+			return
+		setStaminaLoss(max((staminaloss - 3), 0))
 
 //this updates all special effects: stunned, sleeping, weakened, druggy, stuttering, etc..
 /mob/living/carbon/handle_status_effects()
 	..()
-	if(stam_regen_start_time <= world.time)
-		if(stam_paralyzed)
-			update_stamina()
-		if(staminaloss)
-			setStaminaLoss(0, FALSE)
-			update_health_hud()
+
+	CheckStamina()
 
 	var/restingpwr = 1 + 4 * resting
 
@@ -306,6 +336,8 @@
 			AdjustSleeping(1)
 			Paralyse(5)
 
+	if(confused)
+		AdjustConfused(-1)
 
 	//Jitteryness
 	if(jitteriness)
@@ -313,25 +345,17 @@
 		AdjustJitter(-restingpwr)
 
 	if(hallucination)
-		handle_hallucinations()
-		AdjustHallucinate(-2)
+		spawn handle_hallucinations()
 
-	// Keep SSD people asleep
-	if(player_logged)
-		Sleeping(2)
+		AdjustHallucinate(-2)
 
 /mob/living/carbon/handle_sleeping()
 	if(..())
-		if(mind?.has_antag_datum(/datum/antagonist/vampire))
-			if(istype(loc, /obj/structure/closet/coffin))
-				adjustBruteLoss(-1, FALSE)
-				adjustFireLoss(-1, FALSE)
-				adjustToxLoss(-1)
 		handle_dreams()
 		adjustStaminaLoss(-10)
 		var/comfort = 1
-		if(istype(buckled, /obj/structure/bed))
-			var/obj/structure/bed/bed = buckled
+		if(istype(buckled, /obj/structure/stool/bed))
+			var/obj/structure/stool/bed/bed = buckled
 			comfort+= bed.comfort
 		for(var/obj/item/bedsheet/bedsheet in range(loc,0))
 			if(bedsheet.loc != loc) //bedsheets in your backpack/neck don't give you comfort
@@ -340,92 +364,52 @@
 			break //Only count the first bedsheet
 		if(drunk)
 			comfort += 1 //Aren't naps SO much better when drunk?
-			AdjustDrunk(-0.2*comfort) //reduce drunkenness while sleeping.
+			AdjustDrunk(1-0.0015*comfort) //reduce drunkenness ~6% per two seconds, when on floor.
 		if(comfort > 1 && prob(3))//You don't heal if you're just sleeping on the floor without a blanket.
-			adjustBruteLoss(-1 * comfort, FALSE)
-			adjustFireLoss(-1 * comfort)
-		if(prob(10) && health && health_hud_override != HEALTH_HUD_OVERRIDE_CRIT)
+			adjustBruteLoss(-1*comfort)
+			adjustFireLoss(-1*comfort)
+		if(prob(10) && health && hal_screwyhud != SCREWYHUD_CRIT)
 			emote("snore")
-
+	// Keep SSD people asleep
+	if(player_logged)
+		Sleeping(2)
 	return sleeping
 
-/mob/living/carbon/update_health_hud(shown_health_amount)
-	if(!client)
-		return
 
-	if(healths)
-		if(stat != DEAD)
-			. = TRUE
-			if(shown_health_amount == null)
-				shown_health_amount = health
-			if(shown_health_amount >= maxHealth)
-				healths.icon_state = "health0"
-			else if(shown_health_amount > maxHealth * 0.8)
-				healths.icon_state = "health1"
-			else if(shown_health_amount > maxHealth * 0.6)
-				healths.icon_state = "health2"
-			else if(shown_health_amount > maxHealth * 0.4)
-				healths.icon_state = "health3"
-			else if(shown_health_amount > maxHealth * 0.2)
-				healths.icon_state = "health4"
-			else if(shown_health_amount > 0)
-				healths.icon_state = "health5"
-			else
-				healths.icon_state = "health6"
-		else
-			healths.icon_state = "health7"
-
-/mob/living/carbon/update_damage_hud()
+//this handles hud updates. Calls update_vision() and handle_hud_icons()
+/mob/living/carbon/handle_regular_hud_updates()
 	if(!client)
-		return
-	if(stat == UNCONSCIOUS && health <= HEALTH_THRESHOLD_CRIT)
-		if(check_death_method())
+		return 0
+
+	if(stat == UNCONSCIOUS && health <= config.health_threshold_crit)
+		var/severity = 0
+		switch(health)
+			if(-20 to -10) severity = 1
+			if(-30 to -20) severity = 2
+			if(-40 to -30) severity = 3
+			if(-50 to -40) severity = 4
+			if(-60 to -50) severity = 5
+			if(-70 to -60) severity = 6
+			if(-80 to -70) severity = 7
+			if(-90 to -80) severity = 8
+			if(-95 to -90) severity = 9
+			if(-INFINITY to -95) severity = 10
+		overlay_fullscreen("crit", /obj/screen/fullscreen/crit, severity)
+	else
+		clear_fullscreen("crit")
+		if(oxyloss)
 			var/severity = 0
-			switch(health)
-				if(-20 to -10)
-					severity = 1
-				if(-30 to -20)
-					severity = 2
-				if(-40 to -30)
-					severity = 3
-				if(-50 to -40)
-					severity = 4
-				if(-60 to -50)
-					severity = 5
-				if(-70 to -60)
-					severity = 6
-				if(-80 to -70)
-					severity = 7
-				if(-90 to -80)
-					severity = 8
-				if(-95 to -90)
-					severity = 9
-				if(-INFINITY to -95)
-					severity = 10
-			overlay_fullscreen("crit", /obj/screen/fullscreen/crit, severity)
-	else if(stat == CONSCIOUS)
-		if(check_death_method())
-			clear_fullscreen("crit")
-			if(getOxyLoss())
-				var/severity = 0
-				switch(getOxyLoss())
-					if(10 to 20)
-						severity = 1
-					if(20 to 25)
-						severity = 2
-					if(25 to 30)
-						severity = 3
-					if(30 to 35)
-						severity = 4
-					if(35 to 40)
-						severity = 5
-					if(40 to 45)
-						severity = 6
-					if(45 to INFINITY)
-						severity = 7
-				overlay_fullscreen("oxy", /obj/screen/fullscreen/oxy, severity)
-			else
-				clear_fullscreen("oxy")
+			switch(oxyloss)
+				if(10 to 20) severity = 1
+				if(20 to 25) severity = 2
+				if(25 to 30) severity = 3
+				if(30 to 35) severity = 4
+				if(35 to 40) severity = 5
+				if(40 to 45) severity = 6
+				if(45 to INFINITY) severity = 7
+			overlay_fullscreen("oxy", /obj/screen/fullscreen/oxy, severity)
+		else
+			clear_fullscreen("oxy")
 
 		//Fire and Brute damage overlay (BSSR)
 		var/hurtdamage = getBruteLoss() + getFireLoss() + damageoverlaytemp
@@ -443,24 +427,59 @@
 		else
 			clear_fullscreen("brute")
 
-/mob/living/carbon/proc/handle_patches()
-	var/multiple_patch_multiplier = processing_patches.len > 1 ? (processing_patches.len * 1.5) : 1
-	var/applied_amount = 0.35 * multiple_patch_multiplier
+	..()
+	return 1
 
-	for(var/patch in processing_patches)
-		var/obj/item/reagent_containers/food/pill/patch/P = patch
+/mob/living/carbon/update_sight()
+	if(!client)
+		return
+	if(stat == DEAD)
+		grant_death_vision()
+		return
 
-		if(P.reagents && P.reagents.total_volume)
-			var/fractional_applied_amount = applied_amount  / P.reagents.total_volume
-			P.reagents.reaction(src, REAGENT_TOUCH, fractional_applied_amount, P.needs_to_apply_reagents)
-			P.needs_to_apply_reagents = FALSE
-			P.reagents.trans_to(src, applied_amount * 0.5)
-			P.reagents.remove_any(applied_amount * 0.5)
+	see_invisible = initial(see_invisible)
+	see_in_dark = initial(see_in_dark)
+	sight = initial(sight)
+
+	if(XRAY in mutations)
+		grant_xray_vision()
+
+	if(client.eye != src)
+		var/atom/A = client.eye
+		if(A.update_remote_sight(src)) //returns 1 if we override all other sight updates.
+			return
+
+	for(var/obj/item/organ/internal/cyberimp/eyes/E in internal_organs)
+		sight |= E.vision_flags
+		if(E.dark_view)
+			see_in_dark = max(see_in_dark,E.dark_view)
+		if(E.see_invisible)
+			see_invisible = min(see_invisible, E.see_invisible)
+
+	if(see_override)
+		see_invisible = see_override
+
+
+/mob/living/carbon/handle_hud_icons()
+	return
+
+/mob/living/carbon/handle_hud_icons_health()
+	if(healths)
+		if(stat != DEAD)
+			switch(health)
+				if(100 to INFINITY)
+					healths.icon_state = "health0"
+				if(80 to 100)
+					healths.icon_state = "health1"
+				if(60 to 80)
+					healths.icon_state = "health2"
+				if(40 to 60)
+					healths.icon_state = "health3"
+				if(20 to 40)
+					healths.icon_state = "health4"
+				if(0 to 20)
+					healths.icon_state = "health5"
+				else
+					healths.icon_state = "health6"
 		else
-			if(!P.reagents || P.reagents.total_volume <= 0)
-				LAZYREMOVE(processing_patches, P)
-				qdel(P)
-
-/mob/living/carbon/proc/handle_germs()
-	if(germ_level < GERM_LEVEL_AMBIENT && prob(30))	//if you're just standing there, you shouldn't get more germs beyond an ambient level
-		germ_level++
+			healths.icon_state = "health7"

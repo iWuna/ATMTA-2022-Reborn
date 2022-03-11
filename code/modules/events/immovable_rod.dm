@@ -11,12 +11,12 @@ In my current plan for it, 'solid' will be defined as anything with density == 1
 	announceWhen = 5
 
 /datum/event/immovable_rod/announce()
-	GLOB.event_announcement.Announce("What the fuck was that?!", "General Alert")
+	event_announcement.Announce("What the fuck was that?!", "General Alert")
 
 /datum/event/immovable_rod/start()
-	var/startside = pick(GLOB.cardinal)
-	var/turf/startT = spaceDebrisStartLoc(startside, level_name_to_num(MAIN_STATION))
-	var/turf/endT = spaceDebrisFinishLoc(startside, level_name_to_num(MAIN_STATION))
+	var/startside = pick(cardinal)
+	var/turf/startT = spaceDebrisStartLoc(startside, 1)
+	var/turf/endT = spaceDebrisFinishLoc(startside, 1)
 	new /obj/effect/immovablerod/event(startT, endT)
 
 /obj/effect/immovablerod
@@ -25,15 +25,14 @@ In my current plan for it, 'solid' will be defined as anything with density == 1
 	icon = 'icons/obj/objects.dmi'
 	icon_state = "immrod"
 	throwforce = 100
-	density = TRUE
-	anchored = TRUE
+	density = 1
+	anchored = 1
 	var/z_original = 0
 	var/destination
 	var/notify = TRUE
 	var/move_delay = 1
 
 /obj/effect/immovablerod/New(atom/start, atom/end, delay)
-	. = ..()
 	loc = start
 	z_original = z
 	destination = end
@@ -41,9 +40,9 @@ In my current plan for it, 'solid' will be defined as anything with density == 1
 	if(notify)
 		notify_ghosts("\A [src] is inbound!",
 				enter_link="<a href=?src=[UID()];follow=1>(Click to follow)</a>",
-				source = src, action = NOTIFY_FOLLOW)
-	GLOB.poi_list |= src
-	if(end?.z == z_original)
+				source=src, action=NOTIFY_FOLLOW)
+	poi_list |= src
+	if(end && end.z==z_original)
 		walk_towards(src, destination, move_delay)
 
 /obj/effect/immovablerod/Topic(href, href_list)
@@ -53,37 +52,29 @@ In my current plan for it, 'solid' will be defined as anything with density == 1
 			ghost.ManualFollow(src)
 
 /obj/effect/immovablerod/Destroy()
-	GLOB.poi_list.Remove(src)
+	poi_list.Remove(src)
 	return ..()
 
-/obj/effect/immovablerod/ex_act(severity)
+/obj/effect/immovablerod/ex_act(test)
 	return 0
-
-/obj/effect/immovablerod/singularity_act()
-	return
-
-/obj/effect/immovablerod/singularity_pull()
-	return
 
 /obj/effect/immovablerod/Bump(atom/clong)
 	if(prob(10))
-		playsound(src, 'sound/effects/bang.ogg', 50, TRUE)
+		playsound(src, 'sound/effects/bang.ogg', 50, 1)
 		audible_message("CLANG")
 
 	if(clong && prob(25))
 		x = clong.x
 		y = clong.y
 
-	if(isturf(clong) || isobj(clong))
+	if(istype(clong, /turf) || istype(clong, /obj))
 		if(clong.density)
 			clong.ex_act(2)
 
-	else if(ismob(clong))
-		if(ishuman(clong))
+	else if(istype(clong, /mob))
+		if(istype(clong, /mob/living/carbon/human))
 			var/mob/living/carbon/human/H = clong
-			H.visible_message("<span class='danger'>[H.name] is penetrated by an immovable rod!</span>" ,
-				"<span class='userdanger'>The rod penetrates you!</span>" ,
-				"<span class ='danger'>You hear a CLANG!</span>")
+			H.visible_message("<span class='danger'>[H.name] is penetrated by an immovable rod!</span>" , "<span class='userdanger'>The rod penetrates you!</span>" , "<span class ='danger'>You hear a CLANG!</span>")
 			H.adjustBruteLoss(160)
 		if(clong.density || prob(10))
 			clong.ex_act(2)

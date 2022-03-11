@@ -8,12 +8,12 @@
 	gas_transfer_coefficient = 0.90
 	put_on_delay = 20
 	var/resist_time = 0 //deciseconds of how long you need to gnaw to get rid of the gag, 0 to make it impossible to remove
-	var/mute = MUZZLE_MUTE_ALL
+	var/mute = MUTE_ALL
 	var/security_lock = FALSE // Requires brig access to remove 0 - Remove as normal
 	var/locked = FALSE //Indicates if a mask is locked, should always start as 0.
-
+	species_fit = list("Vox")
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/mask.dmi'
+		"Vox" = 'icons/mob/species/vox/mask.dmi'
 		)
 
 // Clumsy folks can't take the mask off themselves.
@@ -22,8 +22,8 @@
 		return 0
 	else if(security_lock && locked)
 		if(do_unlock(user))
-			visible_message("<span class='danger'>[user] unlocks [user.p_their()] [src.name].</span>", \
-								"<span class='userdanger'>[user] unlocks [user.p_their()] [src.name].</span>")
+			visible_message("<span class='danger'>[user] unlocks their [src.name].</span>", \
+								"<span class='userdanger'>[user] unlocks their [src.name].</span>")
 	..()
 	return 1
 
@@ -42,7 +42,7 @@
 		to_chat(user, "<span class='warning'>The lock vibrates as the card forces its locking system open.</span>")
 		do_break()
 		return TRUE
-	else if(ACCESS_BRIG in user.get_access())
+	else if(access_brig in user.get_access())
 		to_chat(user, "<span class='warning'>The muzzle unlocks with a click.</span>")
 		locked = FALSE
 		flags &= ~NODROP
@@ -80,6 +80,12 @@
 			to_chat(usr, "You lack the ability to manipulate the lock.")
 
 
+/obj/item/clothing/mask/muzzle/gag
+	name = "gag"
+	desc = "Stick this in their mouth to stop the noise."
+	icon_state = "gag"
+	w_class = WEIGHT_CLASS_TINY
+
 /obj/item/clothing/mask/muzzle/tapegag
 	name = "tape gag"
 	desc = "MHPMHHH!"
@@ -87,120 +93,33 @@
 	item_state = null
 	w_class = WEIGHT_CLASS_TINY
 	resist_time = 150
-	mute = MUZZLE_MUTE_MUFFLE
+	mute = MUTE_MUFFLE
 	flags = DROPDEL
-
+	species_fit = list("Vox", "Unathi", "Tajaran", "Vulpkanin", "Grey")
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/mask.dmi',
-		"Unathi" = 'icons/mob/clothing/species/unathi/mask.dmi',
-		"Tajaran" = 'icons/mob/clothing/species/tajaran/mask.dmi',
-		"Vulpkanin" = 'icons/mob/clothing/species/vulpkanin/mask.dmi',
-		"Grey" = 'icons/mob/clothing/species/grey/mask.dmi'
+		"Vox" = 'icons/mob/species/vox/mask.dmi',
+		"Unathi" = 'icons/mob/species/unathi/mask.dmi',
+		"Tajaran" = 'icons/mob/species/tajaran/mask.dmi',
+		"Vulpkanin" = 'icons/mob/species/vulpkanin/mask.dmi',
+		"Grey" = 'icons/mob/species/grey/mask.dmi'
 		)
 
-/obj/item/clothing/mask/muzzle/tapegag/dropped(mob/user)
-	var/obj/item/trash/tapetrash/TT = new
-	transfer_fingerprints_to(TT)
-	user.transfer_fingerprints_to(TT)
-	user.put_in_active_hand(TT)
-	playsound(src, 'sound/items/poster_ripped.ogg', 40, 1)
+/obj/item/clothing/mask/muzzle/tapegag/dropped(mob/living/carbon/human/user)
+	var/atom/movable/R = new /obj/item/trash/tapetrash
+	var/turf/T = get_turf(src)
+	R.loc = T
+	transfer_fingerprints_to(R)
+	playsound(src,'sound/items/poster_ripped.ogg',40,1)
 	user.emote("scream")
-	..()
+	. = ..()
 
 /obj/item/clothing/mask/muzzle/safety
 	name = "safety muzzle"
 	desc = "A muzzle designed to prevent biting."
-	icon_state = "muzzle_secure"
-	item_state = "muzzle_secure"
-	resist_time = 0
-	mute = MUZZLE_MUTE_NONE
+	resist_time = 600
+	mute = MUTE_NONE
 	security_lock = TRUE
 	locked = FALSE
-	materials = list(MAT_METAL=500, MAT_GLASS=50)
-
-	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/mask.dmi',
-		"Unathi" = 'icons/mob/clothing/species/unathi/mask.dmi',
-		"Tajaran" = 'icons/mob/clothing/species/tajaran/mask.dmi',
-		"Vulpkanin" = 'icons/mob/clothing/species/vulpkanin/mask.dmi',
-		"Grey" = 'icons/mob/clothing/species/grey/mask.dmi',
-		"Drask" = 'icons/mob/clothing/species/drask/mask.dmi'
-		)
-
-/obj/item/clothing/mask/muzzle/safety/shock
-	name = "shock muzzle"
-	desc = "A muzzle designed to prevent biting. This one is fitted with a behavior correction system."
-	var/obj/item/assembly/trigger = null
-	origin_tech = "materials=1;engineering=1"
-	materials = list(MAT_METAL=500, MAT_GLASS=50)
-
-/obj/item/clothing/mask/muzzle/safety/shock/attackby(obj/item/W, mob/user, params)
-	if(istype(W, /obj/item/assembly/signaler) || istype(W, /obj/item/assembly/voice))
-		if(istype(trigger, /obj/item/assembly/signaler) || istype(trigger, /obj/item/assembly/voice))
-			to_chat(user, "<span class='notice'>Something is already attached to [src].</span>")
-			return FALSE
-		if(!user.drop_item())
-			to_chat(user, "<span class='warning'>You are unable to insert [W] into [src].</span>")
-			return FALSE
-		trigger = W
-		trigger.forceMove(src)
-		trigger.master = src
-		trigger.holder = src
-		AddComponent(/datum/component/proximity_monitor)
-		to_chat(user, "<span class='notice'>You attach [W] to [src].</span>")
-		return TRUE
-	else if(istype(W, /obj/item/assembly))
-		to_chat(user, "<span class='notice'>That won't fit in [src]. Perhaps a signaler or voice analyzer would?</span>")
-		return FALSE
-
-	return ..()
-
-/obj/item/clothing/mask/muzzle/safety/shock/screwdriver_act(mob/user, obj/item/I)
-	if(!trigger)
-		return
-	. = TRUE
-	if(!I.use_tool(src, user, 0, volume = I.tool_volume))
-		return
-	to_chat(user, "<span class='notice'>You remove [trigger] from [src].</span>")
-	trigger.forceMove(get_turf(user))
-	trigger.master = null
-	trigger.holder = null
-	trigger = null
-	qdel(GetComponent(/datum/component/proximity_monitor))
-
-/obj/item/clothing/mask/muzzle/safety/shock/proc/can_shock(obj/item/clothing/C)
-	if(istype(C))
-		if(isliving(C.loc))
-			return C.loc
-	else if(isliving(loc))
-		return loc
-	return FALSE
-
-/obj/item/clothing/mask/muzzle/safety/shock/proc/process_activation(obj/D, normal = 1, special = 1)
-	visible_message("[bicon(src)] *beep* *beep*", "*beep* *beep*")
-	var/mob/M = can_shock(loc)
-	if(M)
-		to_chat(M, "<span class='danger'>You feel a sharp shock!</span>")
-		do_sparks(3, 1, M)
-
-		M.Weaken(5)
-		M.Stuttering(1)
-		M.Jitter(20)
-	return
-
-/obj/item/clothing/mask/muzzle/safety/shock/HasProximity(atom/movable/AM)
-	if(trigger)
-		trigger.HasProximity(AM)
-
-
-/obj/item/clothing/mask/muzzle/safety/shock/hear_talk(mob/living/M as mob, list/message_pieces)
-	if(trigger)
-		trigger.hear_talk(M, message_pieces)
-
-/obj/item/clothing/mask/muzzle/safety/shock/hear_message(mob/living/M as mob, msg)
-	if(trigger)
-		trigger.hear_message(M, msg)
-
 
 
 /obj/item/clothing/mask/surgical
@@ -212,20 +131,19 @@
 	flags_cover = MASKCOVERSMOUTH
 	gas_transfer_coefficient = 0.90
 	permeability_coefficient = 0.01
-	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 25, RAD = 0, FIRE = 0, ACID = 0)
+	armor = list(melee = 0, bullet = 0, laser = 0, energy = 0, bomb = 0, bio = 25, rad = 0)
 	actions_types = list(/datum/action/item_action/adjust)
-
+	species_fit = list("Vox", "Unathi", "Tajaran", "Vulpkanin", "Grey")
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/mask.dmi',
-		"Unathi" = 'icons/mob/clothing/species/unathi/mask.dmi',
-		"Tajaran" = 'icons/mob/clothing/species/tajaran/mask.dmi',
-		"Vulpkanin" = 'icons/mob/clothing/species/vulpkanin/mask.dmi',
-		"Grey" = 'icons/mob/clothing/species/grey/mask.dmi',
-		"Drask" = 'icons/mob/clothing/species/drask/mask.dmi'
+		"Vox" = 'icons/mob/species/vox/mask.dmi',
+		"Unathi" = 'icons/mob/species/unathi/mask.dmi',
+		"Tajaran" = 'icons/mob/species/tajaran/mask.dmi',
+		"Vulpkanin" = 'icons/mob/species/vulpkanin/mask.dmi',
+		"Grey" = 'icons/mob/species/grey/mask.dmi'
 		)
 
 
-/obj/item/clothing/mask/surgical/attack_self(mob/user)
+/obj/item/clothing/mask/surgical/attack_self(var/mob/user)
 	adjustmask(user)
 
 /obj/item/clothing/mask/fakemoustache
@@ -234,15 +152,13 @@
 	icon_state = "fake-moustache"
 	flags_inv = HIDEFACE
 	actions_types = list(/datum/action/item_action/pontificate)
-	dog_fashion = /datum/dog_fashion/head/not_ian
-
+	species_fit = list("Vox", "Unathi", "Tajaran", "Vulpkanin", "Grey")
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/mask.dmi',
-		"Unathi" = 'icons/mob/clothing/species/unathi/mask.dmi',
-		"Tajaran" = 'icons/mob/clothing/species/tajaran/mask.dmi',
-		"Vulpkanin" = 'icons/mob/clothing/species/vulpkanin/mask.dmi',
-		"Grey" = 'icons/mob/clothing/species/grey/mask.dmi',
-		"Drask" = 'icons/mob/clothing/species/drask/mask.dmi'
+		"Vox" = 'icons/mob/species/vox/mask.dmi',
+		"Unathi" = 'icons/mob/species/unathi/mask.dmi',
+		"Tajaran" = 'icons/mob/species/tajaran/mask.dmi',
+		"Vulpkanin" = 'icons/mob/species/vulpkanin/mask.dmi',
+		"Grey" = 'icons/mob/species/grey/mask.dmi'
 		)
 
 /obj/item/clothing/mask/fakemoustache/attack_self(mob/user)
@@ -253,7 +169,7 @@
 		return 1
 
 /obj/item/clothing/mask/fakemoustache/proc/pontificate(mob/user)
-	user.visible_message("<span class='danger'>\ [user] twirls [user.p_their()] moustache and laughs [pick("fiendishly","maniacally","diabolically","evilly")]!</span>")
+	user.visible_message("<span class='danger'>\ [user] twirls \his moustache and laughs [pick("fiendishly","maniacally","diabolically","evilly")]!</span>")
 
 //scarves (fit in in mask slot)
 
@@ -265,7 +181,6 @@
 	flags_cover = MASKCOVERSMOUTH
 	w_class = WEIGHT_CLASS_SMALL
 	gas_transfer_coefficient = 0.90
-
 
 /obj/item/clothing/mask/redscarf
 	name = "red scarf"
@@ -313,14 +228,11 @@
 	flags = BLOCKHAIR
 	flags_inv = HIDEFACE
 	w_class = WEIGHT_CLASS_SMALL
-	var/voicechange = FALSE
+	var/voicechange = 0
 	var/temporaryname = " the Horse"
 	var/originalname = ""
 
-	sprite_sheets = list(
-		"Grey" = 'icons/mob/clothing/species/grey/mask.dmi',
-		"Drask" = 'icons/mob/clothing/species/drask/mask.dmi'
-	)
+
 
 /obj/item/clothing/mask/horsehead/equipped(mob/user, slot)
 	if(flags & NODROP)	//cursed masks only
@@ -346,10 +258,6 @@
 		return
 	if(user.real_name == "[originalname][temporaryname]" || user.real_name == "A Horse With No Name") //if it's somehow changed while the mask is on it doesn't revert
 		user.real_name = originalname
-
-/obj/item/clothing/mask/horsehead/change_speech_verb()
-	if(voicechange)
-		return pick("whinnies", "neighs", "says")
 
 /obj/item/clothing/mask/face
 	flags_inv = HIDEFACE
@@ -412,11 +320,11 @@
 	w_class = WEIGHT_CLASS_SMALL
 
 /obj/item/clothing/mask/gas/clown_hat/pennywise
-	name = "\improper Pennywise mask"
+	name = "Pennywise Mask"
 	desc = "It's the eater of worlds, and of children."
 	icon_state = "pennywise_mask"
 	item_state = "pennywise_mask"
-
+	species_fit = list("Vox")
 	flags = BLOCK_GAS_SMOKE_EFFECT | AIRTIGHT | BLOCKHAIR
 
 // Bandanas
@@ -429,18 +337,17 @@
 	slot_flags = SLOT_MASK
 	adjusted_flags = SLOT_HEAD
 	icon_state = "bandbotany"
-
+	species_fit = list("Vox", "Unathi", "Tajaran", "Vulpkanin", "Grey")
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/mask.dmi',
-		"Unathi" = 'icons/mob/clothing/species/unathi/mask.dmi',
-		"Tajaran" = 'icons/mob/clothing/species/tajaran/mask.dmi',
-		"Vulpkanin" = 'icons/mob/clothing/species/vulpkanin/mask.dmi',
-		"Grey" = 'icons/mob/clothing/species/grey/mask.dmi',
-		"Drask" = 'icons/mob/clothing/species/drask/mask.dmi'
+		"Vox" = 'icons/mob/species/vox/mask.dmi',
+		"Unathi" = 'icons/mob/species/unathi/mask.dmi',
+		"Tajaran" = 'icons/mob/species/tajaran/mask.dmi',
+		"Vulpkanin" = 'icons/mob/species/vulpkanin/mask.dmi',
+		"Grey" = 'icons/mob/species/grey/mask.dmi'
 		)
 	actions_types = list(/datum/action/item_action/adjust)
 
-/obj/item/clothing/mask/bandana/attack_self(mob/user)
+/obj/item/clothing/mask/bandana/attack_self(var/mob/user)
 	adjustmask(user)
 
 /obj/item/clothing/mask/bandana/red
@@ -495,18 +402,13 @@
 	item_color = "black"
 	desc = "It's a black bandana."
 
-/obj/item/clothing/mask/bandana/durathread
-	name = "durathread bandana"
-	desc =  "A bandana made from durathread, you wish it would provide some protection to its wearer, but it's far too thin..."
-	icon_state = "banddurathread"
-
 /obj/item/clothing/mask/cursedclown
 	name = "cursed clown mask"
 	desc = "This is a very, very odd looking mask."
 	icon = 'icons/goonstation/objects/clothing/mask.dmi'
 	icon_state = "cursedclown"
 	item_state = "cclown_hat"
-	resistance_flags = LAVA_PROOF | FIRE_PROOF | ACID_PROOF
+	unacidable = 1 // HUNKE
 	icon_override = 'icons/goonstation/mob/clothing/mask.dmi'
 	lefthand_file = 'icons/goonstation/mob/inhands/clothing_lefthand.dmi'
 	righthand_file = 'icons/goonstation/mob/inhands/clothing_righthand.dmi'
@@ -524,6 +426,5 @@
 /obj/item/clothing/mask/cursedclown/suicide_act(mob/user)
 	user.visible_message("<span class='danger'>[user] gazes into the eyes of [src]. [src] gazes back!</span>")
 	spawn(10)
-		if(user)
-			user.gib()
-	return OBLITERATION
+		user.gib()
+	return BRUTELOSS

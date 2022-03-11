@@ -25,7 +25,6 @@
 	icon_state = "cocoapod"
 	filling_color = "#FFD700"
 	bitesize_mod = 2
-	tastes = list("cocoa" = 1)
 
 // Vanilla Pod
 /obj/item/seeds/cocoapod/vanillapod
@@ -45,5 +44,3 @@
 	desc = "Fattening... Mmmmm... vanilla."
 	icon_state = "vanillapod"
 	filling_color = "#FFD700"
-	tastes = list("vanilla" = 1)
-	distill_reagent = "vanilla" //Takes longer, but you can get even more vanilla from it.

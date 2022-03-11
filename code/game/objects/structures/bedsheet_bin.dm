@@ -16,10 +16,9 @@ LINEN BINS
 	throw_range = 2
 	w_class = WEIGHT_CLASS_TINY
 	item_color = "white"
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 	slot_flags = SLOT_BACK
 
-	dog_fashion = /datum/dog_fashion/head/ghost
 	var/list/dream_messages = list("white")
 	var/list/nightmare_messages = list("black")
 	var/comfort = 0.5
@@ -35,15 +34,6 @@ LINEN BINS
 	add_fingerprint(user)
 	return
 
-/obj/item/bedsheet/attackby(obj/item/I, mob/user, params)
-	if(I.sharp)
-		var/obj/item/stack/sheet/cloth/C = new (get_turf(src), 3)
-		transfer_fingerprints_to(C)
-		C.add_fingerprint(user)
-		qdel(src)
-		to_chat(user, "<span class='notice'>You tear [src] up.</span>")
-	else
-		return ..()
 
 /obj/item/bedsheet/blue
 	icon_state = "sheetblue"
@@ -97,12 +87,6 @@ LINEN BINS
 	dream_messages = list("yellow")
 	nightmare_messages = list("locker full of banana peels")
 
-/obj/item/bedsheet/black
-	icon_state = "sheetblack"
-	item_color = "sheetblack"
-	dream_messages = list("black")
-	nightmare_messages = list("the void of space")
-
 /obj/item/bedsheet/mime
 	name = "mime's blanket"
 	desc = "A very soothing striped blanket.  All the noise just seems to fade out when you're under the covers in this."
@@ -134,11 +118,6 @@ LINEN BINS
 	item_color = "director"
 	dream_messages = list("authority", "a silvery ID", "a bomb", "a mech", "a facehugger", "maniacal laughter", "the research director")
 	nightmare_messages = list("toxins full of plasma", "UPGRADE THE SLEEPERS", "rogue ai")
-
-/obj/item/bedsheet/rd/royal_cape
-	name = "Royal Cape of the Liberator"
-	desc = "Majestic."
-	dream_messages = list("mining", "stone", "a golem", "freedom", "doing whatever")
 
 /obj/item/bedsheet/medical
 	name = "medical blanket"
@@ -236,43 +215,34 @@ LINEN BINS
 	icon = 'icons/obj/structures.dmi'
 	icon_state = "linenbin-full"
 	anchored = 1
-	resistance_flags = FLAMMABLE
-	max_integrity = 70
+	burn_state = FLAMMABLE
+	burntime = 20
 	var/amount = 20
 	var/list/sheets = list()
 	var/obj/item/hidden = null
 
-/obj/structure/bedsheetbin/Destroy()
-	QDEL_LIST(sheets)
-	hidden.forceMove(get_turf(src))
-	hidden = null
-	return ..()
-
 
 /obj/structure/bedsheetbin/examine(mob/user)
-	. = ..()
+	..(user)
 	if(amount < 1)
-		. += "There are no bed sheets in the bin."
-	else if(amount == 1)
-		. += "There is one bed sheet in the bin."
-	else
-		. += "There are [amount] bed sheets in the bin."
+		to_chat(user, "There are no bed sheets in the bin.")
+		return
+	if(amount == 1)
+		to_chat(user, "There is one bed sheet in the bin.")
+		return
+	to_chat(user, "There are [amount] bed sheets in the bin.")
 
 
 /obj/structure/bedsheetbin/update_icon()
 	switch(amount)
-		if(0)
-			icon_state = "linenbin-empty"
-		if(1 to amount / 2)
-			icon_state = "linenbin-half"
-		else
-			icon_state = "linenbin-full"
+		if(0)				icon_state = "linenbin-empty"
+		if(1 to amount / 2)	icon_state = "linenbin-half"
+		else				icon_state = "linenbin-full"
 
 
-/obj/structure/bedsheetbin/fire_act(datum/gas_mixture/air, exposed_temperature, exposed_volume, global_overlay = TRUE)
-	if(amount)
-		amount = 0
-		update_icon()
+/obj/structure/bedsheetbin/fire_act()
+	if(!amount)
+		return
 	..()
 
 /obj/structure/bedsheetbin/burn()
@@ -280,28 +250,22 @@ LINEN BINS
 	extinguish()
 	update_icon()
 
-/obj/structure/bedsheetbin/attackby(obj/item/I, mob/user, params)
+/obj/structure/bedsheetbin/attackby(obj/item/I as obj, mob/user as mob, params)
 	if(istype(I, /obj/item/bedsheet))
-		if(!user.drop_item())
-			to_chat(user, "<span class='notice'>[I] is stuck to your hand!</span>")
-			return
-		I.forceMove(src)
+		user.drop_item()
+		I.loc = src
 		sheets.Add(I)
 		amount++
 		to_chat(user, "<span class='notice'>You put [I] in [src].</span>")
 	else if(amount && !hidden && I.w_class < WEIGHT_CLASS_BULKY)	//make sure there's sheets to hide it among, make sure nothing else is hidden in there.
-		if(I.flags & ABSTRACT)
-			return
-		if(!user.drop_item())
-			to_chat(user, "<span class='notice'>[I] is stuck to your hand!</span>")
-			return
-		I.forceMove(src)
+		user.drop_item()
+		I.loc = src
 		hidden = I
 		to_chat(user, "<span class='notice'>You hide [I] among the sheets.</span>")
 
 
 
-/obj/structure/bedsheetbin/attack_hand(mob/user)
+/obj/structure/bedsheetbin/attack_hand(mob/user as mob)
 	if(amount >= 1)
 		amount--
 
@@ -326,7 +290,7 @@ LINEN BINS
 	add_fingerprint(user)
 
 
-/obj/structure/bedsheetbin/attack_tk(mob/user)
+/obj/structure/bedsheetbin/attack_tk(mob/user as mob)
 	if(amount >= 1)
 		amount--
 

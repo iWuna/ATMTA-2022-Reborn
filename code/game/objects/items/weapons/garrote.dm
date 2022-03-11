@@ -39,12 +39,12 @@
 
 /obj/item/twohanded/garrote/wield(mob/living/carbon/user)
 	if(strangling)
-		user.visible_message("<span class='notice'>[user] removes [src] from [strangling]'s neck.</span>",
-				"<span class='warning'>You remove [src] from [strangling]'s neck.</span>")
+		user.visible_message("<span class='info'>[user] removes the [src] from [strangling]'s neck.</span>", \
+				"<span class='warning'>You remove the [src] from [strangling]'s neck.</span>")
 
 		strangling = null
 		update_icon()
-		STOP_PROCESSING(SSobj, src)
+		processing_objects.Remove(src)
 
 	else
 		..()
@@ -75,7 +75,7 @@
 		return
 
 	if(improvised && ((M.head && (M.head.flags_cover & HEADCOVERSMOUTH)) || (M.wear_mask && (M.wear_mask.flags_cover & MASKCOVERSMOUTH)))) // Improvised garrotes are blocked by mouth-covering items.
-		to_chat(user, "<span class = 'warning'>[M]'s neck is blocked by something [M.p_theyre()] wearing!</span>")
+		to_chat(user, "<span class = 'warning'>[M]'s neck is blocked by something they're wearing!</span>")
 
 	if(strangling)
 		to_chat(user, "<span class = 'warning'>You cannot use [src] on two people at once!</span>")
@@ -84,7 +84,8 @@
 	unwield(U)
 
 	U.swap_hand() // For whatever reason the grab will not properly work if we don't have the free hand active.
-	var/obj/item/grab/G = M.grabbedby(U, 1)
+	M.grabbedby(U, 1)
+	var/obj/item/grab/G = U.get_active_hand()
 	U.swap_hand()
 
 	if(G && istype(G))
@@ -97,14 +98,14 @@
 			M.AdjustSilence(1)
 
 	garrote_time = world.time + 10
-	START_PROCESSING(SSobj, src)
+	processing_objects.Add(src)
 	strangling = M
 	update_icon()
 
 	playsound(src.loc, 'sound/weapons/cablecuff.ogg', 15, 1, -1)
 
-	M.visible_message("<span class='danger'>[U] comes from behind and begins garroting [M] with [src]!</span>", \
-				  "<span class='userdanger'>[U] begins garroting you with [src]![improvised ? "" : " You are unable to speak!"]</span>", \
+	M.visible_message("<span class='danger'>[U] comes from behind and begins garroting [M] with the [src]!</span>", \
+				  "<span class='userdanger'>[U]\ begins garroting you with the [src]![improvised ? "" : " You are unable to speak!"]</span>", \
 				  "You hear struggling and wire strain against flesh!")
 
 	return
@@ -113,14 +114,14 @@
 	if(!strangling)
 		// Our mark got gibbed or similar
 		update_icon()
-		STOP_PROCESSING(SSobj, src)
+		processing_objects.Remove(src)
 		return
 
 
 	if(!istype(loc, /mob/living/carbon/human))
 		strangling = null
 		update_icon()
-		STOP_PROCESSING(SSobj, src)
+		processing_objects.Remove(src)
 		return
 
 	var/mob/living/carbon/human/user = loc
@@ -133,22 +134,22 @@
 		G = user.r_hand
 
 	else
-		user.visible_message("<span class='warning'>[user] loses [user.p_their()] grip on [strangling]'s neck.</span>", \
+		user.visible_message("<span class='warning'>[user] loses \his grip on [strangling]'s neck.</span>", \
 				 "<span class='warning'>You lose your grip on [strangling]'s neck.</span>")
 
 		strangling = null
 		update_icon()
-		STOP_PROCESSING(SSobj, src)
+		processing_objects.Remove(src)
 
 		return
 
 	if(!G.affecting)
-		user.visible_message("<span class='warning'>[user] loses [user.p_their()] grip on [strangling]'s neck.</span>", \
+		user.visible_message("<span class='warning'>[user] loses \his grip on [strangling]'s neck.</span>", \
 				"<span class='warning'>You lose your grip on [strangling]'s neck.</span>")
 
 		strangling = null
 		update_icon()
-		STOP_PROCESSING(SSobj, src)
+		processing_objects.Remove(src)
 
 		return
 
@@ -166,6 +167,6 @@
 
 
 /obj/item/twohanded/garrote/suicide_act(mob/user)
-	user.visible_message("<span class='suicide'>[user] is wrapping [src] around [user.p_their()] neck and pulling the handles! It looks like [user.p_theyre()] trying to commit suicide.</span>")
+	user.visible_message("<span class='suicide'>[user] is wrapping the [src] around \his neck and pulling the handles! It looks like \he's trying to commit suicide.</span>")
 	playsound(src.loc, 'sound/weapons/cablecuff.ogg', 15, 1, -1)
-	return OXYLOSS
+	return (OXYLOSS)

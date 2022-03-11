@@ -1,28 +1,29 @@
 /obj/structure/closet/secure_closet/guncabinet
 	name = "gun cabinet"
-	req_access = list(ACCESS_ARMORY)
+	req_access = list(access_armory)
 	icon = 'icons/obj/guncabinet.dmi'
 	icon_state = "base"
-	anchored = TRUE
+	icon_closed = "base"
+	icon_opened = "base"
+	icon_locked = "base"
+	icon_broken = "base"
+	icon_off = "base"
+
+/obj/structure/closet/secure_closet/guncabinet/New()
+	..()
+	update_icon()
+
+
 
 /obj/structure/closet/secure_closet/guncabinet/toggle()
 	..()
 	update_icon()
 
-/obj/structure/closet/secure_closet/guncabinet/take_contents()
-	..()
-	update_icon()
-
-/obj/structure/closet/secure_closet/guncabinet/emag_act(mob/user)
-	if(!broken)
-		broken = TRUE
-		locked = FALSE
-		to_chat(user, "<span class='notice'>You break the lock on [src].</span>")
-		update_icon()
-
-/obj/structure/closet/secure_closet/guncabinet/update_overlays()
-	cut_overlays()
-	if(!opened)
+/obj/structure/closet/secure_closet/guncabinet/update_icon()
+	overlays.Cut()
+	if(opened)
+		overlays += icon(icon,"door_open")
+	else
 		var/lazors = 0
 		var/shottas = 0
 		for(var/obj/item/gun/G in contents)
@@ -32,7 +33,7 @@
 				shottas++
 		if(lazors || shottas)
 			for(var/i = 0 to 2)
-				var/image/gun = image(icon(icon))
+				var/image/gun = image(icon(src.icon))
 
 				if(lazors > 0 && (shottas <= 0 || prob(50)))
 					lazors--
@@ -44,8 +45,11 @@
 				gun.pixel_x = i*4
 				overlays += gun
 
-		add_overlay("door")
+		overlays += icon(src.icon,"door")
+
 		if(broken)
-			add_overlay("off")
+			overlays += icon(src.icon,"broken")
 		else if(locked)
-			add_overlay("locked")
+			overlays += icon(src.icon,"locked")
+		else
+			overlays += icon(src.icon,"open")

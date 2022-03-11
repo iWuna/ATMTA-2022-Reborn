@@ -10,49 +10,19 @@
  */
 /obj/item/stack
 	origin_tech = "materials=1"
-	/// Whether this stack is a `/cyborg` subtype or not.
-	var/is_cyborg = FALSE
-	/// The energy storage datum that will be used with this stack. Used only with `/cyborg` type stacks.
-	var/datum/robot_energy_storage/source
-	/// Which `robot_energy_storage` to choose when this stack is created in cyborgs. Used only with `/cyborg` type stacks.
-	var/energy_type
-	/// How much energy using 1 sheet from the stack costs. Used only with `/cyborg` type stacks.
-	var/cost = 1
-	/// A list of recipes buildable with this stack.
-	var/list/recipes = list()
+	var/list/recipes = list() // /datum/stack_recipe
 	var/singular_name
 	var/amount = 1
 	var/to_transfer = 0
-	var/max_amount = 50 //also see stack recipes initialisation, param "max_res_amount" must be equal to this max_amount
+	var/max_amount //also see stack recipes initialisation, param "max_res_amount" must be equal to this max_amount
 	var/merge_type = null // This path and its children should merge with this stack, defaults to src.type
-	var/recipe_width = 400 //Width of the recipe popup
-	var/recipe_height = 400 //Height of the recipe popup
 
-/obj/item/stack/New(loc, new_amount, merge = TRUE)
+/obj/item/stack/New(var/loc, var/amt = null)
 	..()
-	if(new_amount != null)
-		amount = new_amount
-	while(amount > max_amount)
-		amount -= max_amount
-		new type(loc, max_amount, FALSE)
+	if(amt != null)	//Allow for stacks with the amount=0
+		amount = amt
 	if(!merge_type)
 		merge_type = type
-	if(merge && !(amount >= max_amount))
-		for(var/obj/item/stack/S in loc)
-			if(S.merge_type == merge_type)
-				merge(S)
-
-/obj/item/stack/Crossed(obj/O, oldloc)
-	if(amount >= max_amount || ismob(loc)) // Prevents unnecessary call. Also prevents merging stack automatically in a mob's inventory
-		return
-	if(istype(O, merge_type) && !O.throwing)
-		merge(O)
-	..()
-
-/obj/item/stack/hitby(atom/movable/AM, skipcatch, hitpush, blocked, datum/thrownthing/throwingdatum)
-	if(istype(AM, merge_type) && !(amount >= max_amount))
-		merge(AM)
-	. = ..()
 
 /obj/item/stack/Destroy()
 	if(usr && usr.machine == src)
@@ -60,29 +30,8 @@
 	return ..()
 
 /obj/item/stack/examine(mob/user)
-	. = ..()
-	if(!in_range(user, src))
-		return
-
-	if(is_cyborg)
-		if(singular_name)
-			. += "There is enough energy for [get_amount()] [singular_name]\s."
-		else
-			. += "There is enough energy for [get_amount()]."
-		return
-
-	if(singular_name)
-		. += "There are [amount] [singular_name]\s in the stack."
-	else
-		. += "There are [amount] [name]\s in the stack."
-	. +="<span class='notice'>Alt-click to take a custom amount.</span>"
-
-/obj/item/stack/proc/add(newamount)
-	if(is_cyborg)
-		source.add_charge(newamount * cost)
-	else
-		amount += newamount
-	update_icon()
+	if(..(user, 1))
+		to_chat(user, "There are [amount] [singular_name]\s in the stack.")
 
 /obj/item/stack/attack_self(mob/user)
 	list_recipes(user)
@@ -108,10 +57,8 @@
 	if(!recipes)
 		return
 
-	if(get_amount() <= 0)
+	if(amount <= 0)
 		user << browse(null, "window=stack")
-		if(is_cyborg)
-			to_chat(user, "<span class='warning'>You don't have enough energy to dispense more [name]!</span>")
 		return
 
 	user.set_machine(src) //for correct work of onclose
@@ -121,7 +68,7 @@
 		var/datum/stack_recipe_list/srl = recipe_list[recipes_sublist]
 		recipe_list = srl.recipes
 
-	var/t1 = "Amount Left: [get_amount()]<br>"
+	var/t1 = "Amount Left: [amount]<br>"
 	for(var/i in 1 to recipe_list.len)
 		var/E = recipe_list[i]
 		if(isnull(E))
@@ -137,11 +84,16 @@
 
 		if(istype(E, /datum/stack_recipe))
 			var/datum/stack_recipe/R = E
-			var/max_multiplier = round(get_amount() / R.req_amount)
+			var/max_multiplier = round(src.amount / R.req_amount)
 			var/title
 			var/can_build = 1
 			can_build = can_build && (max_multiplier > 0)
-
+			/*
+			if(R.one_per_turf)
+				can_build = can_build && !(locate(R.result_type) in usr.loc)
+			if(R.on_floor)
+				can_build = can_build && istype(usr.loc, /turf/simulated/floor)
+			*/
 			if(R.res_amount > 1)
 				title += "[R.res_amount]x [R.title]\s"
 			else
@@ -152,18 +104,17 @@
 			else
 				t1 += "[title]"
 				continue
-			if(R.max_res_amount > 1 && max_multiplier > 1)
+			if(R.max_res_amount>1 && max_multiplier>1)
 				max_multiplier = min(max_multiplier, round(R.max_res_amount / R.res_amount))
 				t1 += " |"
-
-				var/list/multipliers = list(5, 10, 25)
+				var/list/multipliers = list(5,10,25)
 				for(var/n in multipliers)
-					if(max_multiplier >= n)
+					if(max_multiplier>=n)
 						t1 += " <A href='?src=[UID()];make=[i];multiplier=[n]'>[n * R.res_amount]x</A>"
 				if(!(max_multiplier in multipliers))
 					t1 += " <A href='?src=[UID()];make=[i];multiplier=[max_multiplier]'>[max_multiplier * R.res_amount]x</A>"
 
-	var/datum/browser/popup = new(user, "stack", name, recipe_width, recipe_height)
+	var/datum/browser/popup = new(user, "stack", name, 400, 400)
 	popup.set_content(t1)
 	popup.open(0)
 	onclose(user, "stack")
@@ -177,7 +128,7 @@
 		list_recipes(usr, text2num(href_list["sublist"]))
 
 	if(href_list["make"])
-		if(amount < 0 && !is_cyborg)
+		if(amount < 1)
 			qdel(src) //Never should happen
 
 		var/list/recipes_list = recipes
@@ -187,66 +138,46 @@
 
 		var/datum/stack_recipe/R = recipes_list[text2num(href_list["make"])]
 		var/multiplier = text2num(href_list["multiplier"])
-		if(!multiplier || multiplier <= 0 || multiplier > 50 || !IS_INT(multiplier)) // Href exploit checks
-			if(multiplier) // It existed but they tried to fuck with it
-				message_admins("[key_name_admin(usr)] just attempted to href exploit sheet crafting with an invalid multiplier. Ban highly advised.")
+		var/atom/creation_loc = (loc == usr) ? usr.loc : loc
+		if(!multiplier)
 			multiplier = 1
 
-		if(get_amount() < R.req_amount * multiplier)
-			if(R.req_amount * multiplier > 1)
+		if(amount < R.req_amount * multiplier)
+			if(R.req_amount * multiplier>1)
 				to_chat(usr, "<span class='warning'>You haven't got enough [src] to build \the [R.req_amount * multiplier] [R.title]\s!</span>")
 			else
 				to_chat(usr, "<span class='warning'>You haven't got enough [src] to build \the [R.title]!</span>")
-			return FALSE
+			return 0
 
-		if(R.window_checks && !valid_window_location(get_turf(src), usr.dir))
-			to_chat(usr, "<span class='warning'>\The [R.title] won't fit here!</span>")
-			return FALSE
-
-		if(R.one_per_turf && (locate(R.result_type) in get_turf(src)))
+		if(R.one_per_turf && (locate(R.result_type) in creation_loc))
 			to_chat(usr, "<span class='warning'>There is another [R.title] here!</span>")
-			return FALSE
+			return 0
 
-		if(R.on_floor && !istype(get_turf(src), /turf/simulated))
+		if(R.on_floor && !istype(creation_loc, /turf/simulated))
 			to_chat(usr, "<span class='warning'>\The [R.title] must be constructed on the floor!</span>")
-			return FALSE
-
-		if(R.cult_structure)
-			if(usr.holy_check())
-				return
-			if(!is_level_reachable(usr.z))
-				to_chat(usr, "<span class='warning'>The energies of this place interfere with the metal shaping!</span>")
-				return
-			if(locate(/obj/structure/cult) in get_turf(src))
-				to_chat(usr, "<span class='warning'>There is a structure here!</span>")
-				return FALSE
+			return 0
 
 		if(R.time)
-			to_chat(usr, "<span class='notice'>Building [R.title]...</span>")
-			if(!do_after(usr, R.time, target = loc))
-				return FALSE
+			to_chat(usr, "<span class='notice'>Building [R.title] ...</span>")
+			if(!do_after(usr, R.time, target = usr))
+				return 0
 
-		if(R.cult_structure && locate(/obj/structure/cult) in get_turf(src)) //Check again after do_after to prevent queuing construction exploit.
-			to_chat(usr, "<span class='warning'>There is a structure here!</span>")
-			return FALSE
-
-		if(get_amount() < R.req_amount * multiplier)
+		if(amount < R.req_amount * multiplier)
 			return
 
-		var/atom/O
-		if(R.max_res_amount > 1) //Is it a stack?
-			O = new R.result_type(get_turf(src), R.res_amount * multiplier)
-		else
-			O = new R.result_type(get_turf(src))
-		O.setDir(usr.dir)
-		use(R.req_amount * multiplier)
-		updateUsrDialog()
+		var/atom/O = new R.result_type(creation_loc)
+		O.dir = usr.dir
+		if(R.max_res_amount > 1)
+			var/obj/item/stack/new_item = O
+			new_item.amount = R.res_amount * multiplier
+			//new_item.add_to_stacks(usr)
 
 		R.post_build(src, O)
 
+		amount -= R.req_amount * multiplier
 		if(amount < 1) // Just in case a stack's amount ends up fractional somehow
 			var/oldsrc = src
-			src = null //dont kill proc after qdel()
+			src = null //dont kill proc after del()
 			usr.unEquip(oldsrc, 1)
 			qdel(oldsrc)
 			if(istype(O, /obj/item))
@@ -264,22 +195,38 @@
 			interact(usr)
 			return
 
-/obj/item/stack/use(used, check = TRUE)
-	if(check && zero_amount())
-		return FALSE
-	if(is_cyborg)
-		return source.use_charge(used * cost)
+/obj/item/stack/proc/use(used)
 	if(amount < used)
-		return FALSE
+		return 0
 	amount -= used
-	if(check)
-		zero_amount()
+	if(amount < 1) // Just in case a stack's amount ends up fractional somehow
+		if(isrobot(loc))
+			var/mob/living/silicon/robot/R = loc  //Horrifying cyborg snowflake code that allows stacks to GC and cyborgs not to horrendously break
+			if(locate(src) in R.module.modules)
+				R.module.modules -= src
+		if(usr)
+			usr.unEquip(src, TRUE) // this has to be unEquip() over drop_item() or something similar because of cyborgs
+		qdel(src)
 	update_icon()
-	return TRUE
+	return 1
+
+/obj/item/stack/proc/add_to_stacks(mob/usr)
+	var/obj/item/stack/oldsrc = src
+	src = null
+	for(var/obj/item/stack/item in usr.loc)
+		if(item == oldsrc)
+			continue
+		if(!istype(item, oldsrc.type))
+			continue
+		if(item.amount >= item.max_amount)
+			continue
+		oldsrc.attackby(item, usr)
+		to_chat(usr, "You add new [item.singular_name] to the stack. It now contains [item.amount] [item.singular_name]\s.")
+		if(oldsrc.amount <= 0)
+			break
+	oldsrc.update_icon()
 
 /obj/item/stack/proc/get_amount()
-	if(is_cyborg)
-		return round(source.energy / cost)
 	return amount
 
 /obj/item/stack/proc/get_max_amount()
@@ -298,88 +245,46 @@
 	return F
 
 /obj/item/stack/attack_hand(mob/user)
-	if(user.is_in_inactive_hand(src) && get_amount() > 1)
-		change_stack(user, 1)
+	if(user.is_in_inactive_hand(src))
+		var/obj/item/stack/F = split(user, 1)
+		user.put_in_hands(F)
 		if(src && usr.machine == src)
 			spawn(0)
 				interact(usr)
 	else
 		..()
 
-/obj/item/stack/AltClick(mob/living/user)
-	if(!istype(user) || user.incapacitated())
-		to_chat(user, "<span class='warning'>You can't do that right now!</span>")
-		return
-	if(!in_range(src, user))
-		return
-	if(is_cyborg)
-		return
-	if(!ishuman(usr))
-		return
-	if(amount < 1)
-		return
-	//get amount from user
-	var/min = 0
-	var/max = get_amount()
-	var/stackmaterial = round(input(user, "How many sheets do you wish to take out of this stack? (Maximum: [max])") as null|num)
-	if(stackmaterial == null || stackmaterial <= min || stackmaterial > get_amount())
-		return
-	change_stack(user,stackmaterial)
-	to_chat(user, "<span class='notice'>You take [stackmaterial] sheets out of the stack.</span>")
-
-/obj/item/stack/proc/change_stack(mob/user,amount)
-	var/obj/item/stack/F = new type(user, amount, FALSE)
-	. = F
-	F.copy_evidences(src)
-	user.put_in_hands(F)
-	add_fingerprint(user)
-	F.add_fingerprint(user)
-	use(amount)
-
 /obj/item/stack/attackby(obj/item/W, mob/user, params)
+	..()
 	if(istype(W, merge_type))
 		var/obj/item/stack/S = W
-		merge(S)
-		to_chat(user, "<span class='notice'>Your [S.name] stack now contains [S.get_amount()] [S.singular_name]\s.</span>")
+		if(S.amount >= max_amount)
+			return 1
+
+		if(user.is_in_inactive_hand(src))
+			var/desired = input("How much would you like to transfer from this stack?", "How much?", 1) as null|num
+			if(!desired)
+				return
+			desired = round(desired)
+			to_transfer = max(1,min(desired,S.max_amount-S.amount,src.amount))
+		else
+			to_transfer = min(src.amount, S.max_amount-S.amount)
+
+		S.amount += to_transfer
+		if(S && usr.machine == S)
+			spawn(0)
+				S.interact(usr)
+		use(to_transfer)
+		if(src && usr.machine == src)
+			spawn(0)
+				interact(usr)
+		S.update_icon()
 	else
 		return ..()
-
-// Returns TRUE if the stack amount is zero.
-// Also qdels the stack gracefully if it is.
-/obj/item/stack/proc/zero_amount()
-	if(is_cyborg)
-		return source.energy < cost
-	if(amount < 1)
-		if(ismob(loc))
-			var/mob/living/L = loc // At this stage, stack code is so horrible and atrocious, I wouldn't be all surprised ghosts can somehow have stacks. If this happens, then the world deserves to burn.
-			L.unEquip(src, TRUE)
-		if(amount < 1)
-			// If you stand on top of a stack, and drop a - different - 0-amount stack on the floor,
-			// the two get merged, so the amount of items in the stack can increase from the 0 that it had before.
-			// Check the amount again, to be sure we're not qdeling healthy stacks.
-			qdel(src)
-		return TRUE
-	return FALSE
-
-/obj/item/stack/proc/merge(obj/item/stack/S) //Merge src into S, as much as possible
-	if(QDELETED(S) || QDELETED(src) || S == src) //amusingly this can cause a stack to consume itself, let's not allow that.
-		return FALSE
-	var/transfer = get_amount()
-	if(S.is_cyborg)
-		transfer = min(transfer, round((S.source.max_energy - S.source.energy) / S.cost))
-	else
-		transfer = min(transfer, S.max_amount - S.amount)
-	if(transfer <= 0)
-		return
-	if(pulledby)
-		pulledby.start_pulling(S)
-	S.copy_evidences(src)
-	S.add(transfer)
-	use(transfer)
-	return transfer
 
 /obj/item/stack/proc/copy_evidences(obj/item/stack/from)
 	blood_DNA			= from.blood_DNA
 	fingerprints		= from.fingerprints
 	fingerprintshidden	= from.fingerprintshidden
 	fingerprintslast	= from.fingerprintslast
+	//TODO bloody overlay

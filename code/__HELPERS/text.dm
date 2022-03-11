@@ -8,17 +8,49 @@
  *			Misc
  */
 
+
+/*
+ * SQL sanitization
+ */
+
+// Run all strings to be used in an SQL query through this proc first to properly escape out injection attempts.
+/proc/sanitizeSQL(var/t as text)
+	if(isnull(t))
+		return null
+	if(!istext(t))
+		t = "[t]" // Just quietly assume any non-texts are supposed to be text
+	var/sqltext = dbcon.Quote(t);
+	return copytext(sqltext, 2, length(sqltext));//Quote() adds quotes around input, we already do that
+
+/proc/format_table_name(table as text)
+	return sqlfdbktableprefix + table
+
 /*
  * Text sanitization
  */
-// Can be used almost the same way as normal input for text
-/proc/clean_input(Message, Title, Default, mob/user=usr)
-	var/txt = input(user, Message, Title, Default) as text | null
-	if(txt)
-		return html_encode(txt)
+/*
+/proc/sanitize_local(var/input, var/max_length = MAX_MESSAGE_LEN, var/encode = 1, var/trim = 1, var/extra = 1, var/mode = SANITIZE_CHAT)
+	#ifdef DEBUG_CYRILLIC
+	to_chat(world, "\magenta DEBUG: \red <b>sanitize_local() entered, text:</b> <i>[input]</i>")
+	to_chat(world, "\magenta DEBUG: \red <b>ja_mode:</b> [mode]")
+	#endif
+	if(!input)
+		return
 
+	if(max_length)
+		input = copytext(input,1,max_length)
+
+	//code in modules/l10n/localisation.dm
+	input = sanitize_local(input, mode)
+
+	#ifdef DEBUG_CYRILLIC
+	to_chat(world, "\magenta DEBUG: \blue <b>sanitize_local() finished, text:</b> <i>[input]</i>")
+	#endif
+
+	return input
+*/
 //Simply removes < and > and limits the length of the message
-/proc/strip_html_simple(t, limit=MAX_MESSAGE_LEN)
+/proc/strip_html_simple(var/t,var/limit=MAX_MESSAGE_LEN)
 	var/list/strip_chars = list("<",">")
 	t = copytext(t,1,limit)
 	for(var/char in strip_chars)
@@ -29,29 +61,58 @@
 	return t
 
 //Removes a few problematic characters
-/proc/sanitize_simple(t, list/repl_chars = list("\n"="#","\t"="#"))
+/proc/sanitize_simple(var/t,var/list/repl_chars = list("\n"="#","\t"="#"))
 	for(var/char in repl_chars)
 		t = replacetext(t, char, repl_chars[char])
 	return t
 
-//Runs byond's sanitization proc along-side sanitize_simple
-/proc/sanitize(t, list/repl_chars = null)
-	return html_encode(sanitize_simple(t,repl_chars))
+/proc/readd_quotes(var/t)
+	var/list/repl_chars = list("&#34;" = "\"")
+	for(var/char in repl_chars)
+		var/index = findtext(t, char)
+		while(index)
+			t = copytext(t, 1, index) + repl_chars[char] + copytext(t, index+5)
+			index = findtext(t, char)
+	return t
 
-// Gut ANYTHING that isnt alphanumeric, or brackets
-/proc/paranoid_sanitize(t)
+//Runs byond's sanitization proc along-side sanitize_simple
+/proc/sanitize(var/input, var/max_length = MAX_MESSAGE_LEN, var/encode = 1, var/trim = 1, var/extra = 1, var/mode = SANITIZE_CHAT)
+	if(!input)
+		return
+
+	if(max_length)
+		input = copytext(input,1,max_length)
+
+	//code in modules/l10n/localisation.dm
+	input = sanitize_local(input, mode)
+
+	if(extra)
+		input = replace_characters(input, list("\n"=" ","\t"=" "))
+
+	if(encode)
+		// The below \ escapes have a space inserted to attempt to enable Travis auto-checking of span class usage. Please do not remove the space.
+		//In addition to processing html, lhtml_decode removes byond formatting codes like "\ red", "\ i" and other.
+		//It is important to avoid double-encode text, it can "break" quotes and some other characters.
+		//Also, keep in mind that escaped characters don't work in the interface (window titles, lower left corner of the main window, etc.)
+		input = lhtml_encode(input)
+	else
+		//If not need encode text, simply remove < and >
+		//note: we can also remove here byond formatting codes: 0xFF + next byte
+		input = replace_characters(input, list("<"=" ", ">"=" "))
+
+	if(trim)
+		//Maybe, we need trim text twice? Here and before copytext?
+		input = trim(input)
+	return input
+
+/proc/paranoid_sanitize_local(t)
 	var/regex/alphanum_only = regex("\[^a-zA-Z0-9# ,.?!:;()]", "g")
 	return alphanum_only.Replace(t, "#")
 
-// Less agressive, to allow discord features, such as <>, / and @
-/proc/not_as_paranoid_sanitize(t)
-	var/regex/alphanum_slashes_only = regex("\[^a-zA-Z0-9# ,.?!:;()/<>@]", "g")
-	return alphanum_slashes_only.Replace(t, "#")
-
 //Runs sanitize and strip_html_simple
-//I believe strip_html_simple() is required to run first to prevent '<' from displaying as '&lt;' after sanitize() calls byond's html_encode()
-/proc/strip_html(t, limit=MAX_MESSAGE_LEN)
-	return copytext((sanitize(strip_html_simple(t))),1,limit)
+//I believe strip_html_simple() is required to run first to prevent '<' from displaying as '&lt;' after sanitize_local() calls byond's lhtml_encode()
+/proc/strip_html(var/t,var/limit=MAX_MESSAGE_LEN)
+	return copytext((sanitize_local(strip_html_simple(t))),1,limit)
 
 // Used to get a properly sanitized multiline input, of max_length
 /proc/stripped_multiline_input(mob/user, message = "", title = "", default = "", max_length=MAX_MESSAGE_LEN, no_trim=FALSE)
@@ -62,13 +123,13 @@
 		return trim(html_encode(name), max_length)
 
 //Runs byond's sanitization proc along-side strip_html_simple
-//I believe strip_html_simple() is required to run first to prevent '<' from displaying as '&lt;' that html_encode() would cause
-/proc/adminscrub(t, limit=MAX_MESSAGE_LEN)
-	return copytext((html_encode(strip_html_simple(t))),1,limit)
+//I believe strip_html_simple() is required to run first to prevent '<' from displaying as '&lt;' that lhtml_encode() would cause
+/proc/adminscrub(var/t,var/limit=MAX_MESSAGE_LEN)
+	return copytext((lhtml_encode(strip_html_simple(t))),1,limit)
 
 
 //Returns null if there is any bad text in the string
-/proc/reject_bad_text(text, max_length=512)
+/proc/reject_bad_text(var/text, var/max_length=512)
 	if(length(text) > max_length)	return			//message too long
 	var/non_whitespace = 0
 	for(var/i=1, i<=length(text), i++)
@@ -81,32 +142,14 @@
 	if(non_whitespace)		return text		//only accepts the text if it has some non-spaces
 
 // Used to get a sanitized input.
-/proc/stripped_input(mob/user, message = "", title = "", default = "", max_length=MAX_MESSAGE_LEN, no_trim=FALSE)
-	var/name = html_encode(input(user, message, title, default) as text|null)
-	if(!no_trim)
-		name = trim(name) //trim is "outside" because html_encode can expand single symbols into multiple symbols (such as turning < into &lt;)
-	return copytext(name, 1, max_length)
-
-// Uses client.typing to check if the popup should appear or not
-/proc/typing_input(mob/user, message = "", title = "", default = "")
-	if(user.client.checkTyping()) // Prevent double windows
-		return null
-	var/client/C = user.client // Save it in a var in case the client disconnects from the mob
-	C.typing = TRUE
-	var/msg = input(user, message, title, default) as text|null
-	if(!C)
-		return null
-	C.typing = FALSE
-	if(!user || C != user.client) // User got out of the mob for some reason or the mob is gone
-		return null
-	return msg
+/proc/stripped_input(var/mob/user, var/message = "", var/title = "", var/default = "", var/max_length=MAX_MESSAGE_LEN)
+	var/name = input(user, message, title, default)
+	return strip_html_properly(name, max_length)
 
 //Filters out undesirable characters from names
-/proc/reject_bad_name(t_in, allow_numbers=0, max_length=MAX_NAME_LEN)
-	// Decode so that names with characters like < are still rejected
-	t_in = html_decode(t_in)
+/proc/reject_bad_name(var/t_in, var/allow_numbers=0, var/max_length=MAX_NAME_LEN)
 	if(!t_in || length(t_in) > max_length)
-		return //Rejects the input if it is null or if it is longer than the max length allowed
+		return //Rejects the input if it is null or if it is longer then the max length allowed
 
 	var/number_of_alphanumeric	= 0
 	var/last_char_group			= 0
@@ -136,14 +179,14 @@
 				number_of_alphanumeric++
 				last_char_group = 3
 
-			// '  -  . ,
-			if(39, 45, 46, 44)			//Common name punctuation
+			// '  -  .
+			if(39,45,46)			//Common name punctuation
 				if(!last_char_group) continue
 				t_out += ascii2text(ascii_char)
 				last_char_group = 2
 
-			// ~   |   @  :  #  $  %  &  *  +  !
-			if(126, 124, 64, 58, 35, 36, 37, 38, 42, 43, 33)			//Other symbols that we'll allow (mainly for AI)
+			// ~   |   @  :  #  $  %  &  *  +
+			if(126,124,64,58,35,36,37,38,42,43)			//Other symbols that we'll allow (mainly for AI)
 				if(!last_char_group)		continue	//suppress at start of string
 				if(!allow_numbers)			continue
 				t_out += ascii2text(ascii_char)
@@ -170,7 +213,7 @@
 //checks text for html tags
 //if tag is not in whitelist (var/list/paper_tag_whitelist in global.dm)
 //relpaces < with &lt;
-/proc/checkhtml(t)
+proc/checkhtml(var/t)
 	t = sanitize_simple(t, list("&#"="."))
 	var/p = findtext(t,"<",1)
 	while(p)	//going through all the tags
@@ -181,7 +224,7 @@
 				tag = copytext(t,start, p)
 				p++
 			tag = copytext(t,start+1, p)
-			if(!(tag in GLOB.paper_tag_whitelist))	//if it's unkown tag, disarming it
+			if(!(tag in paper_tag_whitelist))	//if it's unkown tag, disarming it
 				t = copytext(t,1,start-1) + "&lt;" + copytext(t,start+1)
 		p = findtext(t,"<",p)
 	return t
@@ -218,11 +261,7 @@
 	if(start)
 		return findtextEx(text, suffix, start, null)
 
-/*
- * Text modification
- */
-// See bygex.dm
-/proc/replace_characters(t, list/repl_chars)
+/proc/replace_characters(var/t,var/list/repl_chars)
 	for(var/char in repl_chars)
 		t = replacetext(t, char, repl_chars[char])
 	return t
@@ -273,7 +312,7 @@
 	return trim_left(trim_right(text))
 
 //Returns a string with the first element of the string capitalized.
-/proc/capitalize(t as text)
+/proc/capitalize(var/t as text)
 	return uppertext(copytext(t, 1, 2)) + copytext(t, 2)
 
 //Centers text by adding spaces to either side of the string.
@@ -301,7 +340,7 @@
 	return copytext(message, 1, length + 1)
 
 
-/proc/stringmerge(text, compare,replace = "*")
+/proc/stringmerge(var/text,var/compare,replace = "*")
 //This proc fills in all spaces with the "replace" var (* by default) with whatever
 //is in the other string at the same spot (assuming it is not a replace char).
 //This is used for fingerprints
@@ -322,7 +361,7 @@
 				return 0
 	return newtext
 
-/proc/stringpercent(text, character = "*")
+/proc/stringpercent(var/text,character = "*")
 //This proc returns the number of chars of the string that is the character
 //This is used for detective work to determine fingerprint completion.
 	if(!text || !character)
@@ -334,7 +373,7 @@
 			count++
 	return count
 
-/proc/reverse_text(text = "")
+/proc/reverse_text(var/text = "")
 	var/new_text = ""
 	for(var/i = length(text); i > 0; i--)
 		new_text += copytext(text, i, i+1)
@@ -343,7 +382,7 @@
 //This proc strips html properly, but it's not lazy like the other procs.
 //This means that it doesn't just remove < and > and call it a day.
 //Also limit the size of the input, if specified.
-/proc/strip_html_properly(input, max_length = MAX_MESSAGE_LEN, allow_lines = 0)
+/proc/strip_html_properly(var/input, var/max_length = MAX_MESSAGE_LEN, allow_lines = 0)
 	if(!input)
 		return
 	var/opentag = 1 //These store the position of < and > respectively.
@@ -365,32 +404,32 @@
 			break
 	if(max_length)
 		input = copytext(input,1,max_length)
-	return sanitize(input, allow_lines ? list("\t" = " ") : list("\n" = " ", "\t" = " "))
+	return sanitize_local(input, allow_lines ? list("\t" = " ") : list("\n" = " ", "\t" = " "))
 
-/proc/trim_strip_html_properly(input, max_length = MAX_MESSAGE_LEN, allow_lines = 0)
+/proc/trim_strip_html_properly(var/input, var/max_length = MAX_MESSAGE_LEN, allow_lines = 0)
     return trim(strip_html_properly(input, max_length, allow_lines))
 
 //Used in preferences' SetFlavorText and human's set_flavor verb
 //Previews a string of len or less length
-/proc/TextPreview(string, len=40)
+/proc/TextPreview(var/string,var/len=40)
 	if(length(string) <= len)
 		if(!length(string))
 			return "\[...\]"
 		else
-			return html_encode(string) //NO DECODED HTML YOU CHUCKLEFUCKS
+			return lhtml_encode(string) //NO DECODED HTML YOU CHUCKLEFUCKS
 	else
 		return "[copytext_preserve_html(string, 1, 37)]..."
 
 //alternative copytext() for encoded text, doesn't break html entities (&#34; and other)
-/proc/copytext_preserve_html(text, first, last)
-	return html_encode(copytext(html_decode(text), first, last))
+/proc/copytext_preserve_html(var/text, var/first, var/last)
+	return lhtml_encode(copytext(lhtml_decode(text), first, last))
 
-//Run sanitize(), but remove <, >, " first to prevent displaying them as &gt; &lt; &34; in some places, after html_encode().
+//Run sanitize_local(), but remove <, >, " first to prevent displaying them as &gt; &lt; &34; in some places, after lhtml_encode().
 //Best used for sanitize object names, window titles.
-//If you have a problem with sanitize() in chat, when quotes and >, < are displayed as html entites -
-//this is a problem of double-encode(when & becomes &amp;), use sanitize() with encode=0, but not the sanitizeSafe()!
-/proc/sanitizeSafe(input, max_length = MAX_MESSAGE_LEN, encode = 1, trim = 1, extra = 1)
-	return sanitize(replace_characters(input, list(">"=" ","<"=" ", "\""="'")), max_length, encode, trim, extra)
+//If you have a problem with sanitize_local() in chat, when quotes and >, < are displayed as html entites -
+//this is a problem of double-encode(when & becomes &amp;), use sanitize_local() with encode=0, but not the sanitizeSafe()!
+/proc/sanitizeSafe(var/input, var/max_length = MAX_MESSAGE_LEN, var/encode = 1, var/trim = 1, var/extra = 1)
+	return sanitize_local(replace_characters(input, list(">"=" ","<"=" ", "\""="'")), max_length, encode, trim, extra)
 
 
 //Replace BYOND text macros with span classes for to_chat
@@ -453,9 +492,57 @@
 			return 1
 	return 0
 
+/proc/pointization(text as text)
+	if(!text)
+		return
+	if(copytext(text,1,2) == "*") //Emotes allowed.
+		return text
+	if(copytext(text,-1) in list("!", "?", "."))
+		return text
+	text += "."
+	return text
+
+
+/proc/ruscapitalize(var/t as text)
+	var/s = 2
+	if(copytext(t,1,2) == ";")
+		s += 1
+	else if(copytext(t,1,2) == ":")
+		if(copytext(t,3,4) == " ")
+			s+=3
+		else
+			s+=2
+	return upperrustext(copytext(t, 1, s)) + copytext(t, s)
+
+/proc/upperrustext(text as text)
+	var/t = ""
+	for(var/i = 1, i <= length(text), i++)
+		var/a = text2ascii(text, i)
+		if(a > 223)
+			t += ascii2text(a - 32)
+		else if(a == 184)
+			t += ascii2text(168)
+		else t += ascii2text(a)
+	t = replacetext(t,"&#1103;","�")
+	t = replacetext(t, "�", "�")
+	return t
+
+
+/proc/lowerrustext(text as text)
+	var/t = ""
+	for(var/i = 1, i <= length(text), i++)
+		var/a = text2ascii(text, i)
+		if(a > 191 && a < 224)
+			t += ascii2text(a + 32)
+		else if(a == 168)
+			t += ascii2text(184)
+		else t += ascii2text(a)
+	t = replacetext(t,"�","&#1103;")
+	return t
+
 
 // Pencode
-/proc/pencode_to_html(text, mob/user, obj/item/pen/P = null, format = 1, sign = 1, fields = 1, deffont = PEN_FONT, signfont = SIGNFONT, crayonfont = CRAYON_FONT, no_font = FALSE)
+/proc/pencode_to_html(text, mob/user, obj/item/pen/P = null, format = 1, sign = 1, fields = 1, deffont = PEN_FONT, signfont = SIGNFONT, crayonfont = CRAYON_FONT)
 	text = replacetext(text, "\[b\]",		"<B>")
 	text = replacetext(text, "\[/b\]",		"</B>")
 	text = replacetext(text, "\[i\]",		"<I>")
@@ -507,54 +594,13 @@
 		text = replacetext(text, "\[/grid\]",	"</td></tr></table>")
 		text = replacetext(text, "\[row\]",		"</td><tr>")
 		text = replacetext(text, "\[cell\]",	"<td>")
-		text = replacetext(text, "\[logo\]",	"&ZeroWidthSpace;<img src = ntlogo.png>")
+		text = replacetext(text, "\[logo\]",	"<img src = ntlogo.png>")
 		text = replacetext(text, "\[time\]",	"[station_time_timestamp()]") // TO DO
-		text = replacetext(text, "\[date\]",	"[GLOB.current_date_string]")
-		text = replacetext(text, "\[station\]", "[SSmapping.map_datum.fluff_name]")
-		if(!no_font)
-			if(P)
-				text = "<font face=\"[deffont]\" color=[P ? P.colour : "black"]>[text]</font>"
-			else
-				text = "<font face=\"[deffont]\">[text]</font>"
-
+	if(P)
+		text = "<font face=\"[deffont]\" color=[P ? P.colour : "black"]>[text]</font>"
+	else
+		text = "<font face=\"[deffont]\">[text]</font>"
 	text = copytext(text, 1, MAX_PAPER_MESSAGE_LEN)
-	return text
-
-/proc/convert_pencode_arg(text, tag, arg)
-	arg = sanitize_simple(html_encode(arg), list("''"="","\""="", "?"=""))
-	// https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html#rule-4---css-escape-and-strictly-validate-before-inserting-untrusted-data-into-html-style-property-values
-	var/list/style_attacks = list("javascript:", "expression", "byond:", "file:")
-
-	for(var/style_attack in style_attacks)
-		if(findtext(arg, style_attack))
-			// Do not attempt to render dangerous things
-			return text
-
-	if(tag == "class")
-		return "<span class='[arg]'>"
-
-	if(tag == "style")
-		return "<span style='[arg]'>"
-
-	if(tag == "img")
-		var/list/img_props = splittext(arg, ";")
-		if(img_props.len == 3)
-			return "<img src='[img_props[1]]' width='[img_props[2]]' height='[img_props[3]]'>"
-		if(img_props.len == 2)
-			return "<img src='[img_props[1]]' width='[img_props[2]]'>"
-		return "<img src='[arg]'>"
-
-	return text
-
-/proc/admin_pencode_to_html()
-	var/text = pencode_to_html(arglist(args))
-	var/regex/R = new(@"\[(.*?) (.*?)\]", "ge")
-	text = R.Replace(text, /proc/convert_pencode_arg)
-
-	text = replacetext(text, "\[/class\]", "</span>")
-	text = replacetext(text, "\[/style\]", "</span>")
-	text = replacetext(text, "\[/img\]", "</img>")
-
 	return text
 
 /proc/html_to_pencode(text)
@@ -591,137 +637,3 @@
 	text = replacetext(text, "<td>",					"\[cell\]")
 	text = replacetext(text, "<img src = ntlogo.png>",	"\[logo\]")
 	return text
-
-/datum/html/split_holder
-	var/list/opening
-	var/inner_text
-	var/list/closing
-
-/datum/html/split_holder/New()
-	opening = list()
-	inner_text = ""
-	closing = list()
-
-/proc/split_html(raw_text="")
-	// gently borrowed and re-purposed from code/modules/pda/utilities.dm
-	// define a datum to hold our result
-	var/datum/html/split_holder/s = new()
-
-	// copy the raw_text to get started
-	var/text = copytext_char(raw_text, 1)
-
-	// search for tag brackets
-	var/tag_start = findtext_char(text, "<")
-	var/tag_stop = findtext_char(text, ">")
-
-	// until we run out of opening tags
-	while((tag_start != 0) && (tag_stop != 0))
-		// if the tag isn't at the beginning of the string
-		if(tag_start > 1)
-			// we've found our text, so copy it out
-			s.inner_text = copytext_char(text, 1, tag_start)
-			// and chop the text for the next round
-			text = copytext_char(text, tag_start)
-			break
-		// otherwise, we found an opening tag, so add it to the list
-		var/tag = copytext_char(text, tag_start, tag_stop+1)
-		s.opening.Add(tag)
-		// and chop the text for the next round
-		text = copytext_char(text, tag_stop+1)
-		// look for the next tag in what's left
-		tag_start = findtext(text, "<")
-		tag_stop = findtext(text, ">")
-
-	// search for tag brackets
-	tag_start = findtext(text, "<")
-	tag_stop = findtext(text, ">")
-
-	// until we run out of closing tags
-	while((tag_start != 0) && (tag_stop != 0))
-		// we found a closing tag, so add it to the list
-		var/tag = copytext_char(text, tag_start, tag_stop+1)
-		s.closing.Add(tag)
-		// and chop the text for the next round
-		text = copytext_char(text, tag_stop+1)
-		// look for the next tag in what's left
-		tag_start = findtext(text, "<")
-		tag_stop = findtext(text, ">")
-
-	// return the split html object to the caller
-	return s
-
-//Used for applying byonds text macros to strings that are loaded at runtime
-/proc/apply_text_macros(string)
-	var/next_backslash = findtext(string, "\\")
-	if(!next_backslash)
-		return string
-
-	var/leng = length(string)
-
-	var/next_space = findtext(string, " ", next_backslash + length(string[next_backslash]))
-	if(!next_space)
-		next_space = leng - next_backslash
-
-	if(!next_space)	//trailing bs
-		return string
-
-	var/base = next_backslash == 1 ? "" : copytext(string, 1, next_backslash)
-	var/macro = lowertext(copytext(string, next_backslash + length(string[next_backslash]), next_space))
-	var/rest = next_backslash > leng ? "" : copytext(string, next_space + length(string[next_space]))
-
-	//See https://secure.byond.com/docs/ref/info.html#/DM/text/macros
-	switch(macro)
-		//prefixes/agnostic
-		if("the")
-			rest = text("\the []", rest)
-		if("a")
-			rest = text("\a []", rest)
-		if("an")
-			rest = text("\an []", rest)
-		if("proper")
-			rest = text("\proper []", rest)
-		if("improper")
-			rest = text("\improper []", rest)
-		if("roman")
-			rest = text("\roman []", rest)
-		//postfixes
-		if("th")
-			base = text("[]\th", rest)
-		if("s")
-			base = text("[]\s", rest)
-		if("he")
-			base = text("[]\he", rest)
-		if("she")
-			base = text("[]\she", rest)
-		if("his")
-			base = text("[]\his", rest)
-		if("himself")
-			base = text("[]\himself", rest)
-		if("herself")
-			base = text("[]\herself", rest)
-		if("hers")
-			base = text("[]\hers", rest)
-
-	. = base
-	if(rest)
-		. += .(rest)
-
-/**
-  * Proc to generate a "rank colour" from a client
-  *
-  * This takes the client and looks at various factors in order, such as patreon status, staff rank, and more
-  * Arguments:
-  * * C - The client were looking up
-  */
-/proc/client2rankcolour(client/C)
-	// First check if end user is an admin
-	if(C.holder)
-		if(C.holder.rank in GLOB.configuration.admin.rank_colour_map)
-			// Return their rank colour if they are in here
-			return GLOB.configuration.admin.rank_colour_map[C.holder.rank]
-
-	// If they arent an admin, see if they are a patreon. Just accept any level
-	if(C.donator_level)
-		return "#e67e22" // Patreon orange
-	return null
-

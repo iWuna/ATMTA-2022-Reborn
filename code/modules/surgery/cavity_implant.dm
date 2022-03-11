@@ -20,20 +20,20 @@
 /datum/surgery/cavity_implant/can_start(mob/user, mob/living/carbon/human/target)
 	if(!istype(target))
 		return 0
-	var/obj/item/organ/external/affected = target.get_organ(user.zone_selected)
+	var/obj/item/organ/external/affected = target.get_organ(user.zone_sel.selecting)
 	if(!affected)
 		return 0
-	if(affected.is_robotic())
+	if(affected.status & ORGAN_ROBOT)
 		return 0
 	return 1
 
 /datum/surgery/cavity_implant/synth/can_start(mob/user, mob/living/carbon/human/target)
 	if(!istype(target))
 		return 0
-	var/obj/item/organ/external/affected = target.get_organ(user.zone_selected)
+	var/obj/item/organ/external/affected = target.get_organ(user.zone_sel.selecting)
 	if(!affected)
 		return 0
-	return affected.is_robotic()
+	return (affected.status & ORGAN_ROBOT)
 
 /datum/surgery_step/cavity
 	priority = 1
@@ -78,7 +78,7 @@
 	var/obj/item/organ/external/affected = target.get_organ(target_zone)
 	user.visible_message("[user] starts making some space inside [target]'s [get_cavity(affected)] cavity with \the [tool].", \
 	"You start making some space inside [target]'s [get_cavity(affected)] cavity with \the [tool]." )
-	target.custom_pain("The pain in your chest is living hell!")
+	target.custom_pain("The pain in your chest is living hell!",1)
 	..()
 
 /datum/surgery_step/cavity/make_space/end_step(mob/living/user, mob/living/carbon/human/target, target_zone, obj/item/tool,datum/surgery/surgery)
@@ -104,7 +104,7 @@
 	var/obj/item/organ/external/affected = target.get_organ(target_zone)
 	user.visible_message("[user] starts mending [target]'s [get_cavity(affected)] cavity wall with \the [tool].", \
 	"You start mending [target]'s [get_cavity(affected)] cavity wall with \the [tool]." )
-	target.custom_pain("The pain in your chest is living hell!")
+	target.custom_pain("The pain in your chest is living hell!",1)
 	..()
 
 /datum/surgery_step/cavity/close_space/end_step(mob/living/user, mob/living/carbon/human/target, target_zone, obj/item/tool,datum/surgery/surgery)
@@ -155,7 +155,7 @@
 	else //no internal items..but we still need a message!
 		user.visible_message("[user] checks for items in [target]'s [target_zone].", "<span class='notice'>You check for items in [target]'s [target_zone]...</span>")
 
-	target.custom_pain("The pain in your [target_zone] is living hell!")
+	target.custom_pain("The pain in your [target_zone] is living hell!",1)
 	..()
 
 /datum/surgery_step/cavity/place_item/end_step(mob/living/user, mob/living/carbon/human/target, target_zone, obj/item/tool,datum/surgery/surgery)
@@ -187,9 +187,10 @@
 		else
 			user.visible_message("<span class='notice'> [user] puts \the [tool] inside [target]'s [get_cavity(affected)] cavity.</span>", \
 			"<span class='notice'> You put \the [tool] inside [target]'s [get_cavity(affected)] cavity.</span>" )
-			if((tool.w_class > get_max_wclass(affected) / 2 && prob(50) && !affected.is_robotic()))
+			if((tool.w_class > get_max_wclass(affected)/2 && prob(50) && !(affected.status & ORGAN_ROBOT)))
 				to_chat(user, "<span class='warning'> You tear some vessels trying to fit the object in the cavity.</span>")
-				affected.cause_internal_bleeding()
+				affected.internal_bleeding = TRUE
+				affected.owner.custom_pain("You feel something rip in your [affected.name]!", 1)
 			user.drop_item()
 			affected.hidden = tool
 			tool.forceMove(affected)

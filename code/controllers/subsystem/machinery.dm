@@ -6,7 +6,6 @@ SUBSYSTEM_DEF(machines)
 	name = "Machines"
 	init_order = INIT_ORDER_MACHINES
 	flags = SS_KEEP_TIMING
-	offline_implications = "Machinery will no longer process. Shuttle call recommended."
 
 	var/list/processing = list()
 	var/list/currentrun = list()
@@ -18,13 +17,7 @@ SUBSYSTEM_DEF(machines)
 /datum/controller/subsystem/machines/Initialize()
 	makepowernets()
 	fire()
-	return ..()
-
-/datum/controller/subsystem/machines/get_metrics()
-	. = ..()
-	var/list/cust = list()
-	cust["processing"] = length(processing)
-	.["custom"] = cust
+	..()
 
 /datum/controller/subsystem/machines/proc/makepowernets()
 	for(var/datum/powernet/PN in powernets)
@@ -48,7 +41,7 @@ SUBSYSTEM_DEF(machines)
 	while(currentrun.len)
 		var/obj/O = currentrun[currentrun.len]
 		currentrun.len--
-		if(O && !QDELETED(O))
+		if(O)
 			var/datum/powernet/newPN = new() // create a new powernet...
 			propagate_network(O, newPN)//... and propagate it to the other side of the cable
 
@@ -68,6 +61,23 @@ SUBSYSTEM_DEF(machines)
 			P.reset() // reset the power state
 		else
 			powernets.Remove(P)
+		if(MC_TICK_CHECK)
+			return
+
+/datum/controller/subsystem/machines/proc/process_premachines(resumed = 0)
+	/* Literally exists as snowflake for fucking powersinks goddamnit */
+	if(!resumed)
+		src.currentrun = processing_power_items.Copy()
+	//cache for sanid speed (lists are references anyways)
+	var/list/currentrun = src.currentrun
+	while(currentrun.len)
+		var/obj/item/I = currentrun[currentrun.len]
+		currentrun.len--
+		if(!QDELETED(I))
+			if(!I.pwr_drain())
+				processing_power_items.Remove(I)
+		else
+			processing_power_items.Remove(I)
 		if(MC_TICK_CHECK)
 			return
 
@@ -100,6 +110,13 @@ SUBSYSTEM_DEF(machines)
 
 	if(currentpart == SSMACHINES_POWERNETS || !resumed)
 		process_powernets(resumed)
+		if(state != SS_RUNNING)
+			return
+		resumed = 0
+		currentpart = SSMACHINES_PREMACHINERY
+
+	if(currentpart == SSMACHINES_PREMACHINERY || !resumed)
+		process_premachines(resumed)
 		if(state != SS_RUNNING)
 			return
 		resumed = 0

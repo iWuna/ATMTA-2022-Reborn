@@ -22,7 +22,6 @@
 	throw_speed = 4
 	throw_range = 20
 	materials = list(MAT_METAL=400)
-	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 30, BIO = 0, RAD = 0, FIRE = 100, ACID = 100)
 	origin_tech = "magnets=3;bluespace=2"
 
 /obj/item/locator/attack_self(mob/user as mob)
@@ -60,20 +59,19 @@ Frequency:
 		if(sr)
 			temp += "<B>Located Beacons:</B><BR>"
 
-			for(var/obj/item/radio/beacon/W in GLOB.beacons)
+			for(var/obj/item/radio/beacon/W in beacons)
 				if(W.frequency == frequency && !W.syndicate)
 					if(W && W.z == z)
 						var/turf/TB = get_turf(W)
 						temp += "[W.code]: [TB.x], [TB.y], [TB.z]<BR>"
 
 			temp += "<B>Located Implants:</B><BR>"
-			for(var/obj/item/implant/tracking/T in GLOB.tracked_implants)
+			for(var/obj/item/implant/tracking/T in tracked_implants)
 				if(!T.implanted || !T.imp_in)
 					continue
-				var/turf/Tr = get_turf(T)
 
-				if(Tr && Tr.z == sr.z)
-					temp += "[T.id]: [Tr.x], [Tr.y], [Tr.z]<BR>"
+				if(T && T.z == z)
+					temp += "[T.id]: [T.imp_in.x], [T.imp_in.y], [T.imp_in.z]<BR>"
 
 			temp += "<B>You are at \[[sr.x],[sr.y],[sr.z]\]</B>."
 			temp += "<BR><BR><A href='byond://?src=[UID()];refresh=1'>Refresh</A><BR>"
@@ -105,8 +103,7 @@ Frequency:
 	throw_range = 5
 	materials = list(MAT_METAL=10000)
 	origin_tech = "magnets=3;bluespace=4"
-	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 30, BIO = 0, RAD = 0, FIRE = 100, ACID = 100)
-	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | ACID_PROOF
+	armor = list(melee = 0, bullet = 0, laser = 0, energy = 0, bomb = 30, bio = 0, rad = 0)
 	var/active_portals = 0
 
 /obj/item/hand_tele/attack_self(mob/user as mob)
@@ -115,7 +112,7 @@ Frequency:
 		to_chat(user, "<span class='notice'>\The [src] is malfunctioning.</span>")
 		return
 	var/list/L = list(  )
-	for(var/obj/machinery/computer/teleporter/com in GLOB.machines)
+	for(var/obj/machinery/computer/teleporter/com in world)
 		if(com.target)
 			if(com.power_station && com.power_station.teleporter_hub && com.power_station.engaged)
 				L["[com.id] (Active)"] = com.target
@@ -144,6 +141,3 @@ Frequency:
 	active_portals++
 	add_fingerprint(user)
 	return
-
-/obj/item/hand_tele/portal_destroyed(obj/effect/portal/P)
-    active_portals--

@@ -9,7 +9,7 @@
 	throw_range = 7
 	w_class = WEIGHT_CLASS_NORMAL
 	attack_verb = list("mopped", "bashed", "bludgeoned", "whacked")
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 	var/mopping = 0
 	var/mopcount = 0
 	var/mopcap = 5
@@ -18,19 +18,20 @@
 /obj/item/mop/New()
 	..()
 	create_reagents(mopcap)
-	GLOB.janitorial_equipment += src
+	janitorial_equipment += src
 
 /obj/item/mop/Destroy()
-	GLOB.janitorial_equipment -= src
+	janitorial_equipment -= src
 	return ..()
 
 /obj/item/mop/proc/clean(turf/simulated/A)
 	if(reagents.has_reagent("water", 1) || reagents.has_reagent("cleaner", 1) || reagents.has_reagent("holywater", 1))
 		A.clean_blood()
+		A.dirt = 0
 		for(var/obj/effect/O in A)
-			if(O.is_cleanable())
+			if(is_cleanable(O))
 				qdel(O)
-	reagents.reaction(A, REAGENT_TOUCH, 10)	//10 is the multiplier for the reaction effect. probably needed to wet the floor properly.
+	reagents.reaction(A, TOUCH, 10)	//10 is the multiplier for the reaction effect. probably needed to wet the floor properly.
 	reagents.remove_any(1)			//reaction() doesn't use up the reagents
 
 /obj/item/mop/afterattack(atom/A, mob/user, proximity)
@@ -88,14 +89,14 @@
 
 /obj/item/mop/advanced/New()
 	..()
-	START_PROCESSING(SSobj, src)
+	processing_objects.Add(src)
 
 /obj/item/mop/advanced/attack_self(mob/user)
 	refill_enabled = !refill_enabled
 	if(refill_enabled)
-		START_PROCESSING(SSobj, src)
+		processing_objects.Add(src)
 	else
-		STOP_PROCESSING(SSobj, src)
+		processing_objects.Remove(src)
 	to_chat(user, "<span class='notice'>You set the condenser switch to the '[refill_enabled ? "ON" : "OFF"]' position.</span>")
 	playsound(user, 'sound/machines/click.ogg', 30, 1)
 
@@ -105,12 +106,12 @@
 		reagents.add_reagent(refill_reagent, refill_rate)
 
 /obj/item/mop/advanced/examine(mob/user)
-	. = ..()
-	. += "<span class='notice'>The condenser switch is set to <b>[refill_enabled ? "ON" : "OFF"]</b>.</span>"
+	..()
+	to_chat(user, "<span class='notice'>The condenser switch is set to <b>[refill_enabled ? "ON" : "OFF"]</b>.</span>")
 
 /obj/item/mop/advanced/Destroy()
 	if(refill_enabled)
-		STOP_PROCESSING(SSobj, src)
+		processing_objects.Remove(src)
 	return ..()
 
 

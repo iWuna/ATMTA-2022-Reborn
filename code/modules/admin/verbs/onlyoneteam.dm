@@ -1,23 +1,24 @@
 /client/proc/only_one_team()
-	if(!SSticker)
+	if(!ticker)
 		alert("The game hasn't started yet!")
 		return
 
-	var/list/incompatible_species = list(/datum/species/plasmaman, /datum/species/vox)
+	var/list/incompatible_species = list("Plasmaman", "Vox")
 	var/team_toggle = 0
-	for(var/mob/living/carbon/human/H in GLOB.player_list)
+	for(var/mob/living/carbon/human/H in player_list)
 		if(H.stat == DEAD || !(H.client))
 			continue
 		if(is_special_character(H))
 			continue
-		if(is_type_in_list(H.dna.species, incompatible_species))
-			H.set_species(/datum/species/human)
-			var/datum/character_save/S = new	// Randomize appearance
-			S.randomise()
-			S.copy_to(H)
+		if(H.species.name in incompatible_species)
+			H.set_species("Human")
+			var/datum/preferences/A = new()	// Randomize appearance
+			A.copy_to(H)
 
 		for(var/obj/item/I in H)
 			if(istype(I, /obj/item/implant))
+				continue
+			if(istype (I, /obj/item/organ))
 				continue
 			qdel(I)
 
@@ -28,7 +29,7 @@
 		H.equip_to_slot_or_del(new /obj/item/clothing/shoes/white(H), slot_shoes)
 
 		if(!team_toggle)
-			GLOB.team_alpha += H
+			team_alpha += H
 
 			H.equip_to_slot_or_del(new /obj/item/clothing/under/color/red/dodgeball(H), slot_w_uniform)
 			var/obj/item/card/id/W = new(H)
@@ -41,7 +42,7 @@
 			H.equip_to_slot_or_del(W, slot_wear_id)
 
 		else
-			GLOB.team_bravo += H
+			team_bravo += H
 
 			H.equip_to_slot_or_del(new /obj/item/clothing/under/color/blue/dodgeball(H), slot_w_uniform)
 			var/obj/item/card/id/W = new(H)
@@ -54,12 +55,12 @@
 			H.equip_to_slot_or_del(W, slot_wear_id)
 
 		team_toggle = !team_toggle
-		H.dna.species.after_equip_job(null, H)
+		H.species.after_equip_job(null, H)
 		H.regenerate_icons()
 
 	message_admins("[key_name_admin(usr)] used DODGEBAWWWWWWWL! -NO ATTACK LOGS WILL BE SENT TO ADMINS FROM THIS POINT FORTH-", 1)
 	log_admin("[key_name(usr)] used dodgeball.")
-	GLOB.nologevent = 1
+	nologevent = 1
 
 /obj/item/beach_ball/dodgeball
 	name = "dodgeball"
@@ -72,21 +73,20 @@
 	..()
 	if((ishuman(hit_atom)))
 		var/mob/living/carbon/human/H = hit_atom
-		if(H.r_hand == src)
-			return
-		if(H.l_hand == src)
-			return
-		var/mob/A = thrownby
-		if((H in GLOB.team_alpha) && (A in GLOB.team_alpha))
+		if(H.r_hand == src) return
+		if(H.l_hand == src) return
+		var/mob/A = H.LAssailant
+		if((H in team_alpha) && (A in team_alpha))
 			to_chat(A, "<span class='warning'>He's on your team!</span>")
 			return
-		else if((H in GLOB.team_bravo) && (A in GLOB.team_bravo))
+		else if((H in team_bravo) && (A in team_bravo))
 			to_chat(A, "<span class='warning'>He's on your team!</span>")
 			return
-		else if(!(A in GLOB.team_alpha) && !(A in GLOB.team_bravo))
+		else if(!A in team_alpha && !A in team_bravo)
 			to_chat(A, "<span class='warning'>You're not part of the dodgeball game, sorry!</span>")
 			return
 		else
 			playsound(src, 'sound/items/dodgeball.ogg', 50, 1)
 			visible_message("<span class='danger'>[H] HAS BEEN ELIMINATED!</span>")
 			H.melt()
+			return

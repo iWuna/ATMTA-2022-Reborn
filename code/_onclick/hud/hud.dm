@@ -7,10 +7,11 @@
 /datum/hud
 	var/mob/mymob
 
-	var/hud_shown = TRUE			//Used for the HUD toggle (F12)
-	var/hud_version = 1				//Current displayed version of the HUD
-	var/inventory_shown = TRUE		//the inventory
-	var/hotkey_ui_hidden = FALSE	//This is to hide the buttons that can be used via hotkeys. (hotkeybuttons list of buttons)
+	var/hud_shown = 1			//Used for the HUD toggle (F12)
+	var/hud_version = 1			//Current displayed version of the HUD
+	var/inventory_shown = 1		//the inventory
+	var/show_intent_icons = 0
+	var/hotkey_ui_hidden = 0	//This is to hide the buttons that can be used via hotkeys. (hotkeybuttons list of buttons)
 
 	var/obj/screen/lingchemdisplay
 	var/obj/screen/lingstingdisplay
@@ -23,7 +24,6 @@
 	var/obj/screen/alien_plasma_display
 	var/obj/screen/nightvisionicon
 	var/obj/screen/action_intent
-	var/obj/screen/zone_select
 	var/obj/screen/move_intent
 	var/obj/screen/module_store_icon
 
@@ -34,35 +34,16 @@
 	var/list/inv_slots[slots_amt]			// /obj/screen/inventory objects, ordered by their slot ID.
 
 	var/obj/screen/movable/action_button/hide_toggle/hide_actions_toggle
-	var/action_buttons_hidden = FALSE
-
-	var/list/obj/screen/plane_master/plane_masters = list() // see "appearance_flags" in the ref, assoc list of "[plane]" = object
-	///Assoc list of controller groups, associated with key string group name with value of the plane master controller ref
-	var/list/atom/movable/plane_master_controller/plane_master_controllers = list()
-	///UI for screentips that appear when you mouse over things
-	var/obj/screen/screentip/screentip_text
+	var/action_buttons_hidden = 0
 
 /mob/proc/create_mob_hud()
 	if(client && !hud_used)
 		hud_used = new /datum/hud(src)
-		update_sight()
 
 /datum/hud/New(mob/owner)
 	mymob = owner
 	hide_actions_toggle = new
 	hide_actions_toggle.InitialiseIcon(mymob)
-
-	for(var/mytype in subtypesof(/obj/screen/plane_master))
-		var/obj/screen/plane_master/instance = new mytype()
-		plane_masters["[instance.plane]"] = instance
-		instance.backdrop(mymob)
-
-	for(var/mytype in subtypesof(/atom/movable/plane_master_controller))
-		var/atom/movable/plane_master_controller/controller_instance = new mytype(src)
-		plane_master_controllers[controller_instance.name] = controller_instance
-
-	screentip_text = new(null, src)
-	static_inventory += screentip_text
 
 /datum/hud/Destroy()
 	if(mymob.hud_used == src)
@@ -76,7 +57,6 @@
 
 	inv_slots.Cut()
 	action_intent = null
-	zone_select = null
 	move_intent = null
 
 	QDEL_LIST(toggleable_inventory)
@@ -90,6 +70,7 @@
 	mymob.healths = null
 	mymob.healthdoll = null
 	mymob.pullin = null
+	mymob.zone_sel = null
 
 	//clear the rest of our reload_fullscreen
 	lingchemdisplay = null
@@ -99,19 +80,14 @@
 	vampire_blood_display = null
 	nightvisionicon = null
 
-	QDEL_LIST_ASSOC_VAL(plane_masters)
-	QDEL_LIST_ASSOC_VAL(plane_master_controllers)
-
 	mymob = null
-	QDEL_NULL(screentip_text)
 	return ..()
 
 /datum/hud/proc/show_hud(version = 0)
 	if(!ismob(mymob))
-		return FALSE
-
+		return 0
 	if(!mymob.client)
-		return FALSE
+		return 0
 
 	mymob.client.screen = list()
 
@@ -132,7 +108,7 @@
 
 	switch(display_hud_version)
 		if(HUD_STYLE_STANDARD)	//Default HUD
-			hud_shown = TRUE	//Governs behavior of other procs
+			hud_shown = 1	//Governs behavior of other procs
 			if(static_inventory.len)
 				mymob.client.screen += static_inventory
 			if(toggleable_inventory.len && inventory_shown)
@@ -148,7 +124,7 @@
 				action_intent.screen_loc = initial(action_intent.screen_loc) //Restore intent selection to the original position
 
 		if(HUD_STYLE_REDUCED)	//Reduced HUD
-			hud_shown = FALSE	//Governs behavior of other procs
+			hud_shown = 0	//Governs behavior of other procs
 			if(static_inventory.len)
 				mymob.client.screen -= static_inventory
 			if(toggleable_inventory.len)
@@ -168,7 +144,7 @@
 				action_intent.screen_loc = ui_acti_alt	//move this to the alternative position, where zone_select usually is.
 
 		if(HUD_STYLE_NOHUD)	//No HUD
-			hud_shown = FALSE	//Governs behavior of other procs
+			hud_shown = 0	//Governs behavior of other procs
 			if(static_inventory.len)
 				mymob.client.screen -= static_inventory
 			if(toggleable_inventory.len)
@@ -179,48 +155,33 @@
 				mymob.client.screen -= infodisplay
 
 	hud_version = display_hud_version
-	persistent_inventory_update()
+	persistant_inventory_update()
 	mymob.update_action_buttons(1)
 	reorganize_alerts()
 	reload_fullscreen()
-	update_parallax_pref(mymob)
-	plane_masters_update()
-
-/datum/hud/proc/plane_masters_update()
-	// Plane masters are always shown to OUR mob, never to observers
-	for(var/thing in plane_masters)
-		var/obj/screen/plane_master/PM = plane_masters[thing]
-		PM.backdrop(mymob)
-		mymob.client.screen += PM
+	update_parallax_and_dust()
 
 /datum/hud/human/show_hud(version = 0)
-	. = ..()
-	if(!.)
-		return
+	..()
 	hidden_inventory_update()
 
 /datum/hud/robot/show_hud(version = 0)
-	. = ..()
-	if(!.)
-		return
+	..()
 	update_robot_modules_display()
 
 /datum/hud/proc/hidden_inventory_update()
 	return
 
-/datum/hud/proc/persistent_inventory_update()
+/datum/hud/proc/persistant_inventory_update()
 	return
 
 //Triggered when F12 is pressed (Unless someone changed something in the DMF)
 /mob/verb/button_pressed_F12()
 	set name = "F12"
-	set hidden = TRUE
+	set hidden = 1
 
 	if(hud_used && client)
 		hud_used.show_hud() //Shows the next hud preset
 		to_chat(usr, "<span class ='info'>Switched HUD mode. Press F12 to toggle.</span>")
 	else
 		to_chat(usr, "<span class ='warning'>This mob type does not use a HUD.</span>")
-
-/datum/hud/proc/update_locked_slots()
-	return

@@ -9,10 +9,9 @@
 	item_state = "bulldog"
 	lefthand_file = 'icons/mob/inhands/guns_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/guns_righthand.dmi'
-	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, RAD = 0, FIRE = 60, ACID = 50)
 	var/maxWeightClass = 20 //The max weight of items that can fit into the cannon
 	var/loadedWeightClass = 0 //The weight of items currently in the cannon
-	var/obj/item/tank/internals/tank = null //The gas tank that is drawn from to fire things
+	var/obj/item/tank/tank = null //The gas tank that is drawn from to fire things
 	var/gasPerThrow = 3 //How much gas is drawn from a tank's pressure to fire
 	var/list/loadedItems = list() //The items loaded into the cannon that will be fired out
 	var/pressureSetting = 1 //How powerful the cannon is - higher pressure = more gas but more powerful throws
@@ -23,19 +22,21 @@
 	return ..()
 
 /obj/item/pneumatic_cannon/examine(mob/user)
-	. = ..()
+	..()
 	if(!in_range(user, src))
-		. += "<span class='notice'>You'll need to get closer to see any more.</span>"
-	else
-		if(tank)
-			. += "<span class='notice'>[bicon(tank)] It has \the [tank] mounted onto it.</span>"
-		for(var/obj/item/I in loadedItems)
-			. += "<span class='info'>[bicon(I)] It has \the [I] loaded.</span>"
+		to_chat(user, "<span class='notice'>You'll need to get closer to see any more.</span>")
+		return
+	for(var/obj/item/I in loadedItems)
+		spawn(0)
+			to_chat(user, "<span class='info'>[bicon(I)] It has \the [I] loaded.</span>")
+	if(tank)
+		to_chat(user, "<span class='notice'>[bicon(tank)] It has \the [tank] mounted onto it.</span>")
+
 
 /obj/item/pneumatic_cannon/attackby(obj/item/W, mob/user, params)
 	..()
-	if(istype(W, /obj/item/tank/internals/) && !tank)
-		if(istype(W, /obj/item/tank/internals/emergency_oxygen))
+	if(istype(W, /obj/item/tank/) && !tank)
+		if(istype(W, /obj/item/tank/emergency_oxygen))
 			to_chat(user, "<span class='warning'>\The [W] is too small for \the [src].</span>")
 			return
 		updateTank(W, 0, user)
@@ -61,9 +62,6 @@
 		return
 	if(istype(W, /obj/item))
 		var/obj/item/IW = W
-		if(IW.flags & (ABSTRACT | NODROP | DROPDEL))
-			to_chat(user, "<span class='warning'>You can't put [IW] into [src]!</span>")
-			return
 		if((loadedWeightClass + IW.w_class) > maxWeightClass)
 			to_chat(user, "<span class='warning'>\The [IW] won't fit into \the [src]!</span>")
 			return
@@ -91,7 +89,7 @@
 	Fire(user, target)
 
 
-/obj/item/pneumatic_cannon/proc/Fire(mob/living/carbon/human/user, atom/target)
+/obj/item/pneumatic_cannon/proc/Fire(var/mob/living/carbon/human/user, var/atom/target)
 	if(!istype(user) && !target)
 		return
 	var/discharge = 0
@@ -104,8 +102,8 @@
 	if(tank && !tank.air_contents.remove(gasPerThrow * pressureSetting))
 		to_chat(user, "<span class='warning'>\The [src] lets out a weak hiss and doesn't react!</span>")
 		return
-	if(user && HAS_TRAIT(user, TRAIT_CLUMSY) && prob(75))
-		user.visible_message("<span class='warning'>[user] loses [user.p_their()] grip on [src], causing it to go off!</span>", "<span class='userdanger'>[src] slips out of your hands and goes off!</span>")
+	if(user && (CLUMSY in user.mutations) && prob(75))
+		user.visible_message("<span class='warning'>[user] loses their grip on [src], causing it to go off!</span>", "<span class='userdanger'>[src] slips out of your hands and goes off!</span>")
 		user.drop_item()
 		if(prob(10))
 			target = get_turf(user)
@@ -140,14 +138,14 @@
 
 /datum/crafting_recipe/improvised_pneumatic_cannon //Pretty easy to obtain but
 	name = "Pneumatic Cannon"
-	result = list(/obj/item/pneumatic_cannon/ghetto)
-	tools = list(TOOL_WELDER, TOOL_WRENCH)
+	result = /obj/item/pneumatic_cannon/ghetto
+	tools = list(/obj/item/weldingtool,
+				 /obj/item/wrench)
 	reqs = list(/obj/item/stack/sheet/metal = 4,
 				/obj/item/stack/packageWrap = 8,
 				/obj/item/pipe = 2)
 	time = 300
-	category = CAT_WEAPONRY
-	subcategory = CAT_WEAPON
+	category = CAT_WEAPON
 
 /obj/item/pneumatic_cannon/proc/updateTank(obj/item/tank/thetank, removing = 0, mob/living/carbon/human/user)
 	if(removing)

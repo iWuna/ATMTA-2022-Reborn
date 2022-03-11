@@ -11,9 +11,6 @@
 /obj/screen/movable
 	var/snap2grid = FALSE
 	var/moved = FALSE
-	var/locked = TRUE
-	var/x_off = -16
-	var/y_off = -16
 
 //Snap Screen Object
 //Tied to the grid, snaps to the nearest turf
@@ -21,10 +18,8 @@
 /obj/screen/movable/snap
 	snap2grid = TRUE
 
-/obj/screen/movable/MouseDrop(over_object, src_location, over_location, src_control, over_control, params)
-	if(locked) //no! I am locked! begone!
-		return
 
+/obj/screen/movable/MouseDrop(over_object, src_location, over_location, src_control, over_control, params)
 	var/list/PM = params2list(params)
 
 	//No screen-loc information? abort.
@@ -44,11 +39,12 @@
 		screen_loc = "[screen_loc_X[1]],[screen_loc_Y[1]]"
 
 	else //Normalise Pixel Values (So the object drops at the center of the mouse, not 16 pixels off)
-		var/pix_X = text2num(screen_loc_X[2]) + x_off
-		var/pix_Y = text2num(screen_loc_Y[2]) + y_off
+		var/pix_X = text2num(screen_loc_X[2]) - 16
+		var/pix_Y = text2num(screen_loc_Y[2]) - 16
 		screen_loc = "[screen_loc_X[1]]:[pix_X],[screen_loc_Y[1]]:[pix_Y]"
 
 	moved = screen_loc
+
 
 //Debug procs
 /client/proc/test_movable_UI()
@@ -68,6 +64,7 @@
 	M.screen_loc = screen_l
 
 	screen += M
+
 
 /client/proc/test_snap_UI()
 	set category = "Debug"

@@ -23,23 +23,23 @@
 	..()
 	base_name = "[name]"
 
-//Some simple descriptors for breaches. Global because lazy, TODO: work out a better way to do this. | 6 years late, but atleast they are proper globals now
+//Some simple descriptors for breaches. Global because lazy, TODO: work out a better way to do this.
 
-GLOBAL_LIST_INIT(breach_brute_descriptors, list(
+var/global/list/breach_brute_descriptors = list(
 	"tiny puncture",
 	"ragged tear",
 	"large split",
 	"huge tear",
 	"gaping wound"
-	))
+	)
 
-GLOBAL_LIST_INIT(breach_burn_descriptors, list(
+var/global/list/breach_burn_descriptors = list(
 	"small burn",
 	"melted patch",
 	"sizable burn",
 	"large scorched area",
 	"huge scorched area"
-	))
+	)
 
 /datum/breach/proc/update_descriptor()
 
@@ -47,12 +47,12 @@ GLOBAL_LIST_INIT(breach_burn_descriptors, list(
 	class = max(1,min(class,5))
 	//Apply the correct descriptor.
 	if(damtype == BURN)
-		descriptor = GLOB.breach_burn_descriptors[class]
+		descriptor = breach_burn_descriptors[class]
 	else if(damtype == BRUTE)
-		descriptor = GLOB.breach_brute_descriptors[class]
+		descriptor = breach_brute_descriptors[class]
 
 //Repair a certain amount of brute or burn damage to the suit.
-/obj/item/clothing/suit/space/proc/repair_breaches(damtype, amount, mob/user)
+/obj/item/clothing/suit/space/proc/repair_breaches(var/damtype, var/amount, var/mob/user)
 
 	if(!can_breach || !breaches || !breaches.len || !damage)
 		to_chat(user, "There are no breaches to repair on \the [src].")
@@ -84,7 +84,7 @@ GLOBAL_LIST_INIT(breach_burn_descriptors, list(
 	user.visible_message("<b>[user]</b> patches some of the damage on \the [src].")
 	calc_breach_damage()
 
-/obj/item/clothing/suit/space/proc/create_breaches(damtype, amount)
+/obj/item/clothing/suit/space/proc/create_breaches(var/damtype, var/amount)
 
 	if(!can_breach || !amount)
 		return
@@ -194,21 +194,28 @@ GLOBAL_LIST_INIT(breach_burn_descriptors, list(
 			repair_breaches(BURN, ( istype(P,/obj/item/stack/sheet/plastic) ? 3 : 5), user)
 		return
 
+	else if(istype(W, /obj/item/weldingtool))
 
-/obj/item/clothing/suit/space/welder_act(mob/user, obj/item/I)
-	. = TRUE
-	if(istype(src.loc,/mob/living))
-		to_chat(user, "<span class='warning'>How do you intend to patch a hardsuit while someone is wearing it?</span>")
+		if(istype(src.loc,/mob/living))
+			to_chat(user, "<span class='warning'>How do you intend to patch a hardsuit while someone is wearing it?</span>")
+			return
+
+		if(!damage || ! brute_damage)
+			to_chat(user, "There is no structural damage on \the [src] to repair.")
+			return
+
+		var/obj/item/weldingtool/WT = W
+		if(!WT.remove_fuel(5))
+			to_chat(user, "<span class='warning'>You need more welding fuel to repair this suit.</span>")
+			return
+
+		repair_breaches(BRUTE, 3, user)
 		return
-	if(!damage || ! brute_damage)
-		to_chat(user, "There is no structural damage on \the [src] to repair.")
-		return
-	if(!I.use_tool(src, user, amount = 5, volume = I.tool_volume))
-		return
-	repair_breaches(BRUTE, 3, user)
+
+	..()
 
 /obj/item/clothing/suit/space/examine(mob/user)
-	. = ..()
+	..(user)
 	if(can_breach && breaches && breaches.len)
 		for(var/datum/breach/B in breaches)
-			. += "<span class='danger'>It has \a [B.descriptor].</span>"
+			to_chat(user, "<span class='danger'>It has \a [B.descriptor].</span>")

@@ -25,7 +25,6 @@
 		overlays.Cut()
 		melee_damage_lower = initial(melee_damage_lower)
 		melee_damage_upper = initial(melee_damage_upper)
-		obj_damage = initial(obj_damage)
 		speed = initial(speed)
 		damage_transfer = 0.4
 		to_chat(src, "<span class='danger'>You switch to combat mode.</span>")
@@ -36,15 +35,13 @@
 		overlays.Add(shield_overlay)
 		melee_damage_lower = 2
 		melee_damage_upper = 2
-		obj_damage = 6 //40/7.5 rounded up, we don't want a protector guardian 2 shotting blob tiles while taking 5% damage, thats just silly.
 		speed = 1
 		damage_transfer = 0.05 //damage? what's damage?
 		to_chat(src, "<span class='danger'>You switch to protection mode.</span>")
 		toggle = TRUE
 
 /mob/living/simple_animal/hostile/guardian/protector/snapback() //snap to what? snap to the guardian!
-	// If the summoner dies instantly, the summoner's ghost may be drawn into null space as the protector is deleted. This check should prevent that.
-	if(summoner && loc && summoner.loc)
+	if(summoner)
 		if(get_dist(get_turf(summoner),get_turf(src)) <= range)
 			return
 		else
@@ -54,7 +51,7 @@
 				Recall(TRUE)
 			else
 				to_chat(summoner, "<span class='holoparasite'>You moved out of range, and were pulled back! You can only move [range] meters from <b>[src]</b>!</span>")
-				summoner.visible_message("<span class='danger'>[summoner] jumps back to [summoner.p_their()] protector.</span>")
+				summoner.visible_message("<span class='danger'>[summoner] jumps back to their protector.</span>")
 				new /obj/effect/temp_visual/guardian/phase/out(get_turf(summoner))
 				summoner.forceMove(get_turf(src))
 				new /obj/effect/temp_visual/guardian/phase(get_turf(summoner))//Protector

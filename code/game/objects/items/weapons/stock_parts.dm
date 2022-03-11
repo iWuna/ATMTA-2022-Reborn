@@ -8,28 +8,28 @@
 	w_class = WEIGHT_CLASS_HUGE
 	can_hold = list(/obj/item/stock_parts)
 	storage_slots = 50
-	use_to_pickup = TRUE
-	allow_quick_gather = TRUE
-	allow_quick_empty = TRUE
-	pickup_all_on_tile = TRUE
-	display_contents_with_number = TRUE
+	use_to_pickup = 1
+	allow_quick_gather = 1
+	allow_quick_empty = 1
+	collection_mode = 1
+	display_contents_with_number = 1
 	max_w_class = WEIGHT_CLASS_NORMAL
 	max_combined_w_class = 100
-	var/works_from_distance = FALSE
+	var/works_from_distance = 0
 	var/primary_sound = 'sound/items/rped.ogg'
 	var/alt_sound = null
 	toolspeed = 1
 	usesound = 'sound/items/rped.ogg'
 
-/obj/item/storage/part_replacer/afterattack(obj/machinery/M, mob/user, flag, params)
-	if(!flag && works_from_distance && istype(M))
-		// Make sure its in range
-		if(M in view(user))
-			if(M.component_parts)
-				M.exchange_parts(user, src)
-				user.Beam(M,icon_state="rped_upgrade", icon='icons/effects/effects.dmi', time=5)
-		else
-			message_admins("\[EXPLOIT] [key_name_admin(user)] attempted to upgrade machinery with a BRPED via a camera console. (Attempted range exploit)")
+/obj/item/storage/part_replacer/afterattack(obj/machinery/T as obj, mob/living/carbon/human/user as mob, flag, params)
+	if(flag)
+		return
+	else if(works_from_distance)
+		if(istype(T))
+			if(T.component_parts)
+				T.exchange_parts(user, src)
+				user.Beam(T,icon_state="rped_upgrade",icon='icons/effects/effects.dmi',time=5)
+	return
 
 /obj/item/storage/part_replacer/bluespace
 	name = "bluespace rapid part exchange device"
@@ -39,10 +39,10 @@
 	storage_slots = 400
 	max_w_class = WEIGHT_CLASS_NORMAL
 	max_combined_w_class = 800
-	works_from_distance = TRUE
-	primary_sound = 'sound/items/pshoom.ogg'
-	alt_sound = 'sound/items/pshoom_2.ogg'
-	usesound = 'sound/items/pshoom.ogg'
+	works_from_distance = 1
+	primary_sound = 'sound/items/PSHOOM.ogg'
+	alt_sound = 'sound/items/PSHOOM_2.ogg'
+	usesound = 'sound/items/PSHOOM.ogg'
 	toolspeed = 0.5
 
 /obj/item/storage/part_replacer/proc/play_rped_sound()
@@ -54,7 +54,7 @@
 
 //Sorts stock parts inside an RPED by their rating.
 //Only use /obj/item/stock_parts/ with this sort proc!
-/proc/cmp_rped_sort(obj/item/stock_parts/A, obj/item/stock_parts/B)
+/proc/cmp_rped_sort(var/obj/item/stock_parts/A, var/obj/item/stock_parts/B)
 	return B.rating - A.rating
 
 /obj/item/stock_parts
@@ -65,14 +65,20 @@
 	w_class = WEIGHT_CLASS_SMALL
 	var/rating = 1
 	toolspeed = 1
-	usesound = 'sound/items/deconstruct.ogg'
+	usesound = 'sound/items/Deconstruct.ogg'
 
 /obj/item/stock_parts/New()
-	..()
 	src.pixel_x = rand(-5.0, 5)
 	src.pixel_y = rand(-5.0, 5)
 
 //Rank 1
+
+/obj/item/stock_parts/console_screen
+	name = "console screen"
+	desc = "Used in the construction of computers and other devices with a interactive console."
+	icon_state = "screen"
+	origin_tech = "materials=1"
+	materials = list(MAT_GLASS=200)
 
 /obj/item/stock_parts/capacitor
 	name = "capacitor"
@@ -104,7 +110,7 @@
 
 /obj/item/stock_parts/matter_bin
 	name = "matter bin"
-	desc = "A container used to hold compressed matter awaiting re-construction."
+	desc = "A container for hold compressed matter awaiting re-construction."
 	icon_state = "matter_bin"
 	origin_tech = "materials=1"
 	materials = list(MAT_METAL=80)
@@ -145,7 +151,7 @@
 
 /obj/item/stock_parts/matter_bin/adv
 	name = "advanced matter bin"
-	desc = "A container used to hold compressed matter awaiting re-construction."
+	desc = "A container for hold compressed matter awaiting re-construction."
 	icon_state = "advanced_matter_bin"
 	origin_tech = "materials=3"
 	rating = 2
@@ -187,7 +193,7 @@
 
 /obj/item/stock_parts/matter_bin/super
 	name = "super matter bin"
-	desc = "A container used to hold compressed matter awaiting re-construction."
+	desc = "A container for hold compressed matter awaiting re-construction."
 	icon_state = "super_matter_bin"
 	origin_tech = "materials=4;engineering=4"
 	rating = 3
@@ -229,11 +235,62 @@
 
 /obj/item/stock_parts/matter_bin/bluespace
 	name = "bluespace matter bin"
-	desc = "A container used to hold compressed matter awaiting re-construction."
+	desc = "A container for hold compressed matter awaiting re-construction."
 	icon_state = "bluespace_matter_bin"
 	origin_tech = "materials=6;programming=4;engineering=4"
 	rating = 4
 	materials = list(MAT_METAL=80)
+
+// Subspace stock parts
+
+/obj/item/stock_parts/subspace/ansible
+	name = "subspace ansible"
+	icon_state = "subspace_ansible"
+	desc = "A compact module capable of sensing extradimensional activity."
+	origin_tech = "programming=2;magnets=2;materials=2;bluespace=1"
+	materials = list(MAT_METAL=30, MAT_GLASS=10)
+
+/obj/item/stock_parts/subspace/filter
+	name = "hyperwave filter"
+	icon_state = "hyperwave_filter"
+	desc = "A tiny device capable of filtering and converting super-intense radiowaves."
+	origin_tech = "programming=2;magnets=2"
+	materials = list(MAT_METAL=30, MAT_GLASS=10)
+
+/obj/item/stock_parts/subspace/amplifier
+	name = "subspace amplifier"
+	icon_state = "subspace_amplifier"
+	desc = "A compact micro-machine capable of amplifying weak subspace transmissions."
+	origin_tech = "programming=2;magnets=2;materials=2;bluespace=2"
+	materials = list(MAT_METAL=30, MAT_GLASS=10)
+
+/obj/item/stock_parts/subspace/treatment
+	name = "subspace treatment disk"
+	icon_state = "treatment_disk"
+	desc = "A compact micro-machine capable of stretching out hyper-compressed radio waves."
+	origin_tech = "programming=2;magnets=2;materials=2;bluespace=2"
+	materials = list(MAT_METAL=30, MAT_GLASS=10)
+
+/obj/item/stock_parts/subspace/analyzer
+	name = "subspace wavelength analyzer"
+	icon_state = "wavelength_analyzer"
+	desc = "A sophisticated analyzer capable of analyzing cryptic subspace wavelengths."
+	origin_tech = "programming=2;magnets=2;materials=2;bluespace=2"
+	materials = list(MAT_METAL=30, MAT_GLASS=10)
+
+/obj/item/stock_parts/subspace/crystal
+	name = "ansible crystal"
+	icon_state = "ansible_crystal"
+	desc = "A crystal made from pure glass used to transmit laser databursts to subspace."
+	origin_tech = "magnets=2;materials=2;bluespace=2;plasmatech=2"
+	materials = list(MAT_GLASS=50)
+
+/obj/item/stock_parts/subspace/transmitter
+	name = "subspace transmitter"
+	icon_state = "subspace_transmitter"
+	desc = "A large piece of equipment used to open a window into the subspace dimension."
+	origin_tech = "magnets=2;materials=2;bluespace=2"
+	materials = list(MAT_METAL=50)
 
 /obj/item/research//Makes testing much less of a pain -Sieve
 	name = "research"

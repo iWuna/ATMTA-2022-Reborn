@@ -2,16 +2,16 @@
 	name = "blob node"
 	icon = 'icons/mob/blob.dmi'
 	icon_state = "blank_blob"
-	max_integrity = 200
-	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, RAD = 0, FIRE = 65, ACID = 90)
-	point_return = 18
+	health = 100
+	fire_resist = 2
+	var/mob/camera/blob/overmind
 
-/obj/structure/blob/node/Initialize(mapload)
-	. = ..()
-	GLOB.blob_nodes += src
-	START_PROCESSING(SSobj, src)
+/obj/structure/blob/node/New(loc, var/h = 100)
+	blob_nodes += src
+	processing_objects.Add(src)
+	..(loc, h)
 
-/obj/structure/blob/node/adjustcolors(a_color)
+/obj/structure/blob/node/adjustcolors(var/a_color)
 	overlays.Cut()
 	color = null
 	var/image/I = new('icons/mob/blob.dmi', "blob")
@@ -20,9 +20,12 @@
 	var/image/C = new('icons/mob/blob.dmi', "blob_node_overlay")
 	src.overlays += C
 
+/obj/structure/blob/node/fire_act(datum/gas_mixture/air, exposed_temperature, exposed_volume)
+	return
+
 /obj/structure/blob/node/Destroy()
-	GLOB.blob_nodes -= src
-	STOP_PROCESSING(SSobj, src)
+	blob_nodes -= src
+	processing_objects.Remove(src)
 	return ..()
 
 /obj/structure/blob/node/Life(seconds, times_fired)
@@ -32,5 +35,11 @@
 	else
 		for(var/i = 1; i < 8; i += i)
 			Pulse(5, i, color)
-	obj_integrity = min(max_integrity, obj_integrity + 1)
+	health = min(initial(health), health + 1)
 	color = null
+
+/obj/structure/blob/node/update_icon()
+	if(health <= 0)
+		qdel(src)
+		return
+	return

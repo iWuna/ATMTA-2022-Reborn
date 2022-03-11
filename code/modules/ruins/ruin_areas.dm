@@ -1,27 +1,28 @@
 //Parent types
 
-/area/ruin
-	name = "\improper Unexplored Location"
+/area/ruin/
+	name = "Unexplored Location"
 	icon_state = "away"
-	has_gravity = TRUE
-	there_can_be_many = TRUE
-	dynamic_lighting = DYNAMIC_LIGHTING_FORCED
-	ambientsounds = RUINS_SOUNDS
-	sound_environment = SOUND_ENVIRONMENT_STONEROOM
+	has_gravity = 1
+	there_can_be_many = 1
+
 
 /area/ruin/unpowered
-	always_unpowered = FALSE
+	always_unpowered = 0
 
 /area/ruin/unpowered/no_grav
-	has_gravity = FALSE
+	has_gravity = 0
 
 /area/ruin/powered
-	requires_power = FALSE
+	requires_power = 0
+
+
+
 
 //Areas
 
 /area/ruin/unpowered/no_grav/way_home
-	name = "\improper Salvation"
+	name = "Salvation"
 	icon_state = "away"
 
 /area/ruin/powered/snow_biodome
@@ -34,6 +35,7 @@
 	name = "Hallway"
 	icon_state = "hallC"
 
+
 /area/ruin/onehalf/drone_bay
 	name = "Mining Drone Bay"
 	icon_state = "engine"
@@ -42,11 +44,6 @@
 	name = "Crew Quarters"
 	icon_state = "Sleep"
 
-/area/ruin/onehalf/abandonedbridge
-	name = "Abandoned Bridge"
+/area/ruin/onehalf/bridge
+	name = "Bridge"
 	icon_state = "bridge"
-
-// Old tcommsat
-/area/ruin/tcommsat
-	name = "Telecommunications Satellite"
-	icon_state = "tcomsatcham"

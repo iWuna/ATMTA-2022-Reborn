@@ -8,7 +8,6 @@
 	throw_range = 5
 	w_class = WEIGHT_CLASS_TINY
 	origin_tech = "materials=1;biotech=2"
-	container_type = OPENCONTAINER | INJECTABLE | DRAWABLE
 	materials = list(MAT_GLASS=500)
 	var/obj/item/implant/imp = null
 
@@ -17,7 +16,7 @@
 	if(imp)
 		icon_state = "implantcase-[imp.item_color]"
 		origin_tech = imp.origin_tech
-		flags = imp.flags & ~DROPDEL
+		flags = imp.flags
 		reagents = imp.reagents
 	else
 		icon_state = "implantcase-0"
@@ -29,7 +28,15 @@
 /obj/item/implantcase/attackby(obj/item/W, mob/user, params)
 	..()
 	if(istype(W, /obj/item/pen))
-		rename_interactive(user, W)
+		var/t = stripped_input(user, "What would you like the label to be?", name, null)
+		if(user.get_active_hand() != W)
+			return
+		if(!in_range(src, user) && loc != user)
+			return
+		if(t)
+			name = "implant case - '[t]'"
+		else
+			name = "implant case"
 	else if(istype(W, /obj/item/implanter))
 		var/obj/item/implanter/I = W
 		if(I.imp)

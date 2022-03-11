@@ -4,40 +4,40 @@
 	icon_state = "health"
 	materials = list(MAT_METAL=800, MAT_GLASS=200)
 	origin_tech = "magnets=1;biotech=1"
-	secured = FALSE
+	secured = 0
 
-	var/scanning = FALSE
+	var/scanning = 0
 	var/health_scan
 	var/alarm_health = 0
 
 
 
 /obj/item/assembly/health/activate()
-	if(!..())
-		return FALSE//Cooldown check
+	if(!..())	return 0//Cooldown check
 	toggle_scan()
-	return FALSE
+	return 0
 
 /obj/item/assembly/health/toggle_secure()
 	secured = !secured
 	if(secured && scanning)
-		START_PROCESSING(SSobj, src)
+		processing_objects.Add(src)
 	else
-		scanning = FALSE
-		STOP_PROCESSING(SSobj, src)
+		scanning = 0
+		processing_objects.Remove(src)
 	update_icon()
 	return secured
 
-/obj/item/assembly/health/multitool_act(mob/user, obj/item/I)
-	. = TRUE
-	if(!I.use_tool(src, user, 0, volume = I.tool_volume))
+/obj/item/assembly/health/attackby(obj/item/W as obj, mob/user as mob)
+	if(istype(W, /obj/item/multitool))
+		if(alarm_health == 0)
+			alarm_health = -90
+			user.show_message("You toggle [src] to \"detect death\" mode.")
+		else
+			alarm_health = 0
+			user.show_message("You toggle [src] to \"detect critical state\" mode.")
 		return
-	if(alarm_health == 0)
-		alarm_health = -90
-		user.show_message("You toggle [src] to \"detect death\" mode.")
 	else
-		alarm_health = 0
-		user.show_message("You toggle [src] to \"detect critical state\" mode.")
+		return ..()
 
 /obj/item/assembly/health/process()
 	if(!scanning || !secured)
@@ -55,25 +55,24 @@
 		health_scan = M.health
 		if(health_scan <= alarm_health)
 			pulse()
-			audible_message("[bicon(src)] *beep* *beep*")
+			audible_message("[bicon(src)] *beep* *beep*", "*beep* *beep*")
 			toggle_scan()
 		return
 	return
 
 /obj/item/assembly/health/proc/toggle_scan()
-	if(!secured)
-		return FALSE
+	if(!secured)	return 0
 	scanning = !scanning
 	if(scanning)
-		START_PROCESSING(SSobj, src)
+		processing_objects.Add(src)
 	else
-		STOP_PROCESSING(SSobj, src)
+		processing_objects.Remove(src)
 	return
 
-/obj/item/assembly/health/interact(mob/user)//TODO: Change this to the wires thingy
+/obj/item/assembly/health/interact(mob/user as mob)//TODO: Change this to the wires thingy
 	if(!secured)
-		user.show_message("<span class='warning'>[src] is unsecured!</span>")
-		return FALSE
+		user.show_message("<span class='warning'>The [name] is unsecured!</span>")
+		return 0
 	var/dat = text("<TT><B>Health Sensor</B> <A href='?src=[UID()];scanning=1'>[scanning?"On":"Off"]</A>")
 	if(scanning && health_scan)
 		dat += "<BR>Health: [health_scan]"

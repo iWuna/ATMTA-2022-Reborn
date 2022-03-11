@@ -12,6 +12,9 @@
 	var/department_flag = 0
 	var/department_head = list()
 
+	//Players will be allowed to spawn in as jobs that are set to "Station"
+	var/list/faction = list("Station")
+
 	//How many players can be this job
 	var/total_positions = 0
 
@@ -23,9 +26,6 @@
 
 	//Supervisors, who this person answers to directly
 	var/supervisors = ""
-
-	/// Text which is shown to someone in BIG BOLG RED when they spawn. Use for critically important stuff that could make/break a round
-	var/important_information = null
 
 	//Sellection screen color
 	var/selection_color = "#ffffff"
@@ -48,17 +48,15 @@
 
 	//If you have use_age_restriction_for_jobs config option enabled and the database set up, this option will add a requirement for players to be at least minimal_player_age days old. (meaning they first signed in at least that many days before.)
 	var/minimal_player_age = 0
+	var/prisonlist_job = 0
 
-	// Assoc list of EXP_TYPE_ defines and the amount of time needed in those departments
-	var/list/exp_map = list()
+	var/exp_requirements = 0
+	var/exp_type = ""
 
 	var/disabilities_allowed = 1
-	var/transfer_allowed = TRUE // If false, ID computer will always discourage transfers to this job, even if player is eligible
-	var/hidden_from_job_prefs = FALSE // if true, job preferences screen never shows this job.
 
 	var/admin_only = 0
 	var/spawn_ert = 0
-	var/syndicate_command = 0
 
 	var/outfit = null
 
@@ -77,24 +75,21 @@
 	if(!H)
 		return 0
 
-	H.dna.species.before_equip_job(src, H, visualsOnly)
+	H.species.before_equip_job(src, H, visualsOnly)
 
 	if(outfit)
 		H.equipOutfit(outfit, visualsOnly)
 
-	H.dna.species.after_equip_job(src, H, visualsOnly)
+	H.species.after_equip_job(src, H, visualsOnly)
 
 	if(!visualsOnly && announce)
 		announce(H)
 
 /datum/job/proc/get_access()
-	if(!GLOB?.configuration?.jobs)	//Needed for robots.
-		// AA TODO: Remove this once mulebots and stuff use Initialize()
-		// Update: Now that the map is loaded after SSjobs this might not be needed
-		// However, I dont want to take that chance
+	if(!config)	//Needed for robots.
 		return src.minimal_access.Copy()
 
-	if(GLOB.configuration.jobs.jobs_have_minimal_access)
+	if(config.jobs_have_minimal_access)
 		return src.minimal_access.Copy()
 	else
 		return src.access.Copy()
@@ -109,7 +104,7 @@
 /datum/job/proc/available_in_days(client/C)
 	if(!C)
 		return 0
-	if(!GLOB.configuration.jobs.restrict_jobs_on_account_age)
+	if(!config.use_age_restriction_for_jobs)
 		return 0
 	if(!isnum(C.player_age))
 		return 0 //This is only a number if the db connection is established, otherwise it is text: "Requires database", meaning these restrictions cannot be enforced
@@ -123,10 +118,10 @@
 		return 0
 	if(disabilities_allowed)
 		return 0
-	var/list/prohibited_disabilities = list(DISABILITY_FLAG_BLIND, DISABILITY_FLAG_DEAF, DISABILITY_FLAG_MUTE, DISABILITY_FLAG_DIZZY)
+	var/list/prohibited_disabilities = list(DISABILITY_FLAG_DEAF, DISABILITY_FLAG_BLIND, DISABILITY_FLAG_MUTE, DISABILITY_FLAG_SCRAMBLED, DISABILITY_FLAG_EPILEPTIC, DISABILITY_FLAG_TOURETTES, DISABILITY_FLAG_NEARSIGHTED, DISABILITY_FLAG_DIZZY)
 	for(var/i = 1, i < prohibited_disabilities.len, i++)
 		var/this_disability = prohibited_disabilities[i]
-		if(C.prefs.active_character.disabilities & this_disability)
+		if(C.prefs.disabilities & this_disability)
 			return 1
 	return 0
 
@@ -151,7 +146,7 @@
 	var/backpack = /obj/item/storage/backpack
 	var/satchel = /obj/item/storage/backpack/satchel_norm
 	var/dufflebag = /obj/item/storage/backpack/duffel
-	box = /obj/item/storage/box/survival
+	var/box = /obj/item/storage/box/survival
 
 	var/tmp/list/gear_leftovers = list()
 
@@ -173,12 +168,13 @@
 			else
 				back = backpack //Department backpack
 
-	if(box && H.dna.species.speciesbox)
-		box = H.dna.species.speciesbox
+	if(box)
+		backpack_contents.Insert(1, box) // Box always takes a first slot in backpack
+		backpack_contents[box] = 1
 
-	if(allow_loadout && H.client && length(H.client.prefs.active_character.loadout_gear))
-		for(var/gear in H.client.prefs.active_character.loadout_gear)
-			var/datum/gear/G = GLOB.gear_datums[text2path(gear) || gear]
+	if(allow_loadout && H.client && (H.client.prefs.gear && H.client.prefs.gear.len))
+		for(var/gear in H.client.prefs.gear)
+			var/datum/gear/G = gear_datums[gear]
 			if(G)
 				var/permitted = FALSE
 
@@ -188,13 +184,16 @@
 				else
 					permitted = TRUE
 
+				if(G.whitelisted && (G.whitelisted != H.species.name || !is_alien_whitelisted(H, G.whitelisted)))
+					permitted = FALSE
+
 				if(!permitted)
-					to_chat(H, "<span class='warning'>Your current job or whitelist status does not permit you to spawn with [G.display_name]!</span>")
+					to_chat(H, "<span class='warning'>Your current job or whitelist status does not permit you to spawn with [gear]!</span>")
 					continue
 
 				if(G.slot)
-					if(H.equip_to_slot_or_del(G.spawn_item(H), G.slot, TRUE))
-						to_chat(H, "<span class='notice'>Equipping you with [G.display_name]!</span>")
+					if(H.equip_to_slot_or_del(G.spawn_item(H), G.slot))
+						to_chat(H, "<span class='notice'>Equipping you with [gear]!</span>")
 					else
 						gear_leftovers += G
 				else
@@ -212,12 +211,12 @@
 
 	if(gear_leftovers.len)
 		for(var/datum/gear/G in gear_leftovers)
-			var/atom/placed_in = H.equip_or_collect(G.spawn_item(null, H.client.prefs.active_character.loadout_gear[G.display_name]))
+			var/atom/placed_in = H.equip_or_collect(G.spawn_item(null, H.client.prefs.gear[G.display_name]))
 			if(istype(placed_in))
 				if(isturf(placed_in))
 					to_chat(H, "<span class='notice'>Placing [G.display_name] on [placed_in]!</span>")
 				else
-					to_chat(H, "<span class='notice'>Placing [G.display_name] in your [placed_in.name].</span>")
+					to_chat(H, "<span class='noticed'>Placing [G.display_name] in [placed_in.name]")
 				continue
 			if(H.equip_to_appropriate_slot(G))
 				to_chat(H, "<span class='notice'>Placing [G.display_name] in your inventory!</span>")
@@ -228,14 +227,14 @@
 			to_chat(H, "<span class='danger'>Failed to locate a storage object on your mob, either you spawned with no hands free and no backpack or this is a bug.</span>")
 			qdel(G)
 
-		gear_leftovers.Cut()
+		qdel(gear_leftovers)
 
 	return 1
 
 /datum/outfit/job/proc/imprint_idcard(mob/living/carbon/human/H)
-	var/datum/job/J = SSjobs.GetJobType(jobtype)
+	var/datum/job/J = job_master.GetJobType(jobtype)
 	if(!J)
-		J = SSjobs.GetJob(H.job)
+		J = job_master.GetJob(H.job)
 
 	var/alt_title
 	if(H.mind)
@@ -254,8 +253,6 @@
 
 		if(H.mind && H.mind.initial_account)
 			C.associated_account_number = H.mind.initial_account.account_number
-		C.owner_uid = H.UID()
-		C.owner_ckey = H.ckey
 
 /datum/outfit/job/proc/imprint_pda(mob/living/carbon/human/H)
 	var/obj/item/pda/PDA = H.wear_pda
@@ -265,12 +262,3 @@
 		PDA.ownjob = C.assignment
 		PDA.ownrank = C.rank
 		PDA.name = "PDA-[H.real_name] ([PDA.ownjob])"
-
-/datum/job/proc/would_accept_job_transfer_from_player(mob/player)
-	if(!transfer_allowed)
-		return FALSE
-	if(!check_job_karma(title))
-		return TRUE
-	if(!istype(player))
-		return FALSE
-	return is_job_whitelisted(player, title)

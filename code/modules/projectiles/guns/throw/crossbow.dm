@@ -22,9 +22,6 @@
 	var/obj/item/stock_parts/cell/cell = null    // Used for firing superheated rods.
 	var/list/possible_tensions = list(XBOW_TENSION_20, XBOW_TENSION_40, XBOW_TENSION_60, XBOW_TENSION_80, XBOW_TENSION_FULL)
 
-/obj/item/gun/throw/crossbow/get_cell()
-	return cell
-
 /obj/item/gun/throw/crossbow/emp_act(severity)
 	if(cell && severity)
 		emp_act(severity)
@@ -39,11 +36,11 @@
 		icon_state = "[initial(icon_state)]-drawn"
 
 /obj/item/gun/throw/crossbow/examine(mob/user)
-	. = ..()
+	..()
 	if(cell)
-		. += "<span class='notice'>\A [cell] is mounted onto [src]. Battery cell charge: [cell.charge]/[cell.maxcharge]"
+		to_chat(user, "<span class='notice'>\A [cell] is mounted onto [src]. Battery cell charge: [cell.charge]/[cell.maxcharge]")
 	else
-		. += "<span class='notice'>It has an empty mount for a battery cell.</span>"
+		to_chat(user, "<span class='notice'>It has an empty mount for a battery cell.</span>")
 
 /obj/item/gun/throw/crossbow/modify_projectile(obj/item/I, on_chamber = 0)
 	if(cell && on_chamber && istype(I, /obj/item/arrow/rod))
@@ -94,29 +91,25 @@
 		user.visible_message("[usr] draws back the string of [src]!","[src] clunks as you draw the string to its maximum tension!!")
 		update_icon()
 
-/obj/item/gun/throw/crossbow/attackby(obj/item/I, mob/user, params)
-	if(!istype(I, /obj/item/stock_parts/cell))
-		return ..()
-
-	if(cell)
-		to_chat(user, "<span class='notice'>[src] already has a cell installed.</span>")
-		return
-
-	user.drop_item()
-	I.forceMove(src)
-	cell = I
-	to_chat(user, "<span class='notice'>You jam [cell] into [src] and wire it to the firing coil.</span>")
-	process_chamber()
-
-/obj/item/gun/throw/crossbow/screwdriver_act(mob/user, obj/item/I)
-	. = ..()
-	if(!cell)
-		to_chat(user, "<span class='notice'>[src] doesn't have a cell installed.</span>")
-		return
-
-	cell.forceMove(get_turf(src))
-	to_chat(user, "<span class='notice'>You jimmy [cell] out of [src] with [I].</span>")
-	cell = null
+/obj/item/gun/throw/crossbow/attackby(obj/item/W as obj, mob/user as mob, params)
+	if(istype(W, /obj/item/stock_parts/cell))
+		if(!cell)
+			user.drop_item()
+			W.loc = src
+			cell = W
+			to_chat(user, "<span class='notice'>You jam [cell] into [src] and wire it to the firing coil.</span>")
+			process_chamber()
+		else
+			to_chat(user, "<span class='notice'>[src] already has a cell installed.</span>")
+	else if(istype(W, /obj/item/screwdriver))
+		if(cell)
+			cell.loc = get_turf(src)
+			to_chat(user, "<span class='notice'>You jimmy [cell] out of [src] with [W].</span>")
+			cell = null
+		else
+			to_chat(user, "<span class='notice'>[src] doesn't have a cell installed.</span>")
+	else
+		..()
 
 /obj/item/gun/throw/crossbow/verb/set_tension()
 	set name = "Adjust Tension"
@@ -132,13 +125,13 @@
 
 	switch(choice)
 		if(XBOW_TENSION_20)
-			drawtension = CEILING(0.2 * maxtension, 1)
+			drawtension = Ceiling(0.2 * maxtension)
 		if(XBOW_TENSION_40)
-			drawtension = CEILING(0.4 * maxtension, 1)
+			drawtension = Ceiling(0.4 * maxtension)
 		if(XBOW_TENSION_60)
-			drawtension = CEILING(0.6 * maxtension, 1)
+			drawtension = Ceiling(0.6 * maxtension)
 		if(XBOW_TENSION_80)
-			drawtension = CEILING(0.8 * maxtension, 1)
+			drawtension = Ceiling(0.8 * maxtension)
 		if(XBOW_TENSION_FULL)
 			drawtension = maxtension
 
@@ -170,7 +163,7 @@
 	name = "makeshift bolt"
 	desc = "A sharpened metal rod that can be fired out of a crossbow."
 	icon_state = "metal-rod"
-	throwforce = 10
+	throwforce = 8
 	var/superheated = 0
 
 /obj/item/arrow/rod/removed()

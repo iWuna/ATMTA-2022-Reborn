@@ -8,54 +8,32 @@
 	var/list/networks = list("SS13")
 	var/datum/action/innate/camera_off/off_action = new
 	var/datum/action/innate/camera_jump/jump_action = new
-	var/list/actions = list()
 
 /obj/machinery/computer/camera_advanced/proc/CreateEye()
 	eyeobj = new()
 	eyeobj.origin = src
 
-/obj/machinery/computer/camera_advanced/proc/GrantActions(mob/living/user)
-	if(off_action)
-		off_action.target = user
-		off_action.Grant(user)
-		actions += off_action
-
-	if(jump_action)
-		jump_action.target = user
-		jump_action.Grant(user)
-		actions += jump_action
-
-/obj/machinery/computer/camera_advanced/proc/remove_eye_control(mob/living/user)
-	if(!user)
-		return
-	for(var/V in actions)
-		var/datum/action/A = V
-		A.Remove(user)
-	actions.Cut()
-	if(user.client)
-		user.reset_perspective(null)
-		eyeobj.RemoveImages()
-	eyeobj.eye_user = null
-	user.remote_control = null
-
-	current_user = null
-	user.unset_machine()
-	playsound(src, 'sound/machines/terminal_off.ogg', 25, 0)
+/obj/machinery/computer/camera_advanced/proc/GrantActions(mob/living/carbon/user)
+	off_action.target = user
+	off_action.Grant(user)
+	jump_action.target = user
+	jump_action.Grant(user)
 
 /obj/machinery/computer/camera_advanced/check_eye(mob/user)
-	if((stat & (NOPOWER|BROKEN)) || (!Adjacent(user) && !user.has_unlimited_silicon_privilege) || !user.has_vision() || user.incapacitated())
+	if((stat & (NOPOWER|BROKEN)) || !Adjacent(user) || !user.has_vision() || user.incapacitated())
 		user.unset_machine()
+		return 0
+	return 1
 
 /obj/machinery/computer/camera_advanced/Destroy()
 	if(current_user)
 		current_user.unset_machine()
 	QDEL_NULL(eyeobj)
-	QDEL_LIST(actions)
 	return ..()
 
 /obj/machinery/computer/camera_advanced/on_unset_machine(mob/M)
 	if(M == current_user)
-		remove_eye_control(M)
+		off_action.Activate()
 
 /obj/machinery/computer/camera_advanced/attack_hand(mob/user)
 	if(current_user)
@@ -72,10 +50,10 @@
 
 	if(!eyeobj.eye_initialized)
 		var/camera_location
-		for(var/obj/machinery/camera/C in GLOB.cameranet.cameras)
+		for(var/obj/machinery/camera/C in cameranet.cameras)
 			if(!C.can_use())
 				continue
-			if(length(C.network & networks))
+			if(C.network&networks)
 				camera_location = get_turf(C)
 				break
 		if(camera_location)
@@ -96,13 +74,13 @@
 	current_user = user
 	eyeobj.eye_user = user
 	eyeobj.name = "Camera Eye ([user.name])"
+	// This should be able to be excised once the full view refactor rolls out
+	user.remote_view = 1
 	user.remote_control = eyeobj
 	user.reset_perspective(eyeobj)
 
 /mob/camera/aiEye/remote
 	name = "Inactive Camera Eye"
-	// Abductors dont trigger the Ai Detector
-	ai_detector_visible = FALSE
 	var/sprint = 10
 	var/cooldown = 0
 	var/acceleration = 1
@@ -117,13 +95,6 @@
 	origin = null
 	return ..()
 
-/mob/camera/aiEye/remote/RemoveImages()
-	..()
-	if(visible_icon)
-		var/client/C = GetViewerClient()
-		if(C)
-			C.images -= user_image
-
 /mob/camera/aiEye/remote/GetViewerClient()
 	if(eye_user)
 		return eye_user.client
@@ -134,11 +105,8 @@
 		if(!isturf(eye_user.loc))
 			return
 		T = get_turf(T)
-		var/old_loc = loc
 		loc = T
-		Moved(old_loc, get_dir(old_loc, loc))
-		if(use_static)
-			GLOB.cameranet.visibility(src, GetViewerClient())
+		cameranet.visibility(src)
 		if(visible_icon)
 			if(eye_user.client)
 				eye_user.client.images -= user_image
@@ -172,8 +140,20 @@
 		return
 	var/mob/living/carbon/C = target
 	var/mob/camera/aiEye/remote/remote_eye = C.remote_control
-	var/obj/machinery/computer/camera_advanced/console = remote_eye.origin
-	console.remove_eye_control(target)
+	C.remote_view = 0
+	remote_eye.origin.current_user = null
+	remote_eye.origin.jump_action.Remove(C)
+	remote_eye.eye_user = null
+	if(C.client)
+		C.reset_perspective(null)
+		if(remote_eye.visible_icon)
+			C.client.images -= remote_eye.user_image
+		for(var/datum/camerachunk/chunk in remote_eye.visibleCameraChunks)
+			C.client.images -= chunk.obscured
+	C.remote_control = null
+	C.unset_machine()
+	src.Remove(C)
+	playsound(remote_eye.origin, 'sound/machines/terminal_off.ogg', 25, 0)
 
 /datum/action/innate/camera_jump
 	name = "Jump To Camera"
@@ -188,7 +168,7 @@
 
 	var/list/L = list()
 
-	for(var/obj/machinery/camera/cam in GLOB.cameranet.cameras)
+	for(var/obj/machinery/camera/cam in cameranet.cameras)
 		L.Add(cam)
 
 	camera_sort(L)

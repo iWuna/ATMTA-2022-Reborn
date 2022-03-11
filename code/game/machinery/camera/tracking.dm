@@ -17,7 +17,7 @@
 		return
 
 	var/list/L = list()
-	for(var/obj/machinery/camera/C in GLOB.cameranet.cameras)
+	for(var/obj/machinery/camera/C in cameranet.cameras)
 		L.Add(C)
 
 	camera_sort(L)
@@ -33,7 +33,7 @@
 	return T
 
 
-/mob/living/silicon/ai/proc/ai_camera_list(camera in get_camera_list())
+/mob/living/silicon/ai/proc/ai_camera_list(var/camera in get_camera_list())
 	set category = "AI Commands"
 	set name = "Show Camera List"
 
@@ -54,7 +54,7 @@
 	set name = "Store Camera Location"
 	set desc = "Stores your current camera location by the given name"
 
-	loc = sanitize(copytext(loc, 1, MAX_MESSAGE_LEN))
+	loc = sanitize_local(copytext(loc, 1, MAX_MESSAGE_LEN))
 	if(!loc)
 		to_chat(src, "<span class='warning'>Must supply a location name</span>")
 		return
@@ -120,7 +120,7 @@
 	if(usr.stat == 2)
 		return list()
 
-	for(var/mob/living/M in GLOB.mob_list)
+	for(var/mob/living/M in mob_list)
 		if(!M.can_track(usr))
 			continue
 
@@ -160,7 +160,7 @@
 
 	ai_actual_track(target)
 
-/mob/living/silicon/ai/proc/ai_cancel_tracking(forced = 0)
+/mob/living/silicon/ai/proc/ai_cancel_tracking(var/forced = 0)
 	if(!cameraFollow)
 		return
 
@@ -226,9 +226,9 @@
 		return 0
 	if(isrobot(M))
 		var/mob/living/silicon/robot/R = M
-		if(!(R.camera && R.camera.can_use()) && !GLOB.cameranet.checkCameraVis(M))
+		if(!(R.camera && R.camera.can_use()) && !cameranet.checkCameraVis(M))
 			return 0
-	else if(!GLOB.cameranet.checkCameraVis(M))
+	else if(!cameranet.checkCameraVis(M))
 		return 0
 	return 1
 

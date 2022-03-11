@@ -6,14 +6,7 @@
 	icon = 'icons/obj/trash.dmi'
 	w_class = WEIGHT_CLASS_TINY
 	desc = "This is rubbish."
-	resistance_flags = FLAMMABLE
-
-/obj/item/trash/decompile_act(obj/item/matter_decompiler/C, mob/user)
-	C.stored_comms["metal"] += 2
-	C.stored_comms["wood"] += 1
-	C.stored_comms["glass"] += 1
-	qdel(src)
-	return TRUE
+	burn_state = FLAMMABLE
 
 /obj/item/trash/raisins
 	name = "4no raisins"
@@ -39,10 +32,6 @@
 	name = "Scaredy's Private Reserve Beef Jerky"
 	icon_state = "sosjerky"
 
-/obj/item/trash/spacetwinkie
-	name = "Space Twinkie"
-	icon_state = "space_twinkie"
-
 /obj/item/trash/syndi_cakes
 	name = "Syndi cakes"
 	icon_state = "syndi_cakes"
@@ -52,25 +41,13 @@
 	icon_state = "waffles"
 
 /obj/item/trash/plate
-	name = "plate"
+	name = "Plate"
 	icon_state = "plate"
-	resistance_flags = NONE
+	burn_state = FIRE_PROOF
 
 /obj/item/trash/snack_bowl
-	name = "snack bowl"
+	name = "Snack bowl"
 	icon_state	= "snack_bowl"
-
-/obj/item/trash/fried_vox
-	name = "Kentucky Fried Vox"
-	icon_state = "fried_vox_empty"
-	item_state = "fried_vox_empty"
-	slot_flags = SLOT_HEAD
-	dog_fashion = /datum/dog_fashion/head/fried_vox_empty
-	sprite_sheets = list(
-	"Skrell" = 'icons/mob/clothing/species/skrell/head.dmi',
-	"Drask" = 'icons/mob/clothing/species/drask/head.dmi',
-	"Kidan" = 'icons/mob/clothing/species/kidan/head.dmi'
-	)
 
 /obj/item/trash/pistachios
 	name = "Pistachios pack"
@@ -83,7 +60,7 @@
 /obj/item/trash/tray
 	name = "Tray"
 	icon_state = "tray"
-	resistance_flags = NONE
+	burn_state = FIRE_PROOF
 
 /obj/item/trash/candle
 	name = "candle"
@@ -91,7 +68,7 @@
 	icon_state = "candle4"
 
 /obj/item/trash/liquidfood
-	name = "\improper \"LiquidFood\" ration"
+	name = "\"LiquidFood\" ration"
 	icon_state = "liquidfood"
 
 /obj/item/trash/can
@@ -99,7 +76,7 @@
 	icon_state = "cola"
 	var/is_glass = 0
 	var/is_plastic = 0
-	resistance_flags = NONE
+	burn_state = FIRE_PROOF
 
 /obj/item/trash/gum
 	name = "chewed gum"
@@ -109,12 +86,6 @@
 /obj/item/trash/tastybread
 	name = "bread tube"
 	icon_state = "tastybread"
-
-/obj/item/trash/spentcasing
-	icon = 'icons/obj/ammo.dmi'
-	name = "bullet casing"
-	desc = "A spent bullet casing. Smells like cordite."
-	icon_state = "gshell"
 
 /obj/item/trash/tapetrash
 	name = "old duct tape"

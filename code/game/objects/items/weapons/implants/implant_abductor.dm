@@ -13,7 +13,7 @@
 	if(cooldown == total_cooldown)
 		home.Retrieve(imp_in,1)
 		cooldown = 0
-		START_PROCESSING(SSobj, src)
+		processing_objects.Add(src)
 	else
 		to_chat(imp_in, "<span class='warning'>You must wait [(total_cooldown - cooldown)*2] seconds to use [src] again!</span>")
 
@@ -21,16 +21,15 @@
 	if(cooldown < total_cooldown)
 		cooldown++
 		if(cooldown == total_cooldown)
-			STOP_PROCESSING(SSobj, src)
+			processing_objects.Remove(src)
 
 /obj/item/implant/abductor/implant(mob/source, mob/user)
 	if(..())
 		var/obj/machinery/abductor/console/console
 		if(ishuman(source))
 			var/mob/living/carbon/human/H = source
-			if(isabductor(H))
-				var/datum/species/abductor/S = H.dna.species
-				console = get_team_console(S.team)
+			if(H.get_species() == "Abductor")
+				console = get_team_console(H.mind.abductor.team)
 				home = console.pad
 
 		if(!home)
@@ -38,9 +37,9 @@
 			home = console.pad
 		return 1
 
-/obj/item/implant/abductor/proc/get_team_console(team)
+/obj/item/implant/abductor/proc/get_team_console(var/team)
 	var/obj/machinery/abductor/console/console
-	for(var/obj/machinery/abductor/console/c in GLOB.abductor_equipment)
+	for(var/obj/machinery/abductor/console/c in abductor_equipment)
 		if(c.team == team)
 			console = c
 			break

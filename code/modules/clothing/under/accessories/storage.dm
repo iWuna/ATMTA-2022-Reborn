@@ -3,7 +3,7 @@
 	desc = "Used to hold things when you don't have enough hands."
 	icon_state = "webbing"
 	item_color = "webbing"
-	slot = ACCESSORY_SLOT_UTILITY
+	slot = "utility"
 	var/slots = 3
 	var/obj/item/storage/internal/hold
 	actions_types = list(/datum/action/item_action/accessory/storage)
@@ -37,14 +37,14 @@
 	return hold.attackby(W, user, params)
 
 /obj/item/clothing/accessory/storage/emp_act(severity)
-	..()
 	hold.emp_act(severity)
-
-/obj/item/clothing/accessory/storage/hear_talk(mob/M, list/message_pieces, verb)
-	hold.hear_talk(M, message_pieces, verb)
 	..()
 
-/obj/item/clothing/accessory/storage/hear_message(mob/M, msg, verb, datum/language/speaking)
+/obj/item/clothing/accessory/storage/hear_talk(mob/M, var/msg, verb, datum/language/speaking)
+	hold.hear_talk(M, msg, verb, speaking)
+	..()
+
+/obj/item/clothing/accessory/storage/hear_message(mob/M, var/msg, verb, datum/language/speaking)
 	hold.hear_message(M, msg)
 	..()
 
@@ -78,9 +78,9 @@
 	desc = "Sturdy mess of synthcotton belts and buckles, ready to share your burden."
 	icon_state = "webbing"
 	item_color = "webbing"
-
+	species_fit = list("Vox")
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/suit.dmi'
+		"Vox" = 'icons/mob/species/vox/suit.dmi'
 		)
 
 /obj/item/clothing/accessory/storage/black_vest

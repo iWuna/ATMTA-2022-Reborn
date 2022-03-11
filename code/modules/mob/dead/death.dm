@@ -3,6 +3,3 @@
 
 /mob/dead/gib()		//ghosts can't be gibbed.
 	return
-
-/mob/dead
-	move_resist = INFINITY

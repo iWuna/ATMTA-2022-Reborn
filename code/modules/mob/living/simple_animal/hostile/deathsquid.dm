@@ -1,7 +1,6 @@
 /mob/living/simple_animal/hostile/deathsquid
 	name = "death squid"
 	desc = "A large, floating eldritch horror. Its body glows with an evil red light, and its tentacles look to have been dipped in alien blood."
-	mob_biotypes = MOB_ORGANIC | MOB_BEAST
 
 	speed = 1
 	speak_emote = list("telepathically thunders", "telepathically booms")
@@ -12,8 +11,6 @@
 	icon_state = "deathsquid"
 	icon_living = "deathsquid"
 	icon_dead = "deathsquiddead"
-	pixel_x = -24
-	pixel_y = -24
 
 	attacktext = "slices"
 	attack_sound = 'sound/weapons/bladeslice.ogg'
@@ -30,11 +27,11 @@
 	see_in_dark = 8
 	mob_size = MOB_SIZE_LARGE
 	ventcrawler = 0
-	gold_core_spawnable = NO_SPAWN
+	gold_core_spawnable = CHEM_MOB_SPAWN_INVALID
 
 
 
-/mob/living/simple_animal/hostile/deathsquid/Process_Spacemove(movement_dir = 0)
+/mob/living/simple_animal/hostile/deathsquid/Process_Spacemove(var/movement_dir = 0)
 	return 1 //copypasta from carp code
 
 /mob/living/simple_animal/hostile/deathsquid/ex_act(severity)

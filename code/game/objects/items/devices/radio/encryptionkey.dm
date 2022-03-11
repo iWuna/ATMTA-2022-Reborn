@@ -1,5 +1,5 @@
 
-/obj/item/encryptionkey
+/obj/item/encryptionkey/
 	name = "Standard Encryption Key"
 	desc = "An encyption key for a radio headset. Contains cypherkeys."
 	icon = 'icons/obj/radio.dmi'
@@ -7,58 +7,39 @@
 	item_state = ""
 	w_class = WEIGHT_CLASS_TINY
 	origin_tech = "engineering=2;bluespace=1"
-	var/translate_binary = FALSE
-	var/translate_hive = FALSE
-	var/syndie = FALSE
-	var/change_voice = FALSE
+	var/translate_binary = 0
+	var/translate_hive = 0
+	var/syndie = 0
 	var/list/channels = list()
 
+
+/obj/item/encryptionkey/New()
 
 /obj/item/encryptionkey/attackby(obj/item/W as obj, mob/user as mob, params)
 
 /obj/item/encryptionkey/syndicate
-	name = "syndicate encryption key"
-	icon_state = "syn_cypherkey"
+	icon_state = "cypherkey"
 	channels = list("Syndicate" = 1)
 	origin_tech = "syndicate=1;engineering=3;bluespace=2"
-	syndie = TRUE //Signifies that it de-crypts Syndicate transmissions
-	change_voice = TRUE
-	var/fake_name = "Agent ALERT_A_CODER"
-	var/static/list/fakename_list
-
-/obj/item/encryptionkey/syndicate/Initialize()
-	if(!LAZYLEN(fakename_list))
-		fakename_list = GLOB.html_colors.Copy()
-	. = ..()
-	if(change_voice)
-		fake_name = "Agent [pick_n_take(fakename_list)]"
-
-/obj/item/encryptionkey/syndicate/nukeops
-	change_voice = FALSE
+	syndie = 1 //Signifies that it de-crypts Syndicate transmissions
 
 /obj/item/encryptionkey/syndteam
-	name = "syndicate encryption key"
-	icon_state = "syn_cypherkey"
+	icon_state = "cypherkey"
 	channels = list("SyndTeam" = 1, "Syndicate" = 1)
 	origin_tech = "syndicate=4"
-	syndie = TRUE //Signifies that it de-crypts Syndicate transmissions
+	syndie = 1 //Signifies that it de-crypts Syndicate transmissions
 
 /obj/item/encryptionkey/binary
 	name = "binary translator key"
-	desc = "An encryption key for a radio headset. To access the binary channel, use :+."
-	icon_state = "bin_cypherkey"
-	translate_binary = TRUE
+	desc = "An encryption key for a radio headset. To access the binary channel, use :b."
+	icon_state = "cypherkey"
+	translate_binary = 1
 	origin_tech = "syndicate=3;engineering=4;bluespace=3"
 
 /obj/item/encryptionkey/headset_sec
 	name = "Security Radio Encryption Key"
 	icon_state = "sec_cypherkey"
 	channels = list("Security" = 1)
-
-/obj/item/encryptionkey/headset_iaa
-	name = "IAA Radio Encryption Key"
-	icon_state = "sec_cypherkey"
-	channels = list("Security" = 1, "Procedure" = 1)
 
 /obj/item/encryptionkey/headset_eng
 	name = "Engineering Radio Encryption Key"
@@ -93,7 +74,7 @@
 /obj/item/encryptionkey/heads/captain
 	name = "Captain's Encryption Key"
 	icon_state = "cap_cypherkey"
-	channels = list("Command" = 1, "Security" = 1, "Engineering" = 0, "Science" = 0, "Medical" = 0, "Supply" = 0, "Service" = 0, "Procedure" = 1)
+	channels = list("Command" = 1, "Security" = 1, "Engineering" = 0, "Science" = 0, "Medical" = 0, "Supply" = 0, "Service" = 0)
 
 /obj/item/encryptionkey/heads/rd
 	name = "Research Director's Encryption Key"
@@ -123,12 +104,12 @@
 /obj/item/encryptionkey/heads/ntrep
 	name = "Nanotrasen Representative's Encryption Key"
 	icon_state = "com_cypherkey"
-	channels = list("Command" = 1, "Security" = 0, "Engineering" = 0, "Science" = 0, "Medical" = 0, "Supply" = 0, "Service" = 0, "Procedure" = 1)
+	channels = list("Command" = 1, "Security" = 0, "Engineering" = 0, "Science" = 0, "Medical" = 0, "Supply" = 0, "Service" = 0)
 
 /obj/item/encryptionkey/heads/magistrate
 	name = "Magistrate's Encryption Key"
 	icon_state = "com_cypherkey"
-	channels = list("Command" = 1, "Security" = 1, "Procedure" = 1)
+	channels = list("Command" = 1, "Security" = 1)
 
 /obj/item/encryptionkey/heads/blueshield
 	name = "Blueshield's Encryption Key"
@@ -158,14 +139,14 @@
 
 /obj/item/encryptionkey/ert
 	name = "Nanotrasen ERT Radio Encryption Key"
-	channels = list("Response Team" = 1, "Science" = 1, "Command" = 1, "Medical" = 1, "Engineering" = 1, "Security" = 1, "Supply" = 1, "Service" = 1, "Procedure" = 1)
+	channels = list("Response Team" = 1, "Science" = 1, "Command" = 1, "Medical" = 1, "Engineering" = 1, "Security" = 1, "Supply" = 1, "Service" = 1)
 
 /obj/item/encryptionkey/centcom
 	name = "Centcom Radio Encryption Key"
-	channels = list("Response Team" = 1, "Special Ops" = 1, "Science" = 1, "Command" = 1, "Medical" = 1, "Engineering" = 1, "Security" = 1, "Supply" = 1, "Service" = 1, "Procedure" = 1)
+	channels = list("Response Team" = 1, "Special Ops" = 1, "Science" = 1, "Command" = 1, "Medical" = 1, "Engineering" = 1, "Security" = 1, "Supply" = 1, "Service" = 1)
 
 /obj/item/encryptionkey/heads/ai_integrated //ported from bay, this goes 'inside' the AI.
 	name = "AI Integrated Encryption Key"
 	desc = "Integrated encryption key"
 	icon_state = "cap_cypherkey"
-	channels = list("Command" = 1, "Security" = 1, "Engineering" = 1, "Science" = 1, "Medical" = 1, "Supply" = 1, "Service" = 1, "AI Private" = 1, "Procedure" = 1)
+	channels = list("Command" = 1, "Security" = 1, "Engineering" = 1, "Science" = 1, "Medical" = 1, "Supply" = 1, "Service" = 1, "AI Private" = 1)

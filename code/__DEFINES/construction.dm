@@ -18,42 +18,19 @@
 #define RWALL_SUPPORT_RODS 5
 #define RWALL_SHEATH 6
 
-//window construction states
-#define WINDOW_OUT_OF_FRAME 0
-#define WINDOW_IN_FRAME 1
-#define WINDOW_SCREWED_TO_FRAME 2
-
 //airlock assembly construction states
 #define AIRLOCK_ASSEMBLY_NEEDS_WIRES 0
 #define AIRLOCK_ASSEMBLY_NEEDS_ELECTRONICS 1
 #define AIRLOCK_ASSEMBLY_NEEDS_SCREWDRIVER 2
 
-//used by airlocks and airlock wires.
-#define AICONTROLDISABLED_OFF 0 // Silicons can control the airlock normally.
-#define AICONTROLDISABLED_ON 1 // Silicons cannot control the airlock, but can hack the airlock.
-#define AICONTROLDISABLED_BYPASS 2 // Silicons can control the airlock because they succeeded on the hack
-#define AICONTROLDISABLED_PERMA 3 // Wire cutting an airlock on AICONTROLDISABLED_BYPASS toggles it between AICONTROLDISABLED_BYPASS and this.
-
 //plastic flaps construction states
 #define PLASTIC_FLAPS_NORMAL 0
 #define PLASTIC_FLAPS_DETACHED 1
 
-
-//ai core defines
-#define EMPTY_CORE 0
-#define CIRCUIT_CORE 1
-#define SCREWED_CORE 2
-#define CABLED_CORE 3
-#define GLASS_CORE 4
-#define AI_READY_CORE 5
-
 //other construction-related things
 
-//windows affected by nar'sie turn this color.
+//windows affected by nar-sie turn this color.
 #define NARSIE_WINDOW_COLOUR "#7D1919"
-
-//let's just pretend fulltile windows being children of border windows is fine
-#define FULLTILE_WINDOW_DIR NORTHEAST
 
 //Material defines, for determining how much of a given material an item contains
 #define MAT_METAL			"$metal"

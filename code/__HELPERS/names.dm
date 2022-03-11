@@ -1,7 +1,7 @@
-GLOBAL_VAR(church_name)
+var/church_name = null
 /proc/church_name()
-	if(GLOB.church_name)
-		return GLOB.church_name
+	if(church_name)
+		return church_name
 
 	var/name = ""
 
@@ -15,20 +15,27 @@ GLOBAL_VAR(church_name)
 
 	return name
 
-GLOBAL_VAR(religion_name)
+var/command_name = null
+/proc/command_name()
+	return using_map.dock_name
+
+var/religion_name = null
 /proc/religion_name()
-	if(GLOB.religion_name)
-		return GLOB.religion_name
+	if(religion_name)
+		return religion_name
 
 	var/name = ""
 
-	name += pick("bee", "science", "edu", "captain", "assistant", "monkey", "alien", "space", "unit", "sprocket", "gadget", "bomb", "revolution", "beyond", "station", "goon", "robot", "ivor", "hobnob")
+	name += pick("bee", "science", "edu", "captain", "civilian", "monkey", "alien", "space", "unit", "sprocket", "gadget", "bomb", "revolution", "beyond", "station", "goon", "robot", "ivor", "hobnob")
 	name += pick("ism", "ia", "ology", "istism", "ites", "ick", "ian", "ity")
 
 	return capitalize(name)
 
+/proc/system_name()
+	return using_map.starsys_name
+
 /proc/station_name()
-	return SSmapping.map_datum.fluff_name
+	return using_map.station_name
 
 /proc/new_station_name()
 	var/random = rand(1,5)
@@ -42,10 +49,10 @@ GLOBAL_VAR(religion_name)
 		name = ""
 
 	// Prefix
-	for(var/holiday_name in SSholiday.holidays)
+	for(var/holiday_name in holiday_master.holidays)
 		if(holiday_name == "Friday the 13th")
 			random = 13
-		var/datum/holiday/holiday = SSholiday.holidays[holiday_name]
+		var/datum/holiday/holiday = holiday_master.holidays[holiday_name]
 		name = holiday.getStationPrefix()
 		//get normal name
 	if(!name)
@@ -73,10 +80,10 @@ GLOBAL_VAR(religion_name)
 			new_station_name += pick("13","XIII","Thirteen")
 	return new_station_name
 
-GLOBAL_VAR(syndicate_name)
+var/syndicate_name = null
 /proc/syndicate_name()
-	if(GLOB.syndicate_name)
-		return GLOB.syndicate_name
+	if(syndicate_name)
+		return syndicate_name
 
 	var/name = ""
 
@@ -100,13 +107,13 @@ GLOBAL_VAR(syndicate_name)
 		name += pick("-", "*", "")
 		name += pick("Tech", "Sun", "Co", "Tek", "X", "Inc", "Gen", "Star", "Dyne", "Code", "Hive")
 
-	GLOB.syndicate_name = name
+	syndicate_name = name
 	return name
 
 
 //Traitors and traitor silicons will get these. Revs will not.
-GLOBAL_VAR(syndicate_code_phrase) //Code phrase for traitors.
-GLOBAL_VAR(syndicate_code_response) //Code response for traitors.
+var/syndicate_code_phrase//Code phrase for traitors.
+var/syndicate_code_response//Code response for traitors.
 
 	/*
 	Should be expanded.
@@ -135,10 +142,10 @@ GLOBAL_VAR(syndicate_code_response) //Code response for traitors.
 	var/safety[] = list(1,2,3)//Tells the proc which options to remove later on.
 	var/nouns[] = list("love","hate","anger","peace","pride","sympathy","bravery","loyalty","honesty","integrity","compassion","charity","success","courage","deceit","skill","beauty","brilliance","pain","misery","beliefs","dreams","justice","truth","faith","liberty","knowledge","thought","information","culture","trust","dedication","progress","education","hospitality","leisure","trouble","friendships", "relaxation")
 	var/drinks[] = list("vodka and tonic","gin fizz","bahama mama","manhattan","black Russian","whiskey soda","long island tea","margarita","Irish coffee"," manly dwarf","Irish cream","doctor's delight","Beepksy Smash","tequila sunrise","brave bull","gargle blaster","bloody mary","whiskey cola","white Russian","vodka martini","martini","Cuba libre","kahlua","vodka","wine","moonshine")
-	var/locations[] = length(SSmapping.teleportlocs) ? SSmapping.teleportlocs : drinks//if null, defaults to drinks instead.
+	var/locations[] = teleportlocs.len ? teleportlocs : drinks//if null, defaults to drinks instead.
 
 	var/names[] = list()
-	for(var/datum/data/record/t in GLOB.data_core.general)//Picks from crew manifest.
+	for(var/datum/data/record/t in data_core.general)//Picks from crew manifest.
 		names += t.fields["name"]
 
 	var/maxwords = words//Extra var to check for duplicates.
@@ -154,10 +161,14 @@ GLOBAL_VAR(syndicate_code_response) //Code response for traitors.
 			if(1)//1 and 2 can only be selected once each to prevent more than two specific names/places/etc.
 				switch(rand(1,2))//Mainly to add more options later.
 					if(1)
-						if(names.len)
+						if(names.len&&prob(70))
 							code_phrase += pick(names)
+						else
+							code_phrase += pick(pick(first_names_male,first_names_female))
+							code_phrase += " "
+							code_phrase += pick(last_names)
 					if(2)
-						code_phrase += pick(GLOB.joblist)//Returns a job.
+						code_phrase += pick(joblist)//Returns a job.
 				safety -= 1
 			if(2)
 				switch(rand(1,2))//Places or things.
@@ -171,9 +182,9 @@ GLOBAL_VAR(syndicate_code_response) //Code response for traitors.
 					if(1)
 						code_phrase += pick(nouns)
 					if(2)
-						code_phrase += pick(GLOB.adjectives)
+						code_phrase += pick(adjectives)
 					if(3)
-						code_phrase += pick(GLOB.verbs)
+						code_phrase += pick(verbs)
 		if(words==1)
 			code_phrase += "."
 		else
@@ -184,7 +195,7 @@ GLOBAL_VAR(syndicate_code_response) //Code response for traitors.
 /proc/GenerateKey()
 	var/newKey
 	newKey += pick("the", "if", "of", "as", "in", "a", "you", "from", "to", "an", "too", "little", "snow", "dead", "drunk", "rosebud", "duck", "al", "le")
-	newKey += pick("diamond", "beer", "mushroom", "assistant", "clown", "captain", "twinkie", "security", "nuke", "small", "big", "escape", "yellow", "gloves", "monkey", "engine", "nuclear", "ai")
+	newKey += pick("diamond", "beer", "mushroom", "civilian", "clown", "captain", "twinkie", "security", "nuke", "small", "big", "escape", "yellow", "gloves", "monkey", "engine", "nuclear", "ai")
 	newKey += pick("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
 	return newKey
 
@@ -208,9 +219,9 @@ GLOBAL_VAR(syndicate_code_response) //Code response for traitors.
 		if(1)
 			syndicate_code_phrase += pick("I'm looking for","Have you seen","Maybe you've seen","I'm trying to find","I'm tracking")
 			syndicate_code_phrase += " "
-			syndicate_code_phrase += pick(pick(GLOB.first_names_male,GLOB.first_names_female))
+			syndicate_code_phrase += pick(pick(first_names_male,first_names_female))
 			syndicate_code_phrase += " "
-			syndicate_code_phrase += pick(GLOB.last_names)
+			syndicate_code_phrase += pick(last_names)
 			syndicate_code_phrase += "."
 		if(2)
 			syndicate_code_phrase += pick("How do I get to","How do I find","Where is","Where do I find")
@@ -234,7 +245,7 @@ GLOBAL_VAR(syndicate_code_response) //Code response for traitors.
 		if(5)
 			syndicate_code_phrase += pick("Do we have","Is there","Where is","Where's","Who's")
 			syndicate_code_phrase += " "
-			syndicate_code_phrase += "[pick(GLOB.joblist)]"
+			syndicate_code_phrase += "[pick(joblist)]"
 			syndicate_code_phrase += "?"
 
 	switch(choice)
@@ -258,12 +269,12 @@ GLOBAL_VAR(syndicate_code_response) //Code response for traitors.
 				syndicate_code_response += pick("Try asking","Ask","Talk to","Go see","Follow","Hunt down")
 				syndicate_code_response += " "
 				if(prob(50))
-					syndicate_code_response += pick(pick(GLOB.first_names_male,GLOB.first_names_female))
+					syndicate_code_response += pick(pick(first_names_male,first_names_female))
 					syndicate_code_response += " "
-					syndicate_code_response += pick(GLOB.last_names)
+					syndicate_code_response += pick(last_names)
 				else
 					syndicate_code_response += " the "
-					syndicate_code_response += "[pic(GLOB.joblist)]"
+					syndicate_code_response += "[pic(joblist)]"
 				syndicate_code_response += "."
 			else
 				syndicate_code_response += pick("*shrug*","*smile*","*blink*","*sigh*","*laugh*","*nod*","*giggle*")

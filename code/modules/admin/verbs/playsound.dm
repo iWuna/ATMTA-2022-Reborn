@@ -1,4 +1,4 @@
-GLOBAL_LIST_EMPTY(sounds_cache)
+var/list/sounds_cache = list()
 
 /client/proc/stop_global_admin_sounds()
 	set category = "Event"
@@ -10,7 +10,7 @@ GLOBAL_LIST_EMPTY(sounds_cache)
 
 	log_admin("[key_name(src)] stopped admin sounds.")
 	message_admins("[key_name_admin(src)] stopped admin sounds.", 1)
-	for(var/mob/M in GLOB.player_list)
+	for(var/mob/M in player_list)
 		M << awful_sound
 
 /client/proc/play_sound(S as sound)
@@ -21,22 +21,18 @@ GLOBAL_LIST_EMPTY(sounds_cache)
 	var/sound/uploaded_sound = sound(S, repeat = 0, wait = 1, channel = CHANNEL_ADMIN)
 	uploaded_sound.priority = 250
 
-	GLOB.sounds_cache += S
+	sounds_cache += S
 
 	if(alert("Are you sure?\nSong: [S]\nNow you can also play this sound using \"Play Server Sound\".", "Confirmation request" ,"Play", "Cancel") == "Cancel")
 		return
 
 	log_admin("[key_name(src)] played sound [S]")
 	message_admins("[key_name_admin(src)] played sound [S]", 1)
-
-	for(var/mob/M in GLOB.player_list)
+	for(var/mob/M in player_list)
 		if(M.client.prefs.sound & SOUND_MIDI)
-			if(isnewplayer(M) && (M.client.prefs.sound & SOUND_LOBBY))
-				M.stop_sound_channel(CHANNEL_LOBBYMUSIC)
-			uploaded_sound.volume = 100 * M.client.prefs.get_channel_volume(CHANNEL_ADMIN)
-			SEND_SOUND(M, uploaded_sound)
+			M << uploaded_sound
 
-	SSblackbox.record_feedback("tally", "admin_verb", 1, "Play Global Sound") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
+	feedback_add_details("admin_verb","PGS") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
 
 /client/proc/play_local_sound(S as sound)
@@ -47,21 +43,21 @@ GLOBAL_LIST_EMPTY(sounds_cache)
 	log_admin("[key_name(src)] played a local sound [S]")
 	message_admins("[key_name_admin(src)] played a local sound [S]", 1)
 	playsound(get_turf(src.mob), S, 50, 0, 0)
-	SSblackbox.record_feedback("tally", "admin_verb", 1, "Play Local Sound") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
+	feedback_add_details("admin_verb","PLS") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
 /client/proc/play_server_sound()
 	set category = "Event"
 	set name = "Play Server Sound"
 	if(!check_rights(R_SOUNDS))	return
 
-	var/list/sounds = file2list("sound/serversound_list.txt")
-	sounds += GLOB.sounds_cache
+	var/list/sounds = file2list("sound/serversound_list.txt");
+	sounds += sounds_cache
 
 	var/melody = input("Select a sound from the server to play", "Server sound list") as null|anything in sounds
 	if(!melody)	return
 
 	play_sound(melody)
-	SSblackbox.record_feedback("tally", "admin_verb", 1, "Play Server Sound") //If you are copy-pasting this, ensure the 2nd paramter is unique to the new proc!
+	feedback_add_details("admin_verb","PSS") //If you are copy-pasting this, ensure the 2nd paramter is unique to the new proc!
 
 /client/proc/play_intercomm_sound()
 	set category = "Event"
@@ -72,8 +68,8 @@ GLOBAL_LIST_EMPTY(sounds_cache)
 	var/A = alert("This will play a sound at every intercomm, are you sure you want to continue? This works best with short sounds, beware.","Warning","Yep","Nope")
 	if(A != "Yep")	return
 
-	var/list/sounds = file2list("sound/serversound_list.txt")
-	sounds += GLOB.sounds_cache
+	var/list/sounds = file2list("sound/serversound_list.txt");
+	sounds += sounds_cache
 
 	var/melody = input("Select a sound from the server to play", "Server sound list") as null|anything in sounds
 	if(!melody)	return
@@ -96,10 +92,59 @@ GLOBAL_LIST_EMPTY(sounds_cache)
 	if(C == "Yep")
 		ignore_power = 1
 
-	for(var/O in GLOB.global_intercoms)
+	for(var/O in global_intercoms)
 		var/obj/item/radio/intercom/I = O
 		if(!is_station_level(I.z) && !ignore_z)
 			continue
 		if(!I.on && !ignore_power)
 			continue
 		playsound(I, melody, cvol)
+
+/*
+/client/proc/cuban_pete()
+	set category = "Event"
+	set name = "Cuban Pete Time"
+
+	message_admins("[key_name_admin(usr)] has declared Cuban Pete Time!", 1)
+	for(var/mob/M in world)
+		if(M.client)
+			if(M.client.midis)
+				M << 'cubanpetetime.ogg'
+
+	for(var/mob/living/carbon/human/CP in world)
+		if(CP.real_name=="Cuban Pete" && CP.key!="Rosham")
+			C << "Your body can't contain the rhumba beat"
+			CP.gib()
+
+
+/client/proc/bananaphone()
+	set category = "Event"
+	set name = "Banana Phone"
+
+	message_admins("[key_name_admin(usr)] has activated Banana Phone!", 1)
+	for(var/mob/M in world)
+		if(M.client)
+			if(M.client.midis)
+				M << 'bananaphone.ogg'
+
+
+client/proc/space_asshole()
+	set category = "Event"
+	set name = "Space Asshole"
+
+	message_admins("[key_name_admin(usr)] has played the Space Asshole Hymn.", 1)
+	for(var/mob/M in world)
+		if(M.client)
+			if(M.client.midis)
+				M << 'sound/music/space_asshole.ogg'
+
+
+client/proc/honk_theme()
+	set category = "Event"
+	set name = "Honk"
+
+	message_admins("[key_name_admin(usr)] has creeped everyone out with Blackest Honks.", 1)
+	for(var/mob/M in world)
+		if(M.client)
+			if(M.client.midis)
+				M << 'honk_theme.ogg'*/

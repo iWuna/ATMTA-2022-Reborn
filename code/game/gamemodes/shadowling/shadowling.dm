@@ -51,20 +51,18 @@ Made by Xhuis
 	var/shadowling_ascended = 0 //If at least one shadowling has ascended
 	var/shadowling_dead = 0 //is shadowling kill
 	var/objective_explanation
-	var/warning_threshold
-	var/victory_warning_announced = FALSE
-	var/thrall_ratio = 1
-
-/proc/is_thrall(mob/living/M)
-	return istype(M) && M.mind && SSticker && SSticker.mode && (M.mind in SSticker.mode.shadowling_thralls)
 
 
-/proc/is_shadow_or_thrall(mob/living/M)
-	return istype(M) && M.mind && SSticker && SSticker.mode && ((M.mind in SSticker.mode.shadowling_thralls) || (M.mind in SSticker.mode.shadows))
+/proc/is_thrall(var/mob/living/M)
+	return istype(M) && M.mind && ticker && ticker.mode && (M.mind in ticker.mode.shadowling_thralls)
 
 
-/proc/is_shadow(mob/living/M)
-	return istype(M) && M.mind && SSticker && SSticker.mode && (M.mind in SSticker.mode.shadows)
+/proc/is_shadow_or_thrall(var/mob/living/M)
+	return istype(M) && M.mind && ticker && ticker.mode && ((M.mind in ticker.mode.shadowling_thralls) || (M.mind in ticker.mode.shadows))
+
+
+/proc/is_shadow(var/mob/living/M)
+	return istype(M) && M.mind && ticker && ticker.mode && (M.mind in ticker.mode.shadows)
 
 
 /datum/game_mode/shadowling
@@ -74,14 +72,14 @@ Made by Xhuis
 	required_enemies = 2
 	recommended_enemies = 2
 	restricted_jobs = list("AI", "Cyborg")
-	protected_jobs = list("Security Officer", "Warden", "Detective", "Head of Security", "Head of Personnel", "Captain", "Blueshield", "Nanotrasen Representative", "Magistrate", "Internal Affairs Agent", "Nanotrasen Navy Officer", "Special Operations Officer", "Syndicate Officer", "Solar Federation General")
+	protected_jobs = list("Security Officer", "Warden", "Detective", "Head of Security", "Captain", "Blueshield", "Nanotrasen Representative", "Security Pod Pilot", "Magistrate", "Brig Physician", "Internal Affairs Agent", "D-Class Prisoner", "Nanotrasen Navy Officer", "Special Operations Officer")
 
 /datum/game_mode/shadowling/announce()
 	to_chat(world, "<b>The current game mode is - Shadowling!</b>")
 	to_chat(world, "<b>There are alien <span class='deadsay'>shadowlings</span> on the station. Crew: Kill the shadowlings before they can eat or enthrall the crew. Shadowlings: Enthrall the crew while remaining in hiding.</b>")
 
 /datum/game_mode/shadowling/pre_setup()
-	if(GLOB.configuration.gamemode.prevent_mindshield_antags)
+	if(config.protect_roles_from_antagonist)
 		restricted_jobs += protected_jobs
 
 	var/list/datum/mind/possible_shadowlings = get_players_for_role(ROLE_SHADOWLING)
@@ -101,10 +99,7 @@ Made by Xhuis
 		shadowlings--
 
 	var/thrall_scaling = round(num_players() / 3)
-	required_thralls = clamp(thrall_scaling, 15, 25)
-	thrall_ratio = required_thralls / 15
-
-	warning_threshold = round(0.66 * required_thralls)
+	required_thralls = Clamp(thrall_scaling, 15, 25)
 
 	..()
 	return 1
@@ -113,23 +108,24 @@ Made by Xhuis
 /datum/game_mode/shadowling/post_setup()
 	for(var/datum/mind/shadow in shadows)
 		log_game("[key_name(shadow)] has been selected as a Shadowling.")
-		spawn(rand(10,100))
-			to_chat(shadow.current, "<br>")
-			to_chat(shadow.current, "<span class='deadsay'><b><font size=3>You are a shadowling!</font></b></span>")
-			greet_shadow(shadow)
-			finalize_shadowling(shadow)
-			process_shadow_objectives(shadow)
+		sleep(10)
+		to_chat(shadow.current, "<br>")
+		to_chat(shadow.current, "<span class='deadsay'><b><font size=3>You are a shadowling!</font></b></span>")
+		greet_shadow(shadow)
+		finalize_shadowling(shadow)
+		process_shadow_objectives(shadow)
 		//give_shadowling_abilities(shadow)
 	..()
 
-/datum/game_mode/proc/greet_shadow(datum/mind/shadow)
-	to_chat(shadow.current, "<b>Currently, you are disguised as an employee aboard [station_name()].</b>")
+/datum/game_mode/proc/greet_shadow(var/datum/mind/shadow)
+	to_chat(shadow.current, "<b>Currently, you are disguised as an employee aboard [world.name].</b>")
 	to_chat(shadow.current, "<b>In your limited state, you have two abilities: Hatch and Shadowling Hivemind (:8).</b>")
 	to_chat(shadow.current, "<b>Any other shadowlings are your allies. You must assist them as they shall assist you.</b>")
-	to_chat(shadow.current, "<span class='motd'>For more information, check the wiki page: ([GLOB.configuration.url.wiki_url]/index.php/Shadowling)</span>")
+	to_chat(shadow.current, "<b>If you are new to shadowling, or want to read about abilities, check the wiki page at http://nanotrasen.se/wiki/index.php/Shadowling</b><br>")
 
 
-/datum/game_mode/proc/process_shadow_objectives(datum/mind/shadow_mind)
+
+/datum/game_mode/proc/process_shadow_objectives(var/datum/mind/shadow_mind)
 	var/objective = "enthrall" //may be devour later, but for now it seems murderbone-y
 
 	if(objective == "enthrall")
@@ -139,16 +135,15 @@ Made by Xhuis
 		to_chat(shadow_mind.current, "<b>Objective #1</b>: [objective_explanation]<br>")
 
 
-/datum/game_mode/proc/finalize_shadowling(datum/mind/shadow_mind)
+/datum/game_mode/proc/finalize_shadowling(var/datum/mind/shadow_mind)
 	var/mob/living/carbon/human/S = shadow_mind.current
-	shadow_mind.AddSpell(new /obj/effect/proc_holder/spell/shadowling_hatch(null))
+	shadow_mind.AddSpell(new /obj/effect/proc_holder/spell/targeted/shadowling_hatch(null))
 	spawn(0)
 		shadow_mind.current.add_language("Shadowling Hivemind")
 		update_shadow_icons_added(shadow_mind)
 		if(shadow_mind.assigned_role == "Clown")
 			to_chat(S, "<span class='notice'>Your alien nature has allowed you to overcome your clownishness.</span>")
-			S.dna.SetSEState(GLOB.clumsyblock, FALSE)
-			singlemutcheck(S, GLOB.clumsyblock, MUTCHK_FORCED)
+			S.mutations.Remove(CLUMSY)
 
 /datum/game_mode/proc/add_thrall(datum/mind/new_thrall_mind)
 	if(!istype(new_thrall_mind))
@@ -158,30 +153,25 @@ Made by Xhuis
 		new_thrall_mind.special_role = SPECIAL_ROLE_SHADOWLING_THRALL
 		update_shadow_icons_added(new_thrall_mind)
 		new_thrall_mind.current.create_attack_log("<span class='danger'>Became a thrall</span>")
-		new_thrall_mind.current.create_log(CONVERSION_LOG, "Became a thrall")
 		new_thrall_mind.current.add_language("Shadowling Hivemind")
-		new_thrall_mind.AddSpell(new /obj/effect/proc_holder/spell/lesser_shadow_walk(null))
-		new_thrall_mind.AddSpell(new /obj/effect/proc_holder/spell/shadow_vision(null))
+		new_thrall_mind.AddSpell(new /obj/effect/proc_holder/spell/targeted/lesser_shadow_walk(null))
+		new_thrall_mind.AddSpell(new /obj/effect/proc_holder/spell/targeted/shadow_vision/thrall(null))
 		to_chat(new_thrall_mind.current, "<span class='shadowling'><b>You see the truth. Reality has been torn away and you realize what a fool you've been.</b></span>")
 		to_chat(new_thrall_mind.current, "<span class='shadowling'><b>The shadowlings are your masters.</b> Serve them above all else and ensure they complete their goals.</span>")
 		to_chat(new_thrall_mind.current, "<span class='shadowling'>You may not harm other thralls or the shadowlings. However, you do not need to obey other thralls.</span>")
 		to_chat(new_thrall_mind.current, "<span class='shadowling'>Your body has been irreversibly altered. The attentive can see this - you may conceal it by wearing a mask.</span>")
 		to_chat(new_thrall_mind.current, "<span class='shadowling'>Though not nearly as powerful as your masters, you possess some weak powers. These can be found in the Thrall Abilities tab.</span>")
 		to_chat(new_thrall_mind.current, "<span class='shadowling'>You may communicate with your allies by speaking in the Shadowling Hivemind (:8).</span>")
-		to_chat(new_thrall_mind.current, "<span class='motd'>For more information, check the wiki page: ([GLOB.configuration.url.wiki_url]/index.php/Shadowling)</span>")
 		if(jobban_isbanned(new_thrall_mind.current, ROLE_SHADOWLING) || jobban_isbanned(new_thrall_mind.current, ROLE_SYNDICATE))
 			replace_jobbanned_player(new_thrall_mind.current, ROLE_SHADOWLING)
-		if(!victory_warning_announced && (length(shadowling_thralls) >= warning_threshold))//are the slings very close to winning?
-			victory_warning_announced = TRUE	//then let's give the station a warning
-			GLOB.command_announcement.Announce("Hostile bluespace entities are attempting to transcend existence aboard [station_name()]. Disrupt the ascension at all costs, before the station is destroyed! Space law and SOP are suspended. The entire crew must kill shadowlings and their thralls on sight.", "Central Command Higher Dimensional Affairs", 'sound/AI/spanomalies.ogg')
+
 		return 1
 
-/datum/game_mode/proc/remove_thrall(datum/mind/thrall_mind, kill = 0)
+/datum/game_mode/proc/remove_thrall(datum/mind/thrall_mind, var/kill = 0)
 	if(!istype(thrall_mind) || !(thrall_mind in shadowling_thralls) || !isliving(thrall_mind.current))
 		return 0 //If there is no mind, the mind isn't a thrall, or the mind's mob isn't alive, return
 	shadowling_thralls.Remove(thrall_mind)
 	thrall_mind.current.create_attack_log("<span class='danger'>Dethralled</span>")
-	thrall_mind.current.create_log(CONVERSION_LOG, "Dethralled")
 	thrall_mind.special_role = null
 	update_shadow_icons_removed(thrall_mind)
 	for(var/obj/effect/proc_holder/spell/S in thrall_mind.spell_list)
@@ -195,10 +185,10 @@ Made by Xhuis
 		return 1
 	var/mob/living/M = thrall_mind.current
 	if(issilicon(M))
-		M.audible_message("<span class='notice'>[M] lets out a short blip.</span>")
-		to_chat(M, "<span class='userdanger'>You have been turned into a robot! You are no longer a thrall! Though you try, you cannot remember anything about your servitude...</span>")
+		M.audible_message("<span class='notice'>[M] lets out a short blip.</span>", \
+							"<span class='userdanger'>You have been turned into a robot! You are no longer a thrall! Though you try, you cannot remember anything about your servitude...</span>")
 	else
-		M.visible_message("<span class='big'>[M] looks like [M.p_their()] mind is [M.p_their()] own again!</span>", \
+		M.visible_message("<span class='big'>[M] looks like their mind is their own again!</span>", \
 						"<span class='userdanger'>A piercing white light floods your eyes. Your mind is your own again! Though you try, you cannot remember anything about the shadowlings or your time \
 							under their command...</span>")
 	return 1
@@ -216,17 +206,17 @@ Made by Xhuis
 		if(shadow.current.stat == DEAD)
 			continue
 		shadows_alive++
-		if(shadow.special_role == SPECIAL_ROLE_SHADOWLING && GLOB.configuration.gamemode.shadowling_max_age)
+		if(shadow.special_role == SPECIAL_ROLE_SHADOWLING && config.shadowling_max_age)
 			if(ishuman(shadow.current))
 				var/mob/living/carbon/human/H = shadow.current
-				if(!isshadowling(H))
-					for(var/obj/effect/proc_holder/spell/shadowling_hatch/hatch_ability in shadow.spell_list)
+				if(H.get_species() != "Shadow")
+					for(var/obj/effect/proc_holder/spell/targeted/shadowling_hatch/hatch_ability in shadow.spell_list)
 						hatch_ability.cycles_unused++
-						if(!H.stunned && prob(20) && hatch_ability.cycles_unused > GLOB.configuration.gamemode.shadowling_max_age)
+						if(!H.stunned && prob(20) && hatch_ability.cycles_unused > config.shadowling_max_age)
 							var/shadow_nag_messages = list("You can barely hold yourself in this lesser form!", "The urge to become something greater is overwhelming!", "You feel a burning passion to hatch free of this shell and assume godhood!")
 							H.take_overall_damage(0, 3)
 							to_chat(H, "<span class='userdanger'>[pick(shadow_nag_messages)]</span>")
-							SEND_SOUND(H, sound('sound/weapons/sear.ogg'))
+							H << 'sound/weapons/sear.ogg'
 
 	if(shadows_alive)
 		return ..()
@@ -239,14 +229,13 @@ Made by Xhuis
 	update_shadow_icons_removed(ling_mind)
 	shadows.Remove(ling_mind)
 	ling_mind.current.create_attack_log("<span class='danger'>Deshadowlinged</span>")
-	ling_mind.current.create_log(CONVERSION_LOG, "Deshadowlinged")
 	ling_mind.special_role = null
 	for(var/obj/effect/proc_holder/spell/S in ling_mind.spell_list)
 		ling_mind.RemoveSpell(S)
 	var/mob/living/M = ling_mind.current
 	if(issilicon(M))
-		M.audible_message("<span class='notice'>[M] lets out a short blip.</span>")
-		to_chat(M, "<span class='userdanger'>You have been turned into a robot! You are no longer a shadowling! Though you try, you cannot remember anything about your time as one...</span>")
+		M.audible_message("<span class='notice'>[M] lets out a short blip.</span>", \
+						  "<span class='userdanger'>You have been turned into a robot! You are no longer a shadowling! Though you try, you cannot remember anything about your time as one...</span>")
 	else
 		M.visible_message("<span class='big'>[M] screams and contorts!</span>", \
 						  "<span class='userdanger'>THE LIGHT-- YOUR MIND-- <i>BURNS--</i></span>")
@@ -255,7 +244,7 @@ Made by Xhuis
 				return
 			M.visible_message("<span class='warning'>[M] suddenly bloats and explodes!</span>", \
 							  "<span class='warning'><b>AAAAAAAAA<font size=3>AAAAAAAAAAAAA</font><font size=4>AAAAAAAAAAAA----</font></span>")
-			playsound(M, 'sound/magic/disintegrate.ogg', 100, 1)
+			playsound(M, 'sound/magic/Disintegrate.ogg', 100, 1)
 			M.gib()
 
 /datum/game_mode/shadowling/proc/check_shadow_victory()
@@ -266,21 +255,13 @@ Made by Xhuis
 
 
 /datum/game_mode/shadowling/declare_completion()
-	if(check_shadow_victory() && SSshuttle.emergency.mode >= SHUTTLE_ESCAPE) //Doesn't end instantly - this is hacky and I don't know of a better way ~X
-		SSticker.mode_result = "shadowling win - shadowling ascension"
-		to_chat(world, "<FONT size = 3><B>Shadowling Victory</B></FONT>")
+	if(check_shadow_victory() && shuttle_master.emergency.mode >= SHUTTLE_ESCAPE) //Doesn't end instantly - this is hacky and I don't know of a better way ~X
 		to_chat(world, "<span class='greentext'><b>The shadowlings have ascended and taken over the station!</b></span>")
 	else if(shadowling_dead && !check_shadow_victory()) //If the shadowlings have ascended, they can not lose the round
-		SSticker.mode_result = "shadowling loss - shadowling killed"
-		to_chat(world, "<FONT size = 3><B>Crew Major Victory</B></FONT>")
 		to_chat(world, "<span class='redtext'><b>The shadowlings have been killed by the crew!</b></span>")
-	else if(!check_shadow_victory() && SSshuttle.emergency.mode >= SHUTTLE_ESCAPE)
-		SSticker.mode_result = "shadowling loss - crew escaped"
-		to_chat(world, "<FONT size = 3><B>Crew Minor Victory</B></FONT>")
+	else if(!check_shadow_victory() && shuttle_master.emergency.mode >= SHUTTLE_ESCAPE)
 		to_chat(world, "<span class='redtext'><b>The crew escaped the station before the shadowlings could ascend!</b></span>")
 	else
-		SSticker.mode_result = "shadowling loss - generic failure"
-		to_chat(world, "<FONT size = 3><B>Crew Major Victory</B></FONT>")
 		to_chat(world, "<span class='redtext'><b>The shadowlings have failed!</b></span>")
 	..()
 	return 1
@@ -325,13 +306,100 @@ Made by Xhuis
 	MISCELLANEOUS
 */
 
+
+/datum/species/shadow/ling
+	//Normal shadowpeople but with enhanced effects
+	name = "Shadowling"
+
+	icobase = 'icons/mob/human_races/r_shadowling.dmi'
+	deform = 'icons/mob/human_races/r_shadowling.dmi'
+
+	blood_color = "#555555"
+	flesh_color = "#222222"
+
+	species_traits = list(NO_BLOOD, NO_BREATHE, RADIMMUNE, NOGUNS) //Can't use guns due to muzzle flash
+	burn_mod = 1.5 //1.5x burn damage, 2x is excessive
+	oxy_mod = 0
+	heatmod = 1.5
+
+	silent_steps = 1
+	grant_vision_toggle = 0
+
+	has_organ = list(
+		"brain" =    /obj/item/organ/internal/brain,
+		"eyes" =     /obj/item/organ/internal/eyes)
+
+/datum/species/shadow/ling/handle_life(var/mob/living/carbon/human/H)
+	if(!H.weakeyes)
+		H.weakeyes = 1 //Makes them more vulnerable to flashes and flashbangs
+	var/light_amount = 0
+	H.nutrition = NUTRITION_LEVEL_WELL_FED //i aint never get hongry
+	if(isturf(H.loc))
+		var/turf/T = H.loc
+		light_amount = T.get_lumcount() * 10
+		if(light_amount > LIGHT_DAM_THRESHOLD && !H.incorporeal_move) //Can survive in very small light levels. Also doesn't take damage while incorporeal, for shadow walk purposes
+			H.throw_alert("lightexposure", /obj/screen/alert/lightexposure)
+			H.take_overall_damage(0, LIGHT_DAMAGE_TAKEN)
+			if(H.stat != DEAD)
+				to_chat(H, "<span class='userdanger'>The light burns you!</span>")//Message spam to say "GET THE FUCK OUT"
+				H << 'sound/weapons/sear.ogg'
+		else if(light_amount < LIGHT_HEAL_THRESHOLD)
+			H.clear_alert("lightexposure")
+			var/obj/item/organ/internal/eyes/E = H.get_int_organ(/obj/item/organ/internal/eyes)
+			if(istype(E))
+				E.receive_damage(-1)
+			H.heal_overall_damage(5, 5)
+			H.adjustToxLoss(-5)
+			H.adjustBrainLoss(-25) //Shad O. Ling gibbers, "CAN U BE MY THRALL?!!"
+			H.AdjustEyeBlurry(-1)
+			H.CureNearsighted()
+			H.CureBlind()
+			H.adjustCloneLoss(-1)
+			H.SetWeakened(0)
+			H.SetStunned(0)
+	..()
+
+
+/datum/species/shadow/ling/lesser //Empowered thralls. Obvious, but powerful
+	name = "Lesser Shadowling"
+
+	icobase = 'icons/mob/human_races/r_lshadowling.dmi'
+	deform = 'icons/mob/human_races/r_lshadowling.dmi'
+
+	blood_color = "#CCCCCC"
+	flesh_color = "#AAAAAA"
+
+	species_traits = list(NO_BLOOD, NO_BREATHE, RADIMMUNE)
+	burn_mod = 1.1
+	oxy_mod = 0
+	heatmod = 1.1
+
+/datum/species/shadow/ling/lesser/handle_life(var/mob/living/carbon/human/H)
+	if(!H.weakeyes)
+		H.weakeyes = 1 //Makes them more vulnerable to flashes and flashbangs
+	var/light_amount = 0
+	H.nutrition = NUTRITION_LEVEL_WELL_FED //i aint never get hongry
+	if(isturf(H.loc))
+		var/turf/T = H.loc
+		light_amount = T.get_lumcount() * 10
+		if(light_amount > LIGHT_DAM_THRESHOLD && !H.incorporeal_move)
+			H.throw_alert("lightexposure", /obj/screen/alert/lightexposure)
+			H.take_overall_damage(0, LIGHT_DAMAGE_TAKEN/2)
+		else if(light_amount < LIGHT_HEAL_THRESHOLD)
+			H.clear_alert("lightexposure")
+			H.heal_overall_damage(2,2)
+			H.adjustToxLoss(-5)
+			H.adjustBrainLoss(-25)
+			H.adjustCloneLoss(-1)
+	..()
+
 /datum/game_mode/proc/update_shadow_icons_added(datum/mind/shadow_mind)
-	var/datum/atom_hud/antag/shadow_hud = GLOB.huds[ANTAG_HUD_SHADOW]
+	var/datum/atom_hud/antag/shadow_hud = huds[ANTAG_HUD_SHADOW]
 	shadow_hud.join_hud(shadow_mind.current)
 	set_antag_hud(shadow_mind.current, ((shadow_mind in shadows) ? "hudshadowling" : "hudshadowlingthrall"))
 
 
 /datum/game_mode/proc/update_shadow_icons_removed(datum/mind/shadow_mind) //This should never actually occur, but it's here anyway.
-	var/datum/atom_hud/antag/shadow_hud = GLOB.huds[ANTAG_HUD_SHADOW]
+	var/datum/atom_hud/antag/shadow_hud = huds[ANTAG_HUD_SHADOW]
 	shadow_hud.leave_hud(shadow_mind.current)
 	set_antag_hud(shadow_mind.current, null)

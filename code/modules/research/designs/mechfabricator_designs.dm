@@ -653,16 +653,6 @@
 	construction_time = 200
 	category = list("Exosuit Equipment")
 
-/datum/design/medical_jaw
-	name = "Exosuit Medical Equipment (Rescue Jaw)"
-	id = "mech_medical_jaw"
-	build_type = MECHFAB
-	build_path = /obj/item/mecha_parts/mecha_equipment/medical/rescue_jaw
-	req_tech = list("materials" = 4, "engineering" = 6, "magnets" = 6)	//now same as jaws of life
-	materials = list(MAT_METAL=5000,MAT_SILVER=2000,MAT_TITANIUM=1500)
-	construction_time = 200
-	category = list("Exosuit Equipment")
-
 /datum/design/mech_generator
 	name = "Exosuit Equipment (Plasma Generator)"
 	id = "mech_generator"
@@ -672,12 +662,12 @@
 	construction_time = 100
 	category = list("Exosuit Equipment")
 
-/datum/design/mech_disabler
-	name = "Exosuit Weapon (CH-DS \"Peacemaker\" Disabler)"
-	id = "mech_disabler"
+/datum/design/mech_taser
+	name = "Exosuit Weapon (PBT \"Pacifier\" Mounted Taser)"
+	id = "mech_taser"
 	build_type = MECHFAB
 	req_tech = list("combat" = 3)
-	build_path = /obj/item/mecha_parts/mecha_equipment/weapon/energy/disabler
+	build_path = /obj/item/mecha_parts/mecha_equipment/weapon/energy/taser
 	materials = list(MAT_METAL=10000)
 	construction_time = 100
 	category = list("Exosuit Equipment")
@@ -751,7 +741,7 @@
 	category = list("Exosuit Equipment")
 
 /datum/design/mech_mining_scanner
-	name = "Exosuit Engineering Equipment (Mining Scanner)"
+	name = "Exosuit Engineering Equipement (Mining Scanner)"
 	id = "mech_mscanner"
 	build_type = MECHFAB
 	build_path = /obj/item/mecha_parts/mecha_equipment/mining_scanner
@@ -777,6 +767,17 @@
 	build_type = MECHFAB
 	req_tech = list("bluespace" = 4, "magnets" = 3, "engineering" = 4)
 	build_path = /obj/item/mecha_parts/mecha_equipment/gravcatapult
+	materials = list(MAT_METAL=10000)
+	construction_time = 100
+	category = list("Exosuit Equipment")
+
+/datum/design/mech_wormhole_gen
+	name = "Exosuit Module (Localized Wormhole Generator)"
+	desc = "An exosuit module that allows generating of small quasi-stable wormholes."
+	id = "mech_wormhole_gen"
+	build_type = MECHFAB
+	req_tech = list("bluespace" = 4, "magnets" = 4, "plasmatech" = 3)
+	build_path = /obj/item/mecha_parts/mecha_equipment/wormhole_generator
 	materials = list(MAT_METAL=10000)
 	construction_time = 100
 	category = list("Exosuit Equipment")
@@ -892,6 +893,17 @@
 	construction_time = 100
 	category = list("Exosuit Equipment")
 
+/datum/design/mech_disabler
+	name = "Exosuit Weapon (CH-PD Disabler)"
+	desc = "Allows for the construction of CH-PD Disabler."
+	id = "mech_disabler"
+	build_type = MECHFAB
+	req_tech = list("combat" = 3)
+	build_path = /obj/item/mecha_parts/mecha_equipment/weapon/energy/laser/disabler
+	materials = list(MAT_METAL=10000)
+	construction_time = 100
+	category = list("Exosuit Equipment")
+
 /datum/design/mech_carbine
 	name = "Exosuit Weapon (FNX-99 \"Hades\" Carbine)"
 	desc = "Allows for the construction of FNX-99 \"Hades\" Carbine."
@@ -926,8 +938,8 @@
 	category = list("Exosuit Equipment")
 
 /datum/design/mech_grenade_launcher
-	name = "Exosuit Weapon (SGL-6 Flashbang Launcher)"
-	desc = "Allows for the construction of SGL-6 Flashbang Launcher."
+	name = "Exosuit Weapon (SGL-6 Grenade Launcher)"
+	desc = "Allows for the construction of SGL-6 Grenade Launcher."
 	id = "mech_grenade_launcher"
 	build_type = MECHFAB
 	req_tech = list("combat" = 4, "engineering" = 4)
@@ -952,9 +964,9 @@
 	desc = "A device that shoots resonant plasma bursts at extreme velocity. The blasts are capable of crushing rock and demolishing solid obstacles."
 	id = "mech_plasma_cutter"
 	build_type = MECHFAB
-	req_tech = list("engineering" = 4, "materials" = 5, "plasmatech" = 4)
+	req_tech = list("engineering" = 3, "materials" = 3, "plasmatech" = 4)
 	build_path = /obj/item/mecha_parts/mecha_equipment/weapon/energy/plasma
-	materials = list(MAT_METAL = 10000, MAT_GLASS = 2000, MAT_PLASMA = 6000)
+	materials = list(MAT_METAL = 8000, MAT_GLASS = 1000, MAT_PLASMA = 2000)
 	construction_time = 100
 	category = list("Exosuit Equipment")
 
@@ -1034,7 +1046,7 @@
 	id = "borg_upgrade_disablercooler"
 	build_type = MECHFAB
 	build_path = /obj/item/borg/upgrade/disablercooler
-	req_tech = list("combat" = 7, "powerstorage" = 7, "engineering" = 7)
+	req_tech = list("combat" = 5, "powerstorage" = 4, "engineering" = 4)
 	materials = list(MAT_METAL=80000 , MAT_GLASS=6000 , MAT_GOLD= 2000, MAT_DIAMOND = 500)
 	construction_time = 120
 	category = list("Cyborg Upgrade Modules")
@@ -1059,40 +1071,11 @@
 	construction_time = 120
 	category = list("Cyborg Upgrade Modules")
 
-/datum/design/borg_upgrade_abductor_engi
-	name = "Cyborg Upgrade (Abdcutor Engineering Equipment)"
-	id = "borg_upgade_abductor_engi"
-	build_type = MECHFAB
-	build_path = /obj/item/borg/upgrade/abductor_engi
-	req_tech = list("engineering" = 7, "materials" = 7, "abductor" = 4)
-	materials = list(MAT_METAL = 25000, MAT_SILVER = 12500, MAT_PLASMA = 5000, MAT_TITANIUM = 10000, MAT_DIAMOND = 10000) //Base abductor engineering tools * 4
-	construction_time = 120
-	category = list("Cyborg Upgrade Modules")
-
-/datum/design/borg_upgrade_abductor_medi
-	name = "Cyborg Upgrade (Abdcutor Medical Equipment)"
-	id = "borg_upgade_abductor_medi"
-	build_type = MECHFAB
-	build_path = /obj/item/borg/upgrade/abductor_medi
-	req_tech = list("biotech" = 7, "materials" = 7, "abductor" = 4)
-	materials = list(MAT_METAL = 18000, MAT_GLASS = 1500, MAT_SILVER = 13000, MAT_GOLD = 1000, MAT_PLASMA = 4000, MAT_TITANIUM = 12000, MAT_DIAMOND = 1000) //Base abductor engineering tools *8 + IMS cost
-	construction_time = 120
-	category = list("Cyborg Upgrade Modules")
-
-/datum/design/borg_upgrade_lavaproof
-	name = "Cyborg Upgrade (Lavaproof Chassis)"
-	id = "borg_upgrade_lavaproof"
-	build_type = MECHFAB
-	build_path = /obj/item/borg/upgrade/lavaproof
-	materials = list(MAT_METAL = 10000, MAT_PLASMA = 4000, MAT_TITANIUM = 5000)
-	construction_time = 120
-	category = list("Cyborg Upgrade Modules")
-
 /datum/design/borg_syndicate_module
-	name = "Cyborg Upgrade (Safety Override)"
+	name = "Cyborg Upgrade (Illegal Modules)"
 	id = "borg_syndicate_module"
 	build_type = MECHFAB
-	req_tech = list("combat" = 7, "programming" = 7)
+	req_tech = list("combat" = 4, "syndicate" = 2)
 	build_path = /obj/item/borg/upgrade/syndicate
 	materials = list(MAT_METAL=10000,MAT_GLASS=15000,MAT_DIAMOND = 10000)
 	construction_time = 120
@@ -1137,15 +1120,6 @@
 	construction_time = 350
 	category = list("Misc")
 
-/datum/design/integrated_robotic_chassis
-	name = "Integrated Robotic Chassis"
-	id = "integrated_robotic_chassis"
-	build_type = MECHFAB
-	build_path = /mob/living/carbon/human/machine/created
-	materials = list(MAT_METAL = 40000, MAT_TITANIUM = 7000) //for something made from lego, they sure need a lot of metal
-	construction_time = 400
-	category = list("Misc")
-
 /datum/design/ipc_cell
 	name = "IPC Microbattery"
 	id = "ipc_cell"
@@ -1173,15 +1147,6 @@
 	construction_time = 200
 	category = list("Misc")
 
-/datum/design/ipc_microphone
-	name = "IPC Microphone"
-	id = "ipc_microphone"
-	build_type = MECHFAB
-	build_path = /obj/item/organ/internal/ears/microphone
-	materials = list(MAT_METAL = 1000, MAT_GLASS = 2500)
-	construction_time = 200
-	category = list("Misc")
-
 /datum/design/synthetic_flash
 	name = "Synthetic Flash"
 	desc = "A synthetic flash used mostly in borg construction."
@@ -1191,55 +1156,4 @@
 	materials = list(MAT_METAL = 750, MAT_GLASS = 750)
 	construction_time = 100
 	build_path = /obj/item/flash/synthetic
-	category = list("Misc")
-
-/datum/design/voice_standard
-	name = "Voice Modkit : Standard"
-	desc = "A modification kit that updates a mech's onboard voice to Standard."
-	id = "voice_standard"
-	build_type = MECHFAB
-	materials = list(MAT_METAL = 500)
-	construction_time = 50
-	build_path = /obj/item/mecha_modkit/voice
-	category = list("Misc")
-
-/datum/design/voice_nanotrasen
-	name = "Voice Modkit : Nanotrasen"
-	desc = "A modification kit that updates a mech's onboard voice to Nanotrasen."
-	id = "voice_nanotrasen"
-	build_type = MECHFAB
-	materials = list(MAT_METAL = 500)
-	construction_time = 50
-	build_path = /obj/item/mecha_modkit/voice/nanotrasen
-	category = list("Misc")
-
-/datum/design/voice_silent
-	name = "Voice Modkit : Silent"
-	desc = "A modification kit that silences a mech's onboard voice."
-	id = "voice_silent"
-	build_type = MECHFAB
-	materials = list(MAT_METAL = 500)
-	construction_time = 50
-	build_path = /obj/item/mecha_modkit/voice/silent
-	category = list("Misc")
-
-/datum/design/voice_honk
-	name = "Voice Modkit : Honk"
-	desc = "A modification kit that updates a mech's onboard voice to Honk. This is a terrible idea."
-	id = "voice_honk"
-	build_type = MECHFAB
-	materials = list(MAT_METAL = 400, MAT_BANANIUM = 100)
-	construction_time = 50
-	build_path = /obj/item/mecha_modkit/voice/honk
-	category = list("Misc")
-
-/datum/design/voice_syndicate
-	name = "Voice Modkit : Syndicate"
-	desc = "A modification kit that updates a mech's onboard voice to Syndicate."
-	id = "voice_syndicate"
-	build_type = MECHFAB
-	materials = list(MAT_METAL = 400, MAT_TITANIUM = 100)
-	req_tech = list("syndicate" = 2)
-	construction_time = 50
-	build_path = /obj/item/mecha_modkit/voice/syndicate
 	category = list("Misc")

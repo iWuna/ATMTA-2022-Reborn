@@ -1,7 +1,8 @@
 //Unathi clothing.
-/obj/item/clothing/suit/unathi
+/obj/item/clothing/suit/unathi/
+	species_fit = list("Vox")
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/suit.dmi'
+		"Vox" = 'icons/mob/species/vox/suit.dmi'
 		)
 
 /obj/item/clothing/suit/unathi/robe

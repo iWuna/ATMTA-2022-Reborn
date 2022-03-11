@@ -6,14 +6,6 @@
 	if(hand)	return l_hand
 	else		return r_hand
 
-/mob/verb/quick_equip()
-	set name = "quick-equip"
-	set hidden = 1
-
-	var/obj/item/I = get_active_hand()
-	if(I)
-		I.equip_to_best_slot(src)
-
 /mob/proc/is_in_active_hand(obj/item/I)
 	var/obj/item/item_to_test = get_active_hand()
 
@@ -36,18 +28,18 @@
 	return 0
 
 // Because there's several different places it's stored.
-/mob/proc/get_multitool(if_active=0)
+/mob/proc/get_multitool(var/if_active=0)
 	return null
 
 //Puts the item into your l_hand if possible and calls all necessary triggers/updates. returns 1 on success.
-/mob/proc/put_in_l_hand(obj/item/W, skip_lying_check = FALSE)
-	if(!put_in_hand_check(W, skip_lying_check))
+/mob/proc/put_in_l_hand(var/obj/item/W)
+	if(!put_in_hand_check(W))
 		return 0
-	if(!l_hand && has_left_hand())
+	if(!l_hand)
 		W.forceMove(src)		//TODO: move to equipped?
 		l_hand = W
-		W.layer = ABOVE_HUD_LAYER	//TODO: move to equipped?
-		W.plane = ABOVE_HUD_PLANE	//TODO: move to equipped?
+		W.layer = 20	//TODO: move to equipped?
+		W.plane = HUD_PLANE	//TODO: move to equipped?
 		W.equipped(src,slot_l_hand)
 		if(pulling == W)
 			stop_pulling()
@@ -56,14 +48,14 @@
 	return 0
 
 //Puts the item into your r_hand if possible and calls all necessary triggers/updates. returns 1 on success.
-/mob/proc/put_in_r_hand(obj/item/W, skip_lying_check = FALSE)
-	if(!put_in_hand_check(W, skip_lying_check))
+/mob/proc/put_in_r_hand(var/obj/item/W)
+	if(!put_in_hand_check(W))
 		return 0
-	if(!r_hand && has_right_hand())
+	if(!r_hand)
 		W.forceMove(src)
 		r_hand = W
-		W.layer = ABOVE_HUD_LAYER
-		W.plane = ABOVE_HUD_PLANE
+		W.layer = 20
+		W.plane = HUD_PLANE
 		W.equipped(src,slot_r_hand)
 		if(pulling == W)
 			stop_pulling()
@@ -71,18 +63,18 @@
 		return 1
 	return 0
 
-/mob/proc/put_in_hand_check(obj/item/W, skip_lying_check)
-	if(!skip_lying_check && lying && !(W.flags & ABSTRACT))	return 0
+/mob/proc/put_in_hand_check(var/obj/item/W)
+	if(lying && !(W.flags & ABSTRACT))	return 0
 	if(!istype(W))	return 0
 	return 1
 
 //Puts the item into our active hand if possible. returns 1 on success.
-/mob/proc/put_in_active_hand(obj/item/W)
+/mob/proc/put_in_active_hand(var/obj/item/W)
 	if(hand)	return put_in_l_hand(W)
 	else		return put_in_r_hand(W)
 
 //Puts the item into our inactive hand if possible. returns 1 on success.
-/mob/proc/put_in_inactive_hand(obj/item/W)
+/mob/proc/put_in_inactive_hand(var/obj/item/W)
 	if(hand)	return put_in_r_hand(W)
 	else		return put_in_l_hand(W)
 
@@ -91,7 +83,7 @@
 //This is probably the main one you need to know :)
 //Just puts stuff on the floor for most mobs, since all mobs have hands but putting stuff in the AI/corgi/ghost hand is VERY BAD.
 /mob/proc/put_in_hands(obj/item/W)
-	W.forceMove(drop_location())
+	W.forceMove(get_turf(src))
 	W.layer = initial(W.layer)
 	W.plane = initial(W.plane)
 	W.dropped()
@@ -102,12 +94,12 @@
 	return 0
 
 //Drops the item in our left hand
-/mob/proc/drop_l_hand(force = FALSE)
-	return unEquip(l_hand, force) //All needed checks are in unEquip
+/mob/proc/drop_l_hand()
+	return unEquip(l_hand) //All needed checks are in unEquip
 
 //Drops the item in our right hand
-/mob/proc/drop_r_hand(force = FALSE)
-	return unEquip(r_hand, force) //Why was this not calling unEquip in the first place jesus fuck.
+/mob/proc/drop_r_hand()
+	return unEquip(r_hand) //Why was this not calling unEquip in the first place jesus fuck.
 
 //Drops the item in our active hand.
 /mob/proc/drop_item() //THIS. DOES. NOT. NEED. AN. ARGUMENT.
@@ -125,7 +117,7 @@
 		return 0
 	return 1
 
-/mob/proc/unEquip(obj/item/I, force, silent = FALSE) //Force overrides NODROP for things like wizarditis and admin undress.
+/mob/proc/unEquip(obj/item/I, force) //Force overrides NODROP for things like wizarditis and admin undress.
 	if(!I) //If there's nothing to drop, the drop is automatically succesfull. If(unEquip) should generally be used to check for NODROP.
 		return 1
 
@@ -145,8 +137,8 @@
 	if(I)
 		if(client)
 			client.screen -= I
-		I.forceMove(drop_location())
-		I.dropped(src, silent)
+		I.forceMove(loc)
+		I.dropped(src)
 		if(I)
 			I.layer = initial(I.layer)
 			I.plane = initial(I.plane)
@@ -154,66 +146,34 @@
 
 
 //Attemps to remove an object on a mob.  Will not move it to another area or such, just removes from the mob.
-/mob/proc/remove_from_mob(obj/O)
+/mob/proc/remove_from_mob(var/obj/O)
 	unEquip(O)
 	O.screen_loc = null
 	return 1
 
 
 //Outdated but still in use apparently. This should at least be a human proc.
-//Daily reminder to murder this - Remie.
-/mob/proc/get_equipped_items(include_pockets = FALSE)
-	var/list/items = list()
-	if(back)
-		items += back
-	if(wear_mask)
-		items += wear_mask
-	return items
+/mob/proc/get_equipped_items()
+	var/list/items = new/list()
 
-/mob/living/carbon/get_equipped_items(include_pockets = FALSE)
-	var/list/items = ..()
-	if(wear_suit)
-		items += wear_suit
-	if(head)
-		items += head
-	return items
+	if(hasvar(src,"back")) if(src:back) items += src:back
+	if(hasvar(src,"belt")) if(src:belt) items += src:belt
+	if(hasvar(src,"l_ear")) if(src:l_ear) items += src:l_ear
+	if(hasvar(src,"r_ear")) if(src:r_ear) items += src:r_ear
+	if(hasvar(src,"glasses")) if(src:glasses) items += src:glasses
+	if(hasvar(src,"gloves")) if(src:gloves) items += src:gloves
+	if(hasvar(src,"head")) if(src:head) items += src:head
+	if(hasvar(src,"shoes")) if(src:shoes) items += src:shoes
+	if(hasvar(src,"wear_id")) if(src:wear_id) items += src:wear_id
+	if(hasvar(src,"wear_mask")) if(src:wear_mask) items += src:wear_mask
+	if(hasvar(src,"wear_suit")) if(src:wear_suit) items += src:wear_suit
+//	if(hasvar(src,"w_radio")) if(src:w_radio) items += src:w_radio  commenting this out since headsets go on your ears now PLEASE DON'T BE MAD KEELIN
+	if(hasvar(src,"w_uniform")) if(src:w_uniform) items += src:w_uniform
 
-/mob/living/carbon/human/get_equipped_items(include_pockets = FALSE)
-	var/list/items = ..()
-	if(belt)
-		items += belt
-	if(l_ear)
-		items += l_ear
-	if(r_ear)
-		items += r_ear
-	if(glasses)
-		items += glasses
-	if(gloves)
-		items += gloves
-	if(shoes)
-		items += shoes
-	if(wear_id)
-		items += wear_id
-	if(wear_pda)
-		items += wear_pda
-	if(w_uniform)
-		items += w_uniform
-	if(include_pockets)
-		if(l_store)
-			items += l_store
-		if(r_store)
-			items += r_store
-		if(s_store)
-			items += s_store
-	return items
+	//if(hasvar(src,"l_hand")) if(src:l_hand) items += src:l_hand
+	//if(hasvar(src,"r_hand")) if(src:r_hand) items += src:r_hand
 
-/mob/living/proc/unequip_everything()
-	var/list/items = list()
-	items |= get_equipped_items(TRUE)
-	for(var/I in items)
-		unEquip(I)
-	drop_l_hand()
-	drop_r_hand()
+	return items
 
 /obj/item/proc/equip_to_best_slot(mob/M)
 	if(src != M.get_active_hand())
@@ -222,9 +182,9 @@
 
 	if(M.equip_to_appropriate_slot(src))
 		if(M.hand)
-			M.update_inv_l_hand()
+			M.update_inv_l_hand(0)
 		else
-			M.update_inv_r_hand()
+			M.update_inv_r_hand(0)
 		return 1
 
 	if(M.s_active && M.s_active.can_be_inserted(src, 1))	//if storage active insert there
@@ -261,22 +221,8 @@
 
 /mob/proc/get_item_by_slot(slot_id)
 	switch(slot_id)
-		if(slot_wear_mask)
-			return wear_mask
-		if(slot_back)
-			return back
 		if(slot_l_hand)
 			return l_hand
 		if(slot_r_hand)
 			return r_hand
 	return null
-
-//search for a path in inventory and storage items in that inventory (backpack, belt, etc) and return it. Not recursive, so doesnt search storage in storage
-/mob/proc/find_item(path)
-	for(var/obj/item/I in contents)
-		if(istype(I, /obj/item/storage))
-			for(var/obj/item/SI in I.contents)
-				if(istype(SI, path))
-					return SI
-		else if(istype(I, path))
-			return I

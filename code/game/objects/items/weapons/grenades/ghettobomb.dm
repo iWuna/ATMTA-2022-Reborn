@@ -40,7 +40,7 @@
 /obj/item/grenade/iedcasing/attack_self(mob/user) //
 	if(!active)
 		if(clown_check(user))
-			to_chat(user, "<span class='warning'>You light [src]!</span>")
+			to_chat(user, "<span class='warning'>You light the [name]!</span>")
 			active = TRUE
 			overlays -= "improvised_grenade_filled"
 			icon_state = initial(icon_state) + "_active"
@@ -48,9 +48,8 @@
 			var/turf/bombturf = get_turf(src)
 			var/area/A = get_area(bombturf)
 
-			log_game("[key_name(user)] has primed a [name] for detonation at [A.name] [COORD(bombturf)].")
-			investigate_log("[key_name(user)] has primed a [name] for detonation at [A.name] [COORD(bombturf)])", INVESTIGATE_BOMB)
-			add_attack_logs(user, src, "has primed for detonation", ATKLOG_FEW)
+			message_admins("[ADMIN_LOOKUPFLW(user)] has primed a [name] for detonation at [ADMIN_COORDJMP(bombturf)].")
+			log_game("[key_name(usr)] has primed a [name] for detonation at [A.name] [COORD(bombturf)].")
 			if(iscarbon(user))
 				var/mob/living/carbon/C = user
 				C.throw_mode_on()
@@ -62,5 +61,5 @@
 	qdel(src)
 
 /obj/item/grenade/iedcasing/examine(mob/user)
-	. = ..()
-	. += "You can't tell when it will explode!"
+	..()
+	to_chat(user, "You can't tell when it will explode!")

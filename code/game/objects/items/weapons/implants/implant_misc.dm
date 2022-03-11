@@ -58,7 +58,7 @@
 
 /obj/item/implant/emp/activate()
 	uses--
-	INVOKE_ASYNC(GLOBAL_PROC, .proc/empulse, get_turf(imp_in), 3, 5, 1)
+	empulse(imp_in, 3, 5)
 	if(!uses)
 		qdel(src)
 

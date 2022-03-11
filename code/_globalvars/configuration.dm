@@ -1,30 +1,50 @@
-/// Join MOTD for the server
-GLOBAL_VAR(join_motd)
-GLOBAL_PROTECT(join_motd) // Takes up a lot of space in VV
-/// Join TOS for the server
-GLOBAL_VAR(join_tos)
-GLOBAL_PROTECT(join_tos) // Takes up a lot of space. Also dont touch this shit
+var/datum/configuration/config = null
 
-/// The current game year
-GLOBAL_VAR_INIT(game_year, (text2num(time2text(world.realtime, "YYYY")) + 544))
+var/host = null
+var/join_motd = null
+var/station_name = "NSS Excidium"
+var/game_version = "Modified ParaCode"
+var/changelog_hash = md5('html/changelog.html') //used to check if the CL changed
+var/game_year = (text2num(time2text(world.realtime, "YYYY")) + 544)
 
-/// Allow new players to enter the game?
-GLOBAL_VAR_INIT(enter_allowed, TRUE)
+var/aliens_allowed = 1
+var/traitor_scaling = 1
+//var/goonsay_allowed = 0
+var/dna_ident = 1
+var/abandon_allowed = 0
+var/enter_allowed = 1
+var/guests_allowed = 1
+var/shuttle_frozen = 0
+var/shuttle_left = 0
+var/tinted_weldhelh = 1
+var/mouse_respawn_time = 5 //Amount of time that must pass between a player dying as a mouse and repawning as a mouse. In minutes.
 
-/// Is OOC currently enabled?
-GLOBAL_VAR_INIT(ooc_enabled, TRUE)
+// Command to run if shutting down (SHUTDOWN_ON_REBOOT) instead of rebooting
+// It's defined here as a global because this is a hilariously bad thing to have on the easily-edited config datum
+var/global/shutdown_shell_command
 
-/// Is LOOC currently enabled?
-GLOBAL_VAR_INIT(looc_enabled, TRUE)
+// Also global to prevent easy edits
+var/global/python_path = "" //Path to the python executable.  Defaults to "python" on windows and "/usr/bin/env python2" on unix
 
-/// Is OOC currently enabled for dead people?
-GLOBAL_VAR_INIT(dooc_enabled, TRUE)
+// Debug is used exactly once (in living.dm) but is commented out in a lot of places.  It is not set anywhere and only checked.
+// Debug2 is used in conjunction with a lot of admin verbs and therefore is actually legit.
+var/Debug = 0	// global debug switch
+var/Debug2 = 1   // enables detailed job debug file in secrets
 
-/// Is deadchat currently enabled?
-GLOBAL_VAR_INIT(dsay_enabled, TRUE)
+//This was a define, but I changed it to a variable so it can be changed in-game.(kept the all-caps definition because... code...) -Errorage
+var/MAX_EX_DEVESTATION_RANGE = 3
+var/MAX_EX_HEAVY_RANGE = 7
+var/MAX_EX_LIGHT_RANGE = 14
+var/MAX_EX_FLASH_RANGE = 14
+var/MAX_EX_FLAME_RANGE = 14
 
-/// Amount of time (in minutes) that must pass between a player dying as a mouse and repawning as a mouse
-GLOBAL_VAR_INIT(mouse_respawn_time, 5)
+//Random event stuff, apparently used
+var/eventchance = 10 //% per 5 mins
+var/event = 0
+var/hadevent = 0
+var/blobevent = 0
 
-/// Enable debugging of things such as job starts and other things
-GLOBAL_VAR_INIT(debug2, TRUE)
+//Medals hub related variables
+var/global/medal_hub = null
+var/global/medal_pass = " "
+var/global/medals_enabled = TRUE	//will be auto set to false if the game fails contacting the medal hub to prevent unneeded calls.

@@ -11,7 +11,7 @@
 	growthstages = 5
 	genes = list(/datum/plant_gene/trait/repeated_harvest, /datum/plant_gene/trait/plant_type/weed_hardy)
 	mutatelist = list(/obj/item/seeds/nettle/death)
-	reagents_add = list("wasabi" = 0.15)
+	reagents_add = list("sacid" = 0.5)
 
 /obj/item/seeds/nettle/death
 	name = "pack of death-nettle seeds"
@@ -44,25 +44,23 @@
 	attack_verb = list("stung")
 
 /obj/item/grown/nettle/suicide_act(mob/user)
-	user.visible_message("<span class='suicide'>[user] is eating some of [src]! It looks like [user.p_theyre()] trying to commit suicide.</span>")
-	return BRUTELOSS|TOXLOSS
+	user.visible_message("<span class='suicide'>[user] is eating some of the [src.name]! It looks like \he's trying to commit suicide.</span>")
+	return (BRUTELOSS|TOXLOSS)
 
 /obj/item/grown/nettle/pickup(mob/living/user)
 	..()
 	if(!ishuman(user))
-		return FALSE
+		return 0
 	var/mob/living/carbon/human/H = user
 	if(H.gloves)
-		return FALSE
-	if(HAS_TRAIT(H, TRAIT_PIERCEIMMUNE))
-		return FALSE
+		return 0
 	var/organ = ((H.hand ? "l_":"r_") + "arm")
 	var/obj/item/organ/external/affecting = H.get_organ(organ)
 	if(affecting)
 		if(affecting.receive_damage(0, force))
 			H.UpdateDamageIcon()
 	to_chat(H, "<span class='userdanger'>The nettle burns your bare hand!</span>")
-	return TRUE
+	return 1
 
 
 
@@ -99,7 +97,7 @@
 /obj/item/grown/nettle/death/pickup(mob/living/carbon/user)
 	if(..())
 		if(prob(50))
-			user.Weaken(5)
+			user.Paralyse(5)
 			to_chat(user, "<span class='userdanger'>You are stunned by the Deathnettle when you try picking it up!</span>")
 
 /obj/item/grown/nettle/death/attack(mob/living/carbon/M, mob/user)

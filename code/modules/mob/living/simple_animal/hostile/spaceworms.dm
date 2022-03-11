@@ -51,7 +51,7 @@
 	var/atom/currentlyEating //what the worm is currently eating
 	var/plasmaPoopPotential = 5 //this mainly exists for the name
 
-/mob/living/simple_animal/hostile/spaceWorm/Process_Spacemove(check_drift = 0)
+/mob/living/simple_animal/hostile/spaceWorm/Process_Spacemove(var/check_drift = 0)
 	return 1 //space worms can flyyyyyy
 
 //Worm Head, Controls the AI for the entire worm "entity"
@@ -83,7 +83,7 @@
 	var/catastrophicDeathProb = 15 //15% chance for the death of the head to kill the whole thing
 
 
-/mob/living/simple_animal/hostile/spaceWorm/wormHead/New(location, segments = spawnWithSegments)
+/mob/living/simple_animal/hostile/spaceWorm/wormHead/New(var/location, var/segments = spawnWithSegments)
 	..()
 
 	if(!src)//This is to prevent a runtime.
@@ -118,16 +118,15 @@
 
 //Try to move onto target's turf and eat them
 /mob/living/simple_animal/hostile/spaceWorm/wormHead/AttackingTarget()
-	. = ..()
-	if(.)
-		attemptToEat(target)
+	..()
+	attemptToEat(target)
 
 //Attempt to eat things we bump into, Mobs, Walls, Clowns
 /mob/living/simple_animal/hostile/spaceWorm/wormHead/Bump(atom/obstacle)
 	attemptToEat(obstacle)
 
 //Attempt to eat things, only the head can eat
-/mob/living/simple_animal/hostile/spaceWorm/wormHead/proc/attemptToEat(atom/noms)
+/mob/living/simple_animal/hostile/spaceWorm/wormHead/proc/attemptToEat(var/atom/noms)
 
 
 	if(currentlyEating == noms) //currentlyEating is always undefined at the end, so don't eat the same thing twice
@@ -169,11 +168,11 @@
 				W.ChangeTurf(/turf/simulated/floor/plating)
 				new /obj/item/stack/sheet/metal(src, plasmaPoopPotential)
 				currentlyEating = null //ffs, unstore this
-				src.visible_message("<span class='userdanger'>\the [src] eats \the [noms]!</span>","<span class='notice'>You eat \the [noms]!</span>","<span class='userdanger'>You hear gnashing.</span>") //inform everyone what the fucking worm is doing.
+				src.visible_message("<span class='userdanger'>\the [src] eats \the [noms]!</span>","<span class='notice'>You eat \the [noms]!</span>","<span class=userdanger'>You hear gnashing.</span>") //inform everyone what the fucking worm is doing.
 			else
 				currentlyEating = null
 				contents += noms
-				src.visible_message("<span class='userdanger'>\the [src] eats \the [noms]!</span>","<span class='notice'>You eat \the [noms]!</span>","<span class='userdanger'>You hear gnashing.</span>") //inform everyone what the fucking worm is doing.
+				src.visible_message("<span class='userdanger'>\the [src] eats \the [noms]!</span>","<span class='notice'>You eat \the [noms]!</span>","<span class=userdanger'>You hear gnashing.</span>") //inform everyone what the fucking worm is doing.
 				if(ismob(noms))
 					var/mob/M = noms //typecast because noms isn't movable
 					M.loc = src //because just setting a mob loc to null breaks the camera and such
@@ -185,10 +184,7 @@
 
 //Harder to kill the head, but it can kill off the whole worm
 /mob/living/simple_animal/hostile/spaceWorm/wormHead/death(gibbed)
-	// Only execute the below if we successfully died
-	. = ..(gibbed)
-	if(!.)
-		return FALSE
+	..()
 	if(prob(catastrophicDeathProb))
 		for(var/mob/living/simple_animal/hostile/spaceWorm/SW in totalWormSegments)
 			SW.death()
@@ -244,7 +240,7 @@
 
 
 //Add a new worm segment
-/mob/living/simple_animal/hostile/spaceWorm/proc/Attach(mob/living/simple_animal/hostile/spaceWorm/toAttach)
+/mob/living/simple_animal/hostile/spaceWorm/proc/Attach(var/mob/living/simple_animal/hostile/spaceWorm/toAttach)
 	if(!toAttach)
 		return
 
@@ -276,7 +272,7 @@
 
 
 //Remove a worm segment
-/mob/living/simple_animal/hostile/spaceWorm/proc/Detach(die = 0)
+/mob/living/simple_animal/hostile/spaceWorm/proc/Detach(var/die = 0)
 	var/mob/living/simple_animal/hostile/spaceWorm/wormHead/newHead = new /mob/living/simple_animal/hostile/spaceWorm/wormHead(loc,0)
 	var/mob/living/simple_animal/hostile/spaceWorm/newHeadPrev
 
@@ -298,10 +294,7 @@
 
 
 /mob/living/simple_animal/hostile/spaceWorm/death(gibbed)
-	// Only execute the below if we successfully died
-	. = ..()
-	if(!.)
-		return FALSE
+	..()
 	if(myHead)
 		myHead.totalWormSegments -= src
 
@@ -335,7 +328,7 @@
 
 
 //Jiggle the whole worm forwards towards the next segment
-/mob/living/simple_animal/hostile/spaceWorm/do_attack_animation(atom/A, visual_effect_icon, used_item, no_effect)
+/mob/living/simple_animal/hostile/spaceWorm/do_attack_animation(atom/A)
 	..()
 	if(previousWorm)
 		previousWorm.do_attack_animation(src)

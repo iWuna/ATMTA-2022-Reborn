@@ -5,7 +5,7 @@
 	icon = 'icons/obj/wallets.dmi'
 	icon_state = "wallet"
 	w_class = WEIGHT_CLASS_SMALL
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 	can_hold = list(
 		/obj/item/stack/spacecash,
 		/obj/item/card,
@@ -49,6 +49,9 @@
 
 	if(front_id)
 		switch(front_id.icon_state)
+			if("id")
+				icon_state = "walletid"
+				return
 			if("silver")
 				icon_state = "walletid_silver"
 				return
@@ -57,9 +60,6 @@
 				return
 			if("centcom")
 				icon_state = "walletid_centcom"
-				return
-			else
-				icon_state = "walletid"
 				return
 	icon_state = "wallet"
 
@@ -74,20 +74,29 @@
 	else
 		return ..()
 
-/obj/item/storage/wallet/random/populate_contents()
-	var/cash = pick(/obj/item/stack/spacecash,
+/obj/item/storage/wallet/random/New()
+	..()
+	var/item1_type = pick(/obj/item/stack/spacecash,
 		/obj/item/stack/spacecash/c10,
 		/obj/item/stack/spacecash/c100,
 		/obj/item/stack/spacecash/c500,
 		/obj/item/stack/spacecash/c1000)
-	var/coin = pickweight(list(/obj/item/coin/iron = 3,
-							   /obj/item/coin/silver = 2,
-							   /obj/item/coin/gold = 1))
+	var/item2_type
+	if(prob(50))
+		item2_type = pick(/obj/item/stack/spacecash,
+		/obj/item/stack/spacecash/c10,
+		/obj/item/stack/spacecash/c100,
+		/obj/item/stack/spacecash/c500,
+		/obj/item/stack/spacecash/c1000)
+	var/item3_type = pick( /obj/item/coin/silver, /obj/item/coin/silver, /obj/item/coin/gold, /obj/item/coin/iron, /obj/item/coin/iron, /obj/item/coin/iron )
 
-	new cash(src)
-	if(prob(50)) // 50% chance of a second
-		new cash(src)
-	new coin(src)
+	spawn(2)
+		if(item1_type)
+			new item1_type(src)
+		if(item2_type)
+			new item2_type(src)
+		if(item3_type)
+			new item3_type(src)
 
 //////////////////////////////////////
 //			Color Wallets			//
@@ -98,11 +107,11 @@
 	desc = "A cheap wallet from the arcade."
 	storage_slots = 5		//smaller storage than normal wallets
 
-/obj/item/storage/wallet/color/Initialize(mapload)
-	. = ..()
+/obj/item/storage/wallet/color/New()
+	..()
 	if(!item_color)
 		var/color_wallet = pick(subtypesof(/obj/item/storage/wallet/color))
-		new color_wallet(loc)
+		new color_wallet(src.loc)
 		qdel(src)
 		return
 	UpdateDesc()
@@ -115,6 +124,9 @@
 /obj/item/storage/wallet/color/update_icon()
 	if(front_id)
 		switch(front_id.icon_state)
+			if("id")
+				icon_state = "[item_color]_walletid"
+				return
 			if("silver")
 				icon_state = "[item_color]_walletid_silver"
 				return
@@ -123,9 +135,6 @@
 				return
 			if("centcom")
 				icon_state = "[item_color]_walletid_centcom"
-				return
-			else
-				icon_state = "[item_color]_walletid"
 				return
 	icon_state = "[item_color]_wallet"
 

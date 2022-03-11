@@ -1,6 +1,6 @@
 /obj/item/gun/medbeam
 	name = "Medical Beamgun"
-	desc = "Delivers volatile medical nanites in a focused beam. Don't cross the beams!"
+	desc = "Delivers medical nanites in a focused beam."
 	icon = 'icons/obj/chronos.dmi'
 	icon_state = "chronogun"
 	item_state = "chronogun"
@@ -17,14 +17,11 @@
 
 /obj/item/gun/medbeam/New()
 	..()
-	START_PROCESSING(SSobj, src)
+	processing_objects.Add(src)
 
 /obj/item/gun/medbeam/Destroy()
-	STOP_PROCESSING(SSobj, src)
+	processing_objects.Remove(src)
 	return ..()
-
-/obj/item/gun/medbeam/handle_suicide()
-	return
 
 /obj/item/gun/medbeam/dropped(mob/user)
 	..()
@@ -51,11 +48,11 @@
 	spawn(0)
 		current_beam.Start()
 
-	SSblackbox.record_feedback("tally", "gun_fired", 1, type)
+	feedback_add_details("gun_fired","[type]")
 
 /obj/item/gun/medbeam/process()
-	var/source = loc
-	if(!ishuman(source) && !isrobot(source))
+	var/mob/living/carbon/human/H = loc
+	if(!istype(H))
 		LoseTarget()
 		return
 
@@ -68,9 +65,9 @@
 
 	last_check = world.time
 
-	if(get_dist(source,current_target)>max_range || !los_check(source,current_target))
+	if(get_dist(H,current_target)>max_range || !los_check(H,current_target))
 		LoseTarget()
-		to_chat(source, "<span class='warning'>You lose control of the beam!</span>")
+		to_chat(H, "<span class='warning'>You lose control of the beam!</span>")
 		return
 
 	if(current_target)
@@ -81,7 +78,7 @@
 	if(!istype(user_turf))
 		return 0
 	var/obj/dummy = new(user_turf)
-	dummy.pass_flags |= PASSTABLE & PASSGLASS & PASSGRILLE & PASSFENCE //Grille/Glass so it can be used through common windows
+	dummy.pass_flags |= PASSTABLE & PASSGLASS & PASSGRILLE //Grille/Glass so it can be used through common windows
 	for(var/turf/turf in getline(user_turf,target))
 		if(turf.density)
 			qdel(dummy)
@@ -92,26 +89,27 @@
 				return 0
 		for(var/obj/effect/ebeam/medical/B in turf)// Don't cross the str-beams!
 			if(B.owner != current_beam)
-				turf.visible_message("<span class='userdanger'>The medbeams cross and EXPLODE!</span>")
 				explosion(B.loc,0,3,5,8)
 				qdel(dummy)
 				return 0
 	qdel(dummy)
 	return 1
 
-/obj/item/gun/medbeam/proc/on_beam_hit(mob/living/target)
+/obj/item/gun/medbeam/proc/on_beam_hit(var/mob/living/target)
 	return
 
-/obj/item/gun/medbeam/proc/on_beam_tick(mob/living/target)
+/obj/item/gun/medbeam/proc/on_beam_tick(var/mob/living/target)
 	target.adjustBruteLoss(-4)
 	target.adjustFireLoss(-4)
 	if(ishuman(target))
-		var/mob/living/carbon/human/H = target
+		var/var/mob/living/carbon/human/H = target
 		for(var/obj/item/organ/external/E in H.bodyparts)
 			if(prob(10))
-				E.mend_fracture()
+				if(E.mend_fracture())
+					E.perma_injury = 0
+	return
 
-/obj/item/gun/medbeam/proc/on_beam_release(mob/living/target)
+/obj/item/gun/medbeam/proc/on_beam_release(var/mob/living/target)
 	return
 
 /obj/effect/ebeam/medical

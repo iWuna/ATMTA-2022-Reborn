@@ -1,94 +1,77 @@
 /obj/item/proc/melee_attack_chain(mob/user, atom/target, params)
-	if(!tool_attack_chain(user, target) && pre_attack(target, user, params))
+	if(pre_attackby(target, user, params))
 		// Return 1 in attackby() to prevent afterattack() effects (when safely moving items for example)
 		var/resolved = target.attackby(src, user, params)
 		if(!resolved && target && !QDELETED(src))
 			afterattack(target, user, 1, params) // 1: clicking something Adjacent
 
-//Checks if the item can work as a tool, calling the appropriate tool behavior on the target
-//Note that if tool_act returns TRUE, then the tool won't call attack_by.
-/obj/item/proc/tool_attack_chain(mob/user, atom/target)
-	if(!tool_behaviour)
-		return FALSE
-	return target.tool_act(user, src, tool_behaviour)
-
 // Called when the item is in the active hand, and clicked; alternately, there is an 'activate held object' verb or you can hit pagedown.
 /obj/item/proc/attack_self(mob/user)
-	if(SEND_SIGNAL(src, COMSIG_ITEM_ATTACK_SELF, user) & COMPONENT_NO_INTERACT)
-		return
 	return
 
-/obj/item/proc/pre_attack(atom/A, mob/living/user, params) //do stuff before attackby!
-	if(is_hot(src) && A.reagents && !ismob(A))
-		to_chat(user, "<span class='notice'>You heat [A] with [src].</span>")
-		A.reagents.temperature_reagents(is_hot(src))
+/obj/item/proc/pre_attackby(atom/A, mob/living/user, params) //do stuff before attackby!
 	return TRUE //return FALSE to avoid calling attackby after this proc does stuff
 
 // No comment
 /atom/proc/attackby(obj/item/W, mob/user, params)
-	if(SEND_SIGNAL(src, COMSIG_PARENT_ATTACKBY, W, user, params) & COMPONENT_NO_AFTERATTACK)
-		return TRUE
-	return FALSE
+	return SendSignal(COMSIG_PARENT_ATTACKBY, W, user, params)
 
 /obj/attackby(obj/item/I, mob/living/user, params)
-	return ..() || (can_be_hit && I.attack_obj(src, user, params))
+	return ..() || I.attack_obj(src, user)
 
 /mob/living/attackby(obj/item/I, mob/living/user, params)
 	user.changeNext_move(CLICK_CD_MELEE)
 	if(attempt_harvest(I, user))
-		return TRUE
+		return 1
 	return I.attack(src, user)
 
 /obj/item/proc/attack(mob/living/M, mob/living/user, def_zone)
-	SEND_SIGNAL(src, COMSIG_ITEM_ATTACK, M, user)
-	SEND_SIGNAL(user, COMSIG_MOB_ITEM_ATTACK, M, user)
 	if(flags & (NOBLUDGEON))
-		return FALSE
+		return 0
+
 	if(can_operate(M))  //Checks if mob is lying down on table for surgery
 		if(istype(src,/obj/item/robot_parts))//popup override for direct attach
 			if(!attempt_initiate_surgery(src, M, user,1))
-				return FALSE
+				return 0
 			else
-				return TRUE
+				return 1
 		if(istype(src,/obj/item/organ/external))
 			var/obj/item/organ/external/E = src
-			if(E.is_robotic()) // Robot limbs are less messy to attach
+			if(E.robotic == 2) // Robot limbs are less messy to attach
 				if(!attempt_initiate_surgery(src, M, user,1))
-					return FALSE
+					return 0
 				else
-					return TRUE
-		var/obj/item/organ/external/O = M.get_organ(user.zone_selected)
-		if((is_sharp(src) || (isscrewdriver(src) && O?.is_robotic())) && user.a_intent == INTENT_HELP)
-			if(!attempt_initiate_surgery(src, M, user))
-				return FALSE
-			else
-				return TRUE
+					return 1
 
-	if(force && HAS_TRAIT(user, TRAIT_PACIFISM))
-		to_chat(user, "<span class='warning'>You don't want to harm other living beings!</span>")
-		return
+		if(isscrewdriver(src) && M.get_species() == "Machine")
+			if(!attempt_initiate_surgery(src, M, user))
+				return 0
+			else
+				return 1
+		if(is_sharp(src))
+			if(!attempt_initiate_surgery(src, M, user))
+				return 0
+			else
+				return 1
 
 	if(!force)
 		playsound(loc, 'sound/weapons/tap.ogg', get_clamped_volume(), 1, -1)
-	else
-		SEND_SIGNAL(M, COMSIG_ITEM_ATTACK)
-		add_attack_logs(user, M, "Attacked with [name] ([uppertext(user.a_intent)]) ([uppertext(damtype)])", (M.ckey && force > 0 && damtype != STAMINA) ? null : ATKLOG_ALMOSTALL)
-		if(hitsound)
-			playsound(loc, hitsound, get_clamped_volume(), TRUE, extrarange = stealthy_audio ? SILENCED_SOUND_EXTRARANGE : -1, falloff_distance = 0)
+	else if(hitsound)
+		playsound(loc, hitsound, get_clamped_volume(), 1, -1)
 
-	M.lastattacker = user.real_name
-	M.lastattackerckey = user.ckey
+	user.lastattacked = M
+	M.lastattacker = user
 
-	user.do_attack_animation(M)
-	. = M.attacked_by(src, user, def_zone)
+	if(user != M)
+		user.do_attack_animation(M)
+	M.attacked_by(src, user, def_zone)
 
+	add_attack_logs(user, M, "Attacked with [name] (INTENT: [uppertext(user.a_intent)]) (DAMTYPE: [uppertext(damtype)])", admin_notify = (force > 0 && damtype != STAMINA))
 	add_fingerprint(user)
 
 
 //the equivalent of the standard version of attack() but for object targets.
-/obj/item/proc/attack_obj(obj/O, mob/living/user, params)
-	if(SEND_SIGNAL(src, COMSIG_ITEM_ATTACK_OBJ, O, user) & COMPONENT_NO_ATTACK_OBJ)
-		return
+/obj/item/proc/attack_obj(obj/O, mob/living/user)
 	if(flags & (NOBLUDGEON))
 		return
 	user.changeNext_move(CLICK_CD_MELEE)
@@ -99,22 +82,14 @@
 	return
 
 /obj/attacked_by(obj/item/I, mob/living/user)
-	var/damage = I.force
 	if(I.force)
 		user.visible_message("<span class='danger'>[user] has hit [src] with [I]!</span>", "<span class='danger'>You hit [src] with [I]!</span>")
-	if(ishuman(user))
-		var/mob/living/carbon/human/H = user
-		damage += H.physiology.melee_bonus
-	take_damage(damage, I.damtype, MELEE, 1)
+	take_damage(I.force, I.damtype, "melee", 1)
 
 /mob/living/attacked_by(obj/item/I, mob/living/user, def_zone)
 	send_item_attack_message(I, user)
 	if(I.force)
-		var/bonus_damage = 0
-		if(ishuman(user))
-			var/mob/living/carbon/human/H = user
-			bonus_damage = H.physiology.melee_bonus
-		apply_damage(I.force + bonus_damage, I.damtype, def_zone)
+		apply_damage(I.force, I.damtype, def_zone)
 		if(I.damtype == BRUTE)
 			if(prob(33))
 				I.add_mob_blood(src)
@@ -142,9 +117,9 @@
 /obj/item/proc/get_clamped_volume()
 	if(w_class)
 		if(force)
-			return clamp((force + w_class) * 4, 30, 100)// Add the item's force to its weight class and multiply by 4, then clamp the value between 30 and 100
+			return Clamp((force + w_class) * 4, 30, 100)// Add the item's force to its weight class and multiply by 4, then clamp the value between 30 and 100
 		else
-			return clamp(w_class * 6, 10, 100) // Multiply the item's weight class by 6, then clamp the value between 10 and 100
+			return Clamp(w_class * 6, 10, 100) // Multiply the item's weight class by 6, then clamp the value between 10 and 100
 
 /mob/living/proc/send_item_attack_message(obj/item/I, mob/living/user, hit_area)
 	if(I.discrete)

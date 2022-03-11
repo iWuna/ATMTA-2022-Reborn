@@ -33,9 +33,9 @@
 	return ..()
 
 /obj/item/restraints/legcuffs/beartrap/suicide_act(mob/user)
-	user.visible_message("<span class='suicide'>[user] is sticking [user.p_their()] head in [src]! It looks like [user.p_theyre()] trying to commit suicide.</span>")
+	user.visible_message("<span class='suicide'>[user] is sticking \his head in the [src.name]! It looks like \he's trying to commit suicide.</span>")
 	playsound(loc, 'sound/weapons/bladeslice.ogg', 50, 1, -1)
-	return BRUTELOSS
+	return (BRUTELOSS)
 
 /obj/item/restraints/legcuffs/beartrap/attack_self(mob/user)
 	..()
@@ -54,7 +54,6 @@
 			return
 		user.drop_item()
 		I.forceMove(src)
-		IED = I
 		message_admins("[key_name_admin(user)] has rigged a beartrap with an IED.")
 		log_game("[key_name(user)] has rigged a beartrap with an IED.")
 		to_chat(user, "<span class='notice'>You sneak [IED] underneath the pressure plate and connect the trigger wire.</span>")
@@ -73,22 +72,22 @@
 			return
 		user.drop_item()
 		I.forceMove(src)
-		to_chat(user, "<span class='notice'>You sneak [sig] underneath the pressure plate and connect the trigger wire.</span>")
+		to_chat(user, "<span class='notice'>You sneak the [sig] underneath the pressure plate and connect the trigger wire.</span>")
 		desc = "A trap used to catch bears and other legged creatures. <span class='warning'>There is a remote signaler hooked up to it.</span>"
 	if(istype(I, /obj/item/screwdriver))
 		if(IED)
 			IED.forceMove(get_turf(src))
 			IED = null
-			to_chat(user, "<span class='notice'>You remove the IED from [src].</span>")
+			to_chat(user, "<span class='notice'>You remove the IED from the [src].</span>")
 			return
 		if(sig)
 			sig.forceMove(get_turf(src))
 			sig = null
-			to_chat(user, "<span class='notice'>You remove the signaler from [src].</span>")
+			to_chat(user, "<span class='notice'>You remove the signaler from the [src].</span>")
 			return
 	..()
 
-/obj/item/restraints/legcuffs/beartrap/Crossed(AM as mob|obj, oldloc)
+/obj/item/restraints/legcuffs/beartrap/Crossed(AM as mob|obj)
 	if(armed && isturf(src.loc))
 		if( (iscarbon(AM) || isanimal(AM)) && !istype(AM, /mob/living/simple_animal/parrot) && !istype(AM, /mob/living/simple_animal/hostile/construct) && !istype(AM, /mob/living/simple_animal/shade) && !istype(AM, /mob/living/simple_animal/hostile/viscerator))
 			var/mob/living/L = AM
@@ -118,7 +117,7 @@
 					H.legcuffed = src
 					forceMove(H)
 					H.update_inv_legcuffed()
-					SSblackbox.record_feedback("tally", "handcuffs", 1, type)
+					feedback_add_details("handcuffs","B") //Yes, I know they're legcuffs. Don't change this, no need for an extra variable. The "B" is used to tell them apart.
 
 			else
 				L.apply_damage(trap_damage, BRUTE)
@@ -130,7 +129,6 @@
 	icon_state = "e_snare"
 	trap_damage = 0
 	flags = DROPDEL
-	breakouttime = 6 SECONDS
 
 /obj/item/restraints/legcuffs/beartrap/energy/New()
 	..()
@@ -138,7 +136,9 @@
 
 /obj/item/restraints/legcuffs/beartrap/energy/proc/dissipate()
 	if(!ismob(loc))
-		do_sparks(1, 1, src)
+		var/datum/effect_system/spark_spread/sparks = new /datum/effect_system/spark_spread
+		sparks.set_up(1, 1, src)
+		sparks.start()
 		qdel(src)
 
 /obj/item/restraints/legcuffs/beartrap/energy/attack_hand(mob/user)
@@ -154,27 +154,20 @@
 	breakouttime = 35//easy to apply, easy to break out of
 	gender = NEUTER
 	origin_tech = "engineering=3;combat=1"
-	hitsound = 'sound/effects/snap.ogg'
 	var/weaken = 0
-
-/obj/item/restraints/legcuffs/bola/throw_at(atom/target, range, speed, mob/thrower, spin=1, diagonals_first = 0, datum/callback/callback)
-	playsound(loc,'sound/weapons/bolathrow.ogg', 50, TRUE)
-	if(!..())
-		return
 
 /obj/item/restraints/legcuffs/bola/throw_impact(atom/hit_atom)
 	if(..() || !iscarbon(hit_atom))//if it gets caught or the target can't be cuffed,
 		return//abort
 	var/mob/living/carbon/C = hit_atom
-	if(!C.legcuffed && C.get_num_legs() >= 2)
+	if(!C.legcuffed)
 		visible_message("<span class='danger'>[src] ensnares [C]!</span>")
 		C.legcuffed = src
 		forceMove(C)
 		C.update_inv_legcuffed()
-		SSblackbox.record_feedback("tally", "handcuffs", 1, type)
+		feedback_add_details("handcuffs","B")
 		to_chat(C, "<span class='userdanger'>[src] ensnares you!</span>")
 		C.Weaken(weaken)
-		playsound(loc, hitsound, 50, TRUE)
 
 /obj/item/restraints/legcuffs/bola/tactical //traitor variant
 	name = "reinforced bola"
@@ -194,7 +187,7 @@
 
 /obj/item/restraints/legcuffs/bola/energy/throw_impact(atom/hit_atom)
 	if(iscarbon(hit_atom))
-		var/obj/item/restraints/legcuffs/beartrap/B = new /obj/item/restraints/legcuffs/beartrap/energy(get_turf(hit_atom))
-		B.Crossed(hit_atom, null)
+		var/obj/item/restraints/legcuffs/beartrap/B = new /obj/item/restraints/legcuffs/beartrap/energy/cyborg(get_turf(hit_atom))
+		B.Crossed(hit_atom)
 		qdel(src)
 	..()

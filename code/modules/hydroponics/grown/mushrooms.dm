@@ -1,7 +1,6 @@
 /obj/item/reagent_containers/food/snacks/grown/mushroom
 	name = "mushroom"
 	bitesize_mod = 2
-	wine_power = 0.4
 
 
 // Reishi
@@ -28,7 +27,6 @@
 	name = "reishi"
 	desc = "<I>Ganoderma lucidum</I>: A special fungus known for its medicinal and stress relieving properties."
 	icon_state = "reishi"
-	tastes = list("reishi" = 1)
 	filling_color = "#FF4500"
 
 
@@ -56,7 +54,6 @@
 	name = "fly amanita"
 	desc = "<I>Amanita Muscaria</I>: Learn poisonous mushrooms by heart. Only pick mushrooms you know."
 	icon_state = "amanita"
-	tastes = list("amanita" = 1)
 	filling_color = "#FF0000"
 
 
@@ -84,11 +81,9 @@
 /obj/item/reagent_containers/food/snacks/grown/mushroom/angel
 	seed = /obj/item/seeds/angel
 	name = "destroying angel"
-	desc = "<I>Amanita Virosa</I>: Deadly poisonous basidiomycete fungus filled with alpha amanitin."
+	desc = "<I>Amanita Virosa</I>: Deadly poisonous basidiomycete fungus filled with alpha amatoxins."
 	icon_state = "angel"
 	filling_color = "#C0C0C0"
-	tastes = list("destroying angel" = 1)
-	wine_power = 0.6
 
 
 // Liberty Cap
@@ -114,9 +109,6 @@
 	desc = "<I>Psilocybe Semilanceata</I>: Liberate yourself!"
 	icon_state = "libertycap"
 	filling_color = "#DAA520"
-	wine_power = 0.8
-	tastes = list("liberty-cap" = 1)
-	wine_flavor = "freedom"
 
 
 // Plump Helmet
@@ -143,8 +135,6 @@
 	desc = "<I>Plumus Hellmus</I>: Plump, soft and s-so inviting~"
 	icon_state = "plumphelmet"
 	filling_color = "#9370DB"
-	tastes = list("plump helmet" = 1, "dwarven hardiness" = 1)
-	distill_reagent = "manlydorf"
 
 
 // Walking Mushroom
@@ -171,11 +161,9 @@
 	icon_state = "walkingmushroom"
 	filling_color = "#9370DB"
 	origin_tech = "biotech=4;programming=5"
-	tastes = list("walking mushroom" = 1, "motion" = 1)
-	can_distill = FALSE
 
 /obj/item/reagent_containers/food/snacks/grown/mushroom/walkingmushroom/attack_self(mob/user)
-	if(isspaceturf(user.loc))
+	if(istype(user.loc, /turf/space))
 		return
 	var/mob/living/simple_animal/hostile/mushroom/M = new /mob/living/simple_animal/hostile/mushroom(user.loc)
 	M.maxHealth += round(seed.endurance / 4)
@@ -211,7 +199,6 @@
 	name = "chanterelle cluster"
 	desc = "<I>Cantharellus Cibarius</I>: These jolly yellow little shrooms sure look tasty!"
 	icon_state = "chanterelle"
-	tastes = list("chanterelle" = 1)
 	filling_color = "#FFA500"
 
 
@@ -245,8 +232,6 @@
 	var/effect_path = /obj/structure/glowshroom
 	origin_tech = "biotech=4;plasmatech=6"
 	light_color = "#006622"
-	tastes = list("warmth" = 1, "light" = 1, "glowshroom" = 1)
-	wine_power = 0.5
 
 /obj/item/reagent_containers/food/snacks/grown/mushroom/glowshroom/attack_self(mob/user)
 	if(istype(user.loc, /turf/space))
@@ -256,7 +241,7 @@
 		return FALSE
 	var/count = 0
 	var/maxcount = 1
-	for(var/tempdir in GLOB.cardinal)
+	for(var/tempdir in cardinal)
 		var/turf/simulated/wall = get_step(user.loc, tempdir)
 		if(istype(wall))
 			maxcount++
@@ -277,7 +262,8 @@
 	desc = "This mycelium -powers- into mushrooms!"
 	icon_state = "mycelium-glowcap"
 	species = "glowcap"
-	icon_harvest = "glowcap-harvest"
+	icon_grow = "glowshroom-grow"
+	icon_dead = "glowshroom-dead"
 	plantname = "Glowcaps"
 	product = /obj/item/reagent_containers/food/snacks/grown/mushroom/glowshroom/glowcap
 	genes = list(/datum/plant_gene/trait/glow/red, /datum/plant_gene/trait/cell_charge, /datum/plant_gene/trait/plant_type/fungal_metabolism)
@@ -294,9 +280,6 @@
 	effect_path = /obj/structure/glowshroom/glowcap
 	origin_tech = "biotech=4;powerstorage=6;plasmatech=4"
 	light_color = "#8E0300"
-	tastes = list("warmth" = 1, "light" = 1, "glowscap" = 1)
-	wine_power = 0.6
-	wine_flavor = "warmth"
 
 // Fungus/Mold
 /obj/item/seeds/fungus
@@ -319,7 +302,6 @@
 	name = "fungus"
 	desc = "A fungus ideal for making antibacterials."
 	icon_state = "angel"
-	tastes = list("fungus" = 1)
 	color = "#4f4331"
 
 //Shadowshroom
@@ -344,6 +326,3 @@
 	icon_state = "shadowshroom"
 	effect_path = /obj/structure/glowshroom/shadowshroom
 	origin_tech = "biotech=4;plasmatech=4;magnets=4"
-	tastes = list("strange coldness" = 1, "shadowshroom" = 1)
-	wine_power = 0.6
-	wine_flavor = "strange coldness"

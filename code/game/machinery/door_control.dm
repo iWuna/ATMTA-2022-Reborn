@@ -1,11 +1,12 @@
 /obj/machinery/door_control
 	name = "remote door-control"
-	desc = "A remote control-switch for a door."
+	desc = "It controls doors, remotely."
 	icon = 'icons/obj/stationobjs.dmi'
 	icon_state = "doorctrl0"
+	desc = "A remote control-switch for a door."
 	power_channel = ENVIRON
 	var/id = null
-	var/safety_z_check = 1
+	var/range = 10
 	var/normaldoorcontrol = 0
 	var/desiredstate = 0 // Zero is closed, 1 is open.
 	var/specialfunctions = 1
@@ -26,7 +27,7 @@
 	*/
 
 	anchored = 1.0
-	use_power = IDLE_POWER_USE
+	use_power = 1
 	idle_power_usage = 2
 	active_power_usage = 4
 
@@ -37,17 +38,31 @@
 		to_chat(user, "Error, no route to host.")
 
 /obj/machinery/door_control/attackby(obj/item/W, mob/user as mob, params)
+	/* For later implementation
+	if(istype(W, /obj/item/screwdriver))
+	{
+		if(wiresexposed)
+			icon_state = "doorctrl0"
+			wiresexposed = 0
+
+		else
+			icon_state = "doorctrl-open"
+			wiresexposed = 1
+
+		return
+	}
+	*/
 	if(istype(W, /obj/item/detective_scanner))
 		return
-	return ..()
+	return attack_hand(user)
 
 /obj/machinery/door_control/emag_act(user as mob)
 	if(!emagged)
 		emagged = 1
 		req_access = list()
 		req_one_access = list()
-		playsound(src, "sparks", 100, TRUE, SHORT_RANGE_SOUND_EXTRARANGE)
-
+		playsound(loc, "sparks", 100, 1)
+		
 /obj/machinery/door_control/attack_ghost(mob/user)
 	if(user.can_advanced_admin_interact())
 		return attack_hand(user)
@@ -67,9 +82,7 @@
 	add_fingerprint(user)
 
 	if(normaldoorcontrol)
-		for(var/obj/machinery/door/airlock/D in GLOB.airlocks)
-			if(safety_z_check && D.z != z)
-				continue
+		for(var/obj/machinery/door/airlock/D in range(range))
 			if(D.id_tag == id)
 				if(specialfunctions & OPEN)
 					if(D.density)
@@ -100,9 +113,7 @@
 						D.safe = 1
 
 	else
-		for(var/obj/machinery/door/poddoor/M in GLOB.airlocks)
-			if(safety_z_check && M.z != z)
-				continue
+		for(var/obj/machinery/door/poddoor/M in airlocks)
 			if(M.id_tag == id)
 				if(M.density)
 					spawn( 0 )

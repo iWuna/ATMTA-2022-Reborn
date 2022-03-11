@@ -1,6 +1,7 @@
 /obj/item/organ/internal/brain
 	name = "brain"
-	max_damage = 120
+	health = 400 //They need to live awhile longer than other organs.
+	max_damage = 200
 	icon_state = "brain2"
 	force = 1.0
 	w_class = WEIGHT_CLASS_SMALL
@@ -13,10 +14,15 @@
 	organ_tag = "brain"
 	parent_organ = "head"
 	slot = "brain"
-	vital = TRUE
-	hidden_pain = TRUE //the brain has no pain receptors, and brain damage is meant to be a stealthy damage type.
+	vital = 1
 	var/mmi_icon = 'icons/obj/assemblies.dmi'
 	var/mmi_icon_state = "mmi_full"
+
+/obj/item/organ/internal/brain/surgeryize()
+	if(!owner)
+		return
+	owner.SetEarDeaf(0)
+	owner.SetEarDamage(0) //Yeah, didn't you...hear? The ears are totally inside the brain.
 
 /obj/item/organ/internal/brain/xeno
 	name = "xenomorph brain"
@@ -26,11 +32,13 @@
 	mmi_icon = 'icons/mob/alien.dmi'
 	mmi_icon_state = "AlienMMI"
 
-/obj/item/organ/internal/brain/Destroy()
-	QDEL_NULL(brainmob)
-	return ..()
+/obj/item/organ/internal/brain/New()
+	..()
+	spawn(5)
+		if(brainmob && brainmob.client)
+			brainmob.client.screen.len = null //clear the hud
 
-/obj/item/organ/internal/brain/proc/transfer_identity(mob/living/carbon/H)
+/obj/item/organ/internal/brain/proc/transfer_identity(var/mob/living/carbon/H)
 	brainmob = new(src)
 	if(isnull(dna)) // someone didn't set this right...
 		log_runtime(EXCEPTION("[src] at [loc] did not contain a dna datum at time of removal."), src)
@@ -45,15 +53,16 @@
 		H.mind.transfer_to(brainmob)
 
 	to_chat(brainmob, "<span class='notice'>You feel slightly disoriented. That's normal when you're just a [initial(src.name)].</span>")
+	callHook("debrain", list(brainmob))
 
 /obj/item/organ/internal/brain/examine(mob/user) // -- TLE
-	. = ..()
+	..(user)
 	if(brainmob && brainmob.client)//if thar be a brain inside... the brain.
-		. += "You can feel the small spark of life still left in this one."
+		to_chat(user, "You can feel the small spark of life still left in this one.")
 	else
-		. += "This one seems particularly lifeless. Perhaps it will regain some of its luster later.."
+		to_chat(user, "This one seems particularly lifeless. Perhaps it will regain some of its luster later..")
 
-/obj/item/organ/internal/brain/remove(mob/living/user,special = 0)
+/obj/item/organ/internal/brain/remove(var/mob/living/user,special = 0)
 	if(dna)
 		name = "[dna.real_name]'s [initial(name)]"
 
@@ -70,10 +79,10 @@
 
 	if(istype(owner,/mob/living/carbon/human))
 		var/mob/living/carbon/human/H = owner
-		H.update_hair()
+		H.update_hair(1)
 	. = ..()
 
-/obj/item/organ/internal/brain/insert(mob/living/target,special = 0)
+/obj/item/organ/internal/brain/insert(var/mob/living/target,special = 0)
 
 	name = "[initial(name)]"
 	var/brain_already_exists = 0
@@ -82,7 +91,7 @@
 			brain_already_exists = 1
 
 		var/mob/living/carbon/human/H = target
-		H.update_hair()
+		H.update_hair(1)
 
 	if(!brain_already_exists)
 		if(brainmob)
@@ -95,19 +104,6 @@
 	else
 		log_debug("Multibrain shenanigans at ([target.x],[target.y],[target.z]), mob '[target]'")
 	..(target, special = special)
-
-/obj/item/organ/internal/brain/receive_damage(amount, silent = 0) //brains are special; if they receive damage by other means, we really just want the damage to be passed ot the owner and back onto the brain.
-	if(owner)
-		owner.adjustBrainLoss(amount)
-
-/obj/item/organ/internal/brain/necrotize(update_sprite = TRUE) //Brain also has special handling for when it necrotizes
-	damage = max_damage
-	status |= ORGAN_DEAD
-	STOP_PROCESSING(SSobj, src)
-	if(dead_icon && !is_robotic())
-		icon_state = dead_icon
-	if(owner && vital)
-		owner.setBrainLoss(120)
 
 /obj/item/organ/internal/brain/prepare_eat()
 	return // Too important to eat.

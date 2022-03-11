@@ -7,8 +7,7 @@
 	icon_state = "cart"
 	anchored = 0
 	density = 1
-	face_while_pulling = FALSE
-	container_type = OPENCONTAINER
+	flags = OPENCONTAINER
 	//copypaste sorry
 	var/amount_per_transfer_from_this = 5 //shit I dunno, adding this so syringes stop runtime erroring. --NeoFite
 	var/obj/item/storage/bag/trash/mybag	= null
@@ -19,13 +18,13 @@
 	var/const/max_signs = 4
 
 
-/obj/structure/janitorialcart/Initialize(mapload)
-	. = ..()
+/obj/structure/janitorialcart/New()
+	..()
 	create_reagents(100)
-	GLOB.janitorial_equipment += src
+	janitorial_equipment += src
 
 /obj/structure/janitorialcart/Destroy()
-	GLOB.janitorial_equipment -= src
+	janitorial_equipment -= src
 	QDEL_NULL(mybag)
 	QDEL_NULL(mymop)
 	QDEL_NULL(myspray)

@@ -14,7 +14,7 @@ SUBSYSTEM_DEF(air)
 	wait = 5
 	flags = SS_BACKGROUND
 	runlevels = RUNLEVEL_GAME | RUNLEVEL_POSTGAME
-	offline_implications = "Turfs will no longer process atmos, and all atmospheric machines (including cryotubes) will no longer function. Shuttle call recommended."
+
 	var/cost_turfs = 0
 	var/cost_groups = 0
 	var/cost_highpressure = 0
@@ -31,16 +31,12 @@ SUBSYSTEM_DEF(air)
 	var/list/networks = list()
 	var/list/atmos_machinery = list()
 	var/list/pipe_init_dirs_cache = list()
-	var/list/machinery_to_construct = list()
 
 
 
 	//Special functions lists
 	var/list/active_super_conductivity = list()
 	var/list/high_pressure_delta = list()
-
-	/// Pipe overlay/underlay icon manager
-	var/datum/pipe_icon_manager/icon_manager
 
 
 	var/list/currentrun = list()
@@ -66,22 +62,14 @@ SUBSYSTEM_DEF(air)
 	msg += "AT/MS:[round((cost ? active_turfs.len/cost : 0),0.1)]"
 	..(msg)
 
-/datum/controller/subsystem/air/get_metrics()
-	. = ..()
-	var/list/cust = list()
-	cust["active_turfs"] = length(active_turfs)
-	cust["hotspots"] = length(hotspots)
-	.["custom"] = cust
 
 /datum/controller/subsystem/air/Initialize(timeofday)
 	setup_overlays() // Assign icons and such for gas-turf-overlays
-	icon_manager = new() // Sets up icon manager for pipes
 	setup_allturfs()
-	setup_atmos_machinery(GLOB.machines)
-	setup_pipenets(GLOB.machines)
-	for(var/obj/machinery/atmospherics/A in machinery_to_construct)
-		A.initialize_atmos_network()
-	return ..()
+	setup_atmos_machinery()
+	setup_pipenets()
+	..()
+
 
 /datum/controller/subsystem/air/fire(resumed = 0)
 	var/timer = TICK_USAGE_REAL
@@ -286,18 +274,19 @@ SUBSYSTEM_DEF(air)
 		if(blockchanges && T.excited_group)
 			T.excited_group.garbage_collect()
 	else
-		for(var/turf/simulated/S in T.atmos_adjacent_turfs)
-			add_to_active(S)
+		for(var/direction in cardinal)
+			if(!(T.atmos_adjacent_turfs & direction))
+				continue
+			var/turf/simulated/S = get_step(T, direction)
+			if(istype(S))
+				add_to_active(S)
 
-/datum/controller/subsystem/air/proc/setup_allturfs(list/turfs_to_init = block(locate(1, 1, 1), locate(world.maxx, world.maxy, world.maxz)))
+/datum/controller/subsystem/air/proc/setup_allturfs(var/list/turfs_to_init = block(locate(1, 1, 1), locate(world.maxx, world.maxy, world.maxz)))
 	var/list/active_turfs = src.active_turfs
-
-	// Clear active turfs - faster than removing every single turf in the world
-	// one-by-one, and Initalize_Atmos only ever adds `src` back in.
-	active_turfs.Cut()
 
 	for(var/thing in turfs_to_init)
 		var/turf/T = thing
+		active_turfs -= T
 		if(T.blocks_air)
 			continue
 		T.Initialize_Atmos(times_fired)
@@ -327,17 +316,11 @@ SUBSYSTEM_DEF(air)
 			ET.excited = 1
 			. += ET
 
-/datum/controller/subsystem/air/proc/setup_atmos_machinery(list/machines_to_init)
+/datum/controller/subsystem/air/proc/setup_atmos_machinery()
 	var/watch = start_watch()
-	log_startup_progress("Initializing atmospherics machinery...")
-	var/count = _setup_atmos_machinery(machines_to_init)
-	log_startup_progress("Initialized [count] atmospherics machines in [stop_watch(watch)]s.")
-
-// this underscored variant is so that we can have a means of late initing
-// atmos machinery without a loud announcement to the world
-/datum/controller/subsystem/air/proc/_setup_atmos_machinery(list/machines_to_init)
 	var/count = 0
-	for(var/obj/machinery/atmospherics/A in machines_to_init)
+	log_startup_progress("Initializing atmospherics machinery...")
+	for(var/obj/machinery/atmospherics/A in machines)
 		A.atmos_init()
 		count++
 		if(istype(A, /obj/machinery/atmospherics/unary/vent_pump))
@@ -346,47 +329,43 @@ SUBSYSTEM_DEF(air)
 		else if(istype(A, /obj/machinery/atmospherics/unary/vent_scrubber))
 			var/obj/machinery/atmospherics/unary/vent_scrubber/T = A
 			T.broadcast_status()
-	return count
+	log_startup_progress("	Initialized [count] atmospherics machines in [stop_watch(watch)]s.")
 
 //this can't be done with setup_atmos_machinery() because
 //	all atmos machinery has to initalize before the first
 //	pipenet can be built.
-/datum/controller/subsystem/air/proc/setup_pipenets(list/pipes)
+/datum/controller/subsystem/air/proc/setup_pipenets()
 	var/watch = start_watch()
-	log_startup_progress("Initializing pipe networks...")
-	var/count = _setup_pipenets(pipes)
-	log_startup_progress("Initialized [count] pipenets in [stop_watch(watch)]s.")
-
-// An underscored wrapper that exists for the same reason
-// the machine init wrapper does
-/datum/controller/subsystem/air/proc/_setup_pipenets(list/pipes)
 	var/count = 0
-	for(var/obj/machinery/atmospherics/machine in pipes)
+	log_startup_progress("Initializing pipe networks...")
+	for(var/obj/machinery/atmospherics/machine in machines)
 		machine.build_network()
 		count++
-	return count
+	log_startup_progress("	Initialized [count] pipenets in [stop_watch(watch)]s.")
 
 /datum/controller/subsystem/air/proc/setup_overlays()
-	GLOB.plmaster = new /obj/effect/overlay()
-	GLOB.plmaster.icon = 'icons/effects/tile_effects.dmi'
-	GLOB.plmaster.icon_state = "plasma"
-	GLOB.plmaster.mouse_opacity = MOUSE_OPACITY_TRANSPARENT
-	GLOB.plmaster.anchored = TRUE  // should only appear in vis_contents, but to be safe
-	GLOB.plmaster.layer = FLY_LAYER
-	GLOB.plmaster.appearance_flags = TILE_BOUND
+	plmaster = new /obj/effect/overlay()
+	plmaster.icon = 'icons/effects/tile_effects.dmi'
+	plmaster.icon_state = "plasma"
+	plmaster.layer = FLY_LAYER
+	plmaster.mouse_opacity = 0
 
-	GLOB.slmaster = new /obj/effect/overlay()
-	GLOB.slmaster.icon = 'icons/effects/tile_effects.dmi'
-	GLOB.slmaster.icon_state = "sleeping_agent"
-	GLOB.slmaster.mouse_opacity = MOUSE_OPACITY_TRANSPARENT
-	GLOB.slmaster.anchored = TRUE  // should only appear in vis_contents, but to be safe
-	GLOB.slmaster.layer = FLY_LAYER
-	GLOB.slmaster.appearance_flags = TILE_BOUND
+	slmaster = new /obj/effect/overlay()
+	slmaster.icon = 'icons/effects/tile_effects.dmi'
+	slmaster.icon_state = "sleeping_agent"
+	slmaster.layer = FLY_LAYER
+	slmaster.mouse_opacity = 0
+
+	icemaster = new /obj/effect/overlay()
+	icemaster.icon = 'icons/turf/overlays.dmi'
+	icemaster.icon_state = "snowfloor"
+	icemaster.layer = TURF_LAYER + 0.1
+	icemaster.mouse_opacity = 0
 
 #undef SSAIR_PIPENETS
 #undef SSAIR_ATMOSMACHINERY
 #undef SSAIR_ACTIVETURFS
 #undef SSAIR_EXCITEDGROUPS
 #undef SSAIR_HIGHPRESSURE
-#undef SSAIR_HOTSPOTS
+#undef SSAIR_HOTSPOT
 #undef SSAIR_SUPERCONDUCTIVITY

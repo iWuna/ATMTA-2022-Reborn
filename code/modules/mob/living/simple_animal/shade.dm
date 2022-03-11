@@ -2,11 +2,10 @@
 	name = "Shade"
 	real_name = "Shade"
 	desc = "A bound spirit"
-	icon = 'icons/mob/cult.dmi'
+	icon = 'icons/mob/mob.dmi'
 	icon_state = "shade"
 	icon_living = "shade"
 	icon_dead = "shade_dead"
-	mob_biotypes = MOB_SPIRIT
 	maxHealth = 50
 	health = 50
 	speak_emote = list("hisses")
@@ -21,50 +20,34 @@
 	maxbodytemp = 4000
 	atmos_requirements = list("min_oxy" = 0, "max_oxy" = 0, "min_tox" = 0, "max_tox" = 0, "min_co2" = 0, "max_co2" = 0, "min_n2" = 0, "max_n2" = 0)
 	speed = -1
-	stop_automated_movement = TRUE
+	stop_automated_movement = 1
 	status_flags = 0
-	pull_force = 0
-	see_invisible = SEE_INVISIBLE_HIDDEN_RUNES
-	universal_speak = TRUE
 	faction = list("cult")
 	status_flags = CANPUSH
-	flying = TRUE
 	loot = list(/obj/item/reagent_containers/food/snacks/ectoplasm)
-	del_on_death = TRUE
+	del_on_death = 1
 	deathmessage = "lets out a contented sigh as their form unwinds."
-	var/holy = FALSE
 
-/mob/living/simple_animal/shade/cult/Initialize(mapload)
-	. = ..()
-	icon_state = SSticker.cultdat?.shade_icon_state
 
-/mob/living/simple_animal/shade/death(gibbed)
-	. = ..()
-	SSticker.mode.remove_cultist(mind, FALSE)
-
-/mob/living/simple_animal/shade/attackby(obj/item/O, mob/user)  //Marker -Agouri
-	if(istype(O, /obj/item/soulstone))
-		var/obj/item/soulstone/SS = O
-		SS.transfer_soul("SHADE", src, user)
-	else
-		..()
-
-/mob/living/simple_animal/shade/Process_Spacemove()
-	return TRUE
-
-/mob/living/simple_animal/shade/holy
-	holy = TRUE
-	icon_state = "shade_angelic"
+	attackby(var/obj/item/O as obj, var/mob/user as mob)  //Marker -Agouri
+		if(istype(O, /obj/item/soulstone))
+			O.transfer_soul("SHADE", src, user)
+		else
+			if(O.force)
+				var/damage = O.force
+				if(O.damtype == STAMINA)
+					damage = 0
+				health -= damage
+				for(var/mob/M in viewers(src, null))
+					if((M.client && !( M.blinded )))
+						M.show_message("<span class='boldwarning'>[src] has been attacked with the [O] by [user]. </span>")
+			else
+				to_chat(usr, "<span class='warning'>This weapon is ineffective, it does no damage.</span>")
+				for(var/mob/M in viewers(src, null))
+					if((M.client && !( M.blinded )))
+						M.show_message("<span class='warning'>[user] gently taps [src] with the [O]. </span>")
+		return
 
 /mob/living/simple_animal/shade/sword
+	universal_speak = 1
 	faction = list("neutral")
-
-/mob/living/simple_animal/shade/sword/Initialize(mapload)
-	.=..()
-	status_flags |= GODMODE
-
-/mob/living/simple_animal/shade/update_runechat_msg_location()
-	if(istype(loc, /obj/item/soulstone))
-		runechat_msg_location = loc.UID()
-	else
-		return ..()

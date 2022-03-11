@@ -8,12 +8,12 @@
 	item_state = "paintcan"
 	materials = list(MAT_METAL=200)
 	w_class = WEIGHT_CLASS_NORMAL
-	resistance_flags = FLAMMABLE
-	max_integrity = 100
+	burn_state = FLAMMABLE
+	burntime = 5
 	amount_per_transfer_from_this = 5
 	possible_transfer_amounts = list(5,10,20,30,50,70)
 	volume = 70
-	container_type = OPENCONTAINER
+	flags = OPENCONTAINER
 
 /obj/item/reagent_containers/glass/paint/afterattack(turf/simulated/target, mob/user, proximity)
 	if(!proximity)
@@ -23,7 +23,7 @@
 	if(istype(target) && reagents.total_volume >= 5)
 		user.visible_message("<span class='warning'>[target] has been splashed with something by [user]!</span>")
 		spawn(5)
-			reagents.reaction(target, REAGENT_TOUCH)
+			reagents.reaction(target, TOUCH)
 			reagents.remove_any(5)
 	else
 		return ..()

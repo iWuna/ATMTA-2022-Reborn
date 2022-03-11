@@ -12,19 +12,17 @@
 	var/active = 0
 	settagwhitelist = list("id_tag", "logic_id_tag")
 	anchored = 1.0
-	armor = list(melee = 50, bullet = 50, laser = 50, energy = 50, bomb = 10, bio = 100, rad = 100, fire = 90, acid = 70)
-	use_power = IDLE_POWER_USE
+	use_power = 1
 	idle_power_usage = 2
 	active_power_usage = 4
-	resistance_flags = LAVA_PROOF | FIRE_PROOF
 	var/range = 7
+
+	var/datum/radio_frequency/radio_connection
+	var/frequency = 0
 	var/logic_id_tag = "default"					//Defines the ID tag to send logic signals to, so you don't have to unlink from doors and stuff
 	var/logic_connect = 0							//Set this to allow the button to send out logic signals when pressed in addition to normal stuff
 
-/obj/machinery/button/indestructible
-	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
-
-/obj/machinery/driver_button/New(turf/loc, w_dir=null)
+/obj/machinery/driver_button/New(turf/loc, var/w_dir=null)
 	..()
 	switch(w_dir)
 		if(NORTH)
@@ -35,22 +33,22 @@
 			pixel_x = 25
 		if(WEST)
 			pixel_x = -25
-	if(SSradio)
+	if(radio_controller)
 		set_frequency(frequency)
 
 /obj/machinery/driver_button/Initialize()
 	..()
 	set_frequency(frequency)
 
-/obj/machinery/driver_button/set_frequency(new_frequency)
-	SSradio.remove_object(src, frequency)
+/obj/machinery/driver_button/proc/set_frequency(new_frequency)
+	radio_controller.remove_object(src, frequency)
 	frequency = new_frequency
-	radio_connection = SSradio.add_object(src, frequency, RADIO_LOGIC)
+	radio_connection = radio_controller.add_object(src, frequency, RADIO_LOGIC)
 	return
 
 /obj/machinery/driver_button/Destroy()
-	if(SSradio)
-		SSradio.remove_object(src, frequency)
+	if(radio_controller)
+		radio_controller.remove_object(src, frequency)
 	radio_connection = null
 	return ..()
 
@@ -79,12 +77,12 @@
 			qdel(src)
 		return 1
 
-	return ..()
+	return attack_hand(user)
 
-/obj/machinery/driver_button/multitool_menu(mob/user, obj/item/multitool/P)
+/obj/machinery/driver_button/multitool_menu(var/mob/user, var/obj/item/multitool/P)
 	return {"
 	<ul>
-	<li><b>ID Tag:</b> [format_tag("ID Tag","id_tag","set_id")]</li>
+	<li><b>ID Tag:</b> [format_tag("ID Tag","id_tag")]</li>
 	<li><b>Logic Connection:</b> <a href='?src=[UID()];toggle_logic=1'>[logic_connect ? "On" : "Off"]</a></li>
 	<li><b>Logic ID Tag:</b> [format_tag("Logic ID Tag", "logic_id_tag")]</li>
 	</ul>"}
@@ -147,7 +145,7 @@
 	icon_state = "launcherbtt"
 	active = 0
 
-/obj/machinery/driver_button/multitool_topic(mob/user, list/href_list, obj/O)
+/obj/machinery/driver_button/multitool_topic(var/mob/user,var/list/href_list,var/obj/O)
 	..()
 	if("toggle_logic" in href_list)
 		logic_connect = !logic_connect
@@ -164,7 +162,7 @@
 	var/id = null
 	var/active = 0
 	anchored = 1.0
-	use_power = IDLE_POWER_USE
+	use_power = 1
 	idle_power_usage = 2
 	active_power_usage = 4
 
@@ -174,6 +172,9 @@
 /obj/machinery/ignition_switch/attack_ghost(mob/user)
 	if(user.can_advanced_admin_interact())
 		return attack_hand(user)
+
+/obj/machinery/ignition_switch/attackby(obj/item/W, mob/user, params)
+	return attack_hand(user)
 
 /obj/machinery/ignition_switch/attack_hand(mob/user)
 	if(stat & (NOPOWER|BROKEN))
@@ -186,12 +187,12 @@
 	active = 1
 	icon_state = "launcheract"
 
-	for(var/obj/machinery/sparker/M in GLOB.machines)
+	for(var/obj/machinery/sparker/M in world)
 		if(M.id == id)
 			spawn( 0 )
 				M.spark()
 
-	for(var/obj/machinery/igniter/M in GLOB.machines)
+	for(var/obj/machinery/igniter/M in world)
 		if(M.id == id)
 			use_power(50)
 			M.on = !( M.on )

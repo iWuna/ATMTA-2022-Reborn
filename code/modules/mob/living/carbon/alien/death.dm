@@ -1,6 +1,4 @@
 /mob/living/carbon/alien/gib()
-	if(!death(TRUE) && stat != DEAD)
-		return FALSE
 	death(1)
 	var/atom/movable/overlay/animation = null
 	notransform = 1
@@ -17,46 +15,46 @@
 
 	flick("gibbed-a", animation)
 	xgibs(loc)
-	GLOB.dead_mob_list -= src
+	dead_mob_list -= src
 
-	QDEL_IN(animation, 15)
-	QDEL_IN(src, 15)
-	return TRUE
+	spawn(15)
+		if(animation)	qdel(animation)
+		if(src)			qdel(src)
 
 /mob/living/carbon/alien/dust()
-	if(!death(TRUE) && stat != DEAD)
-		return FALSE
+	death(1)
+	var/atom/movable/overlay/animation = null
 	notransform = 1
 	canmove = 0
 	icon = null
 	invisibility = 101
-	dust_animation()
-	new /obj/effect/decal/remains/xeno(loc)
-	GLOB.dead_mob_list -= src
-	QDEL_IN(src, 15)
-	return TRUE
 
-/mob/living/carbon/alien/dust_animation()
-	var/atom/movable/overlay/animation = null
 	animation = new(loc)
 	animation.icon_state = "blank"
 	animation.icon = 'icons/mob/mob.dmi'
 	animation.master = src
+
 	flick("dust-a", animation)
 	new /obj/effect/decal/remains/xeno(loc)
-	GLOB.dead_mob_list -= src
-	QDEL_IN(animation, 15)
+	dead_mob_list -= src
+
+	spawn(15)
+		if(animation)	qdel(animation)
+		if(src)			qdel(src)
 
 /mob/living/carbon/alien/death(gibbed)
-	// Only execute the below if we successfully died
-	. = ..(gibbed)
-	if(!.)
-		return FALSE
-	if(healths)
-		healths.icon_state = "health6"
+	if(stat == DEAD)	return
+	if(healths)			healths.icon_state = "health6"
+	stat = DEAD
 
 	if(!gibbed)
-		if(death_sound)
-			playsound(loc, death_sound, 80, 1, 1)
-		visible_message("<B>[src]</B> [death_message]")
+		playsound(loc, 'sound/voice/hiss6.ogg', 80, 1, 1)
+		for(var/mob/O in viewers(src, null))
+			O.show_message("<B>[src]</B> lets out a waning guttural screech, green blood bubbling from its maw...", 1)
+		update_canmove()
 		update_icons()
+
+	timeofdeath = world.time
+	if(mind) 	mind.store_memory("Time of death: [station_time_timestamp("hh:mm:ss", timeofdeath)]", 0)
+
+	return ..(gibbed)

@@ -71,16 +71,6 @@
 	build_path = /obj/item/clothing/glasses/hud/security/night
 	category = list("Equipment")
 
-/datum/design/skills_hud
-	name = "Skills HUD"
-	desc = "A heads-up display that scans the humans in view and shows a summary of their NT employment history."
-	id = "skills_hud"
-	req_tech = list("magnets" = 3, "combat" = 2)
-	build_type = PROTOLATHE
-	materials = list(MAT_METAL = 500, MAT_GLASS = 500)
-	build_path = /obj/item/clothing/glasses/hud/skills
-	category = list("Equipment")
-
 /datum/design/mesons
 	name = "Optical Meson Scanners"
 	desc = "Used for seeing walls, floors, and stuff through anything."
@@ -89,27 +79,6 @@
 	build_type = PROTOLATHE
 	materials = list(MAT_METAL = 500, MAT_GLASS = 500)
 	build_path = /obj/item/clothing/glasses/meson
-	category = list("Equipment")
-
-
-/datum/design/engine_goggles
-	name = "Engineering Scanner Goggles"
-	desc = "Goggles used by engineers. The Meson Scanner mode lets you see basic structural and terrain layouts through walls, regardless of lighting condition. The T-ray Scanner mode lets you see underfloor objects such as cables and pipes."
-	id = "engine_goggles"
-	req_tech = list("materials" = 4, "magnets" = 3, "engineering" = 4, "plasmatech" = 3)
-	build_type = PROTOLATHE
-	materials = list(MAT_METAL = 500, MAT_GLASS = 500, MAT_PLASMA = 100)
-	build_path = /obj/item/clothing/glasses/meson/engine
-	category = list("Equipment")
-
-/datum/design/tray_goggles
-	name = "Optical T-Ray Scanners"
-	desc = "Used by engineering staff to see underfloor objects such as cables and pipes."
-	id = "tray_goggles"
-	req_tech = list("materials" = 3, "magnets" = 2, "engineering" = 2)
-	build_type = PROTOLATHE
-	materials = list(MAT_METAL = 500, MAT_GLASS = 500)
-	build_path = /obj/item/clothing/glasses/meson/engine/tray
 	category = list("Equipment")
 
 /datum/design/nvgmesons
@@ -132,21 +101,11 @@
 	build_path = /obj/item/bikehorn/airhorn
 	category = list("Equipment")
 
-/datum/design/breath_mask
-	name = "Breath mask"
-	desc = "A close-fitting mask that can be connected to an air supply."
-	id = "breathmask"
-	req_tech = list("toxins" = 3)
-	build_type = PROTOLATHE
-	materials = list(MAT_METAL = 300, MAT_GLASS = 200)
-	build_path = /obj/item/clothing/mask/breath
-	category = list("Equipment")
-
 /datum/design/welding_mask
 	name = "Welding Gas Mask"
 	desc = "A gas mask with built in welding goggles and face shield. Looks like a skull, clearly designed by a nerd."
 	id = "weldingmask"
-	req_tech = list("materials" = 2, "engineering" = 3, "toxins" = 3)
+	req_tech = list("materials" = 2, "engineering" = 3)
 	build_type = PROTOLATHE
 	materials = list(MAT_METAL = 3000, MAT_GLASS = 1000)
 	build_path = /obj/item/clothing/mask/gas/welding
@@ -156,7 +115,6 @@
 	name = "Portable Seed Extractor"
 	desc = "For the enterprising botanist on the go. Less efficient than the stationary model, it creates one seed per plant."
 	build_type = PROTOLATHE
-	id = "portaseeder"
 	req_tech = list("biotech" = 3, "engineering" = 2)
 	materials = list(MAT_METAL = 1000, MAT_GLASS = 400)
 	build_path = /obj/item/storage/bag/plants/portaseeder
@@ -300,14 +258,4 @@
 	build_path = /obj/item/multitool/abductor
 	build_type = PROTOLATHE
 	materials = list(MAT_METAL = 5000, MAT_SILVER = 2500, MAT_PLASMA = 5000, MAT_TITANIUM = 2000, MAT_DIAMOND = 2000)
-	category = list("Equipment")
-
-/datum/design/bluespace_closet
-	name = "Bluespace Closet"
-	desc = "A storage unit that moves and stores through the fourth dimension."
-	id = "bluespace_closet"
-	req_tech = list("engineering" = 4, "programming" = 5, "bluespace" = 5, "magnets" = 4, "plasmatech" = 3)
-	build_path = /obj/structure/closet/bluespace
-	build_type = PROTOLATHE
-	materials = list(MAT_METAL = 5000, MAT_PLASMA = 2500, MAT_TITANIUM = 500, MAT_BLUESPACE = 500)
 	category = list("Equipment")

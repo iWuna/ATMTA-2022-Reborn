@@ -2,42 +2,106 @@
 //TODO: allow all controllers to be deleted for clean restarts (see WIP master controller stuff) - MC done - lighting done
 
 
-/client/proc/restart_controller(controller in list("Master", "Failsafe"))
+/client/proc/restart_controller(controller in list("Master","Failsafe"))
 	set category = "Debug"
 	set name = "Restart Controller"
 	set desc = "Restart one of the various periodic loop controllers for the game (be careful!)"
 
-	if(!check_rights(R_DEBUG))
-		return
+	if(!holder)	return
+	usr = null
+	src = null
 	switch(controller)
-		if("Master")
-			Recreate_MC()
-			SSblackbox.record_feedback("tally", "admin_verb", 1, "Restart MC")
 		if("Failsafe")
 			new /datum/controller/failsafe()
-			SSblackbox.record_feedback("tally", "admin_verb", 1, "Restart Failsafe")
-
+			feedback_add_details("admin_verb","RFailsafe")
 	message_admins("Admin [key_name_admin(usr)] has restarted the [controller] controller.")
+	return
 
-/client/proc/debug_controller(controller in list("Configuration", "pAI", "Cameras", "Space Manager"))
+/client/proc/debug_controller(controller in list("Master",
+	"failsafe","Scheduler","StonedMaster","Ticker","Air","Jobs","Sun","Radio","Configuration","pAI",
+	"Cameras","Garbage", "Transfer Controller","Event","Alarm","Nano","Vote","Fires",
+	"Mob","NPC AI","Shuttle","Timer","Weather","Space","Mob Hunt Server"))
 	set category = "Debug"
-	set name = "Debug Misc Controller"
-	set desc = "Debug the various non-subsystem controllers for the game (be careful!)"
+	set name = "Debug Controller"
+	set desc = "Debug the various periodic loop controllers for the game (be careful!)"
 
-	if(!check_rights(R_DEBUG))
-		return
+	if(!holder)	return
 	switch(controller)
+		if("Master")
+			debug_variables(master_controller)
+			feedback_add_details("admin_verb","DMC")
+		if("failsafe")
+			debug_variables(Failsafe)
+			feedback_add_details("admin_verb", "dfailsafe")
+		if("Scheduler")
+			debug_variables(processScheduler)
+			feedback_add_details("admin_verb","DprocessScheduler")
+		if("StonedMaster")
+			debug_variables(Master)
+			feedback_add_details("admin_verb","Dsmc")
+		if("Ticker")
+			debug_variables(ticker)
+			feedback_add_details("admin_verb","DTicker")
+		if("Air")
+			debug_variables(SSair)
+			feedback_add_details("admin_verb","DAir")
+		if("Jobs")
+			debug_variables(job_master)
+			feedback_add_details("admin_verb","DJobs")
+		if("Sun")
+			debug_variables(SSsun)
+			feedback_add_details("admin_verb","DSun")
+		if("Radio")
+			debug_variables(radio_controller)
+			feedback_add_details("admin_verb","DRadio")
 		if("Configuration")
-			debug_variables(GLOB.configuration)
-			SSblackbox.record_feedback("tally", "admin_verb", 1, "Debug Config")
+			debug_variables(config)
+			feedback_add_details("admin_verb","DConf")
 		if("pAI")
-			debug_variables(GLOB.paiController)
-			SSblackbox.record_feedback("tally", "admin_verb", 1, "Debug pAI")
+			debug_variables(paiController)
+			feedback_add_details("admin_verb","DpAI")
 		if("Cameras")
-			debug_variables(GLOB.cameranet)
-			SSblackbox.record_feedback("tally", "admin_verb", 1, "Debug Cameras")
-		if("Space Manager")
-			debug_variables(GLOB.space_manager)
-			SSblackbox.record_feedback("tally", "admin_verb", 1, "Debug Space")
+			debug_variables(cameranet)
+			feedback_add_details("admin_verb","DCameras")
+		if("Event")
+			debug_variables(event_manager)
+			feedback_add_details("admin_verb","DEvent")
+		if("Alarm")
+			debug_variables(alarm_manager)
+			feedback_add_details("admin_verb", "DAlarm")
+		if("Garbage")
+			debug_variables(SSgarbage)
+			feedback_add_details("admin_verb","DGarbage")
+		if("Nano")
+			debug_variables(SSnanoui)
+			feedback_add_details("admin_verb","DNano")
+		if("Vote")
+			debug_variables(vote)
+			feedback_add_details("admin_verb","DVote")
+		if("Fires")
+			debug_variables(SSfires)
+			feedback_add_details("admin_verb","DFires")
+		if("Mob")
+			debug_variables(SSmobs)
+			feedback_add_details("admin_verb","DMob")
+		if("NPC AI")
+			debug_variables(npcai_master)
+			feedback_add_details("admin_verb","DNPCAI")
+		if("Shuttle")
+			debug_variables(shuttle_master)
+			feedback_add_details("admin_verb","DShuttle")
+		if("Timer")
+			debug_variables(SStimer)
+			feedback_add_details("admin_verb","DTimer")
+		if("Weather")
+			debug_variables(weather_master)
+			feedback_add_details("admin_verb","DWeather")
+		if("Space")
+			debug_variables(space_manager)
+			feedback_add_details("admin_verb","DSpace")
+		if("Mob Hunt Server")
+			debug_variables(mob_hunt_server)
+			feedback_add_details("admin_verb","DMobHuntServer")
 
 	message_admins("Admin [key_name_admin(usr)] is debugging the [controller] controller.")
+	return

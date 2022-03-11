@@ -9,9 +9,9 @@
 	icon_state = "mushhat"
 	item_state = "mushhat"
 	flags = BLOCKHAIR
-
+	species_fit = list("Vox")
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/head.dmi'
+		"Vox" = 'icons/mob/species/vox/head.dmi'
 		)
 
 //gold top hat and recolours
@@ -20,9 +20,9 @@
 	desc = "Poshness incarnate."
 	icon_state = "goldtophat"
 	item_state = "goldtophat"
-
+	species_fit = list("Vox")
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/head.dmi'
+		"Vox" = 'icons/mob/species/vox/head.dmi'
 		)
 
 
@@ -45,9 +45,9 @@
 	icon_state = "guardhelm"
 	item_state = "guardhelm"
 	flags = BLOCKHAIR
-
+	species_fit = list("Vox")
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/head.dmi'
+		"Vox" = 'icons/mob/species/vox/head.dmi'
 		)
 
 //black sombrero
@@ -57,7 +57,7 @@
 	icon_state = "blacksombrero"
 	item_state = "blacksombrero"
 	flags = BLOCKHAIR
-
+	species_fit = list("Vox")
 	sprite_sheets = list(
-		"Vox" = 'icons/mob/clothing/species/vox/head.dmi'
+		"Vox" = 'icons/mob/species/vox/head.dmi'
 		)

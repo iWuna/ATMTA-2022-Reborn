@@ -16,35 +16,28 @@
 //	flick("gibbed-r", animation)
 	robogibs(loc)
 
-	GLOB.dead_mob_list -= src
+	dead_mob_list -= src
 	spawn(15)
 		if(animation)	qdel(animation)
 		if(src)			qdel(src)
 
 /mob/living/silicon/dust()
-	if(!death(TRUE) && stat != DEAD)
-		return FALSE
+	death(1)
+	var/atom/movable/overlay/animation = null
 	notransform = 1
 	canmove = 0
 	icon = null
 	invisibility = 101
-	dust_animation()
-	GLOB.dead_mob_list -= src
-	QDEL_IN(src, 15)
-	return TRUE
-
-/mob/living/silicon/dust_animation()
-	//hmmm
-	var/atom/movable/overlay/animation = null
 
 	animation = new(loc)
 	animation.icon_state = "blank"
 	animation.icon = 'icons/mob/mob.dmi'
 	animation.master = src
-	QDEL_IN(animation, 15)
 
-/mob/living/silicon/death(gibbed)
-	. = ..()
-	if(!gibbed)
-		if(death_sound)
-			playsound(get_turf(src), death_sound, 200, 1)
+//	flick("dust-r", animation)
+	new /obj/effect/decal/remains/robot(loc)
+
+	dead_mob_list -= src
+	spawn(15)
+		if(animation)	qdel(animation)
+		if(src)			qdel(src)

@@ -13,29 +13,27 @@
 	//	luminosity = 1
 	settagwhitelist = list("logic_id_tag")
 	var/light_connect = 1							//Allows the switch to control lights in its associated areas. When set to 0, using the switch won't affect the lights.
+	var/datum/radio_frequency/radio_connection
+	var/frequency = 0
 	var/logic_id_tag = "default"					//Defines the ID tag to send logic signals to.
 	var/logic_connect = 0							//Set this to allow the switch to send out logic signals.
 
 
-/obj/machinery/light_switch/New(turf/loc, w_dir=null)
+/obj/machinery/light_switch/New(turf/loc, var/w_dir=null)
 	..()
 	switch(w_dir)
 		if(NORTH)
 			pixel_y = 25
-			dir = NORTH
 		if(SOUTH)
 			pixel_y = -25
-			dir = SOUTH
 		if(EAST)
 			pixel_x = 25
-			dir = EAST
 		if(WEST)
 			pixel_x = -25
-			dir = WEST
-	if(SSradio)
+	if(radio_controller)
 		set_frequency(frequency)
 	spawn(5)
-		src.area = get_area(src)
+		src.area = src.loc.loc
 
 		if(otherarea)
 			src.area = locate(text2path("/area/[otherarea]"))
@@ -49,17 +47,16 @@
 /obj/machinery/light_switch/Initialize()
 	..()
 	set_frequency(frequency)
-	name = "light switch"
 
-/obj/machinery/light_switch/set_frequency(new_frequency)
-	SSradio.remove_object(src, frequency)
+/obj/machinery/light_switch/proc/set_frequency(new_frequency)
+	radio_controller.remove_object(src, frequency)
 	frequency = new_frequency
-	radio_connection = SSradio.add_object(src, frequency, RADIO_LOGIC)
+	radio_connection = radio_controller.add_object(src, frequency, RADIO_LOGIC)
 	return
 
 /obj/machinery/light_switch/Destroy()
-	if(SSradio)
-		SSradio.remove_object(src, frequency)
+	if(radio_controller)
+		radio_controller.remove_object(src, frequency)
 	radio_connection = null
 	return ..()
 
@@ -73,16 +70,16 @@
 			icon_state = "light0"
 
 /obj/machinery/light_switch/examine(mob/user)
-	. = ..()
-	. += "A light switch. It is [on? "on" : "off"]."
+	if(..(user, 1))
+		to_chat(user, "A light switch. It is [on? "on" : "off"].")
 
 /obj/machinery/light_switch/attack_ghost(mob/user)
 	if(user.can_advanced_admin_interact())
 		return attack_hand(user)
 
 /obj/machinery/light_switch/attack_hand(mob/user)
+	playsound(src, "switch", 30)
 	on = !on
-	playsound(src, 'sound/machines/lightswitch.ogg', 10, TRUE)
 	updateicon()
 
 	if(light_connect)
@@ -151,27 +148,22 @@
 /obj/machinery/light_switch/attackby(obj/item/W as obj, mob/user as mob, params)
 	if(istype(W, /obj/item/detective_scanner))
 		return
-	return ..()
 
-/obj/machinery/light_switch/multitool_act(mob/user, obj/item/I)
-	. = TRUE
-	if(!I.use_tool(src, user, 0, volume = I.tool_volume))
-		return
-	update_multitool_menu(user)
+	if(istype(W, /obj/item/multitool))
+		update_multitool_menu(user)
+		return 1
 
-/obj/machinery/light_switch/wrench_act(mob/user, obj/item/I)
-	. = TRUE
-	if(!I.tool_use_check(user, 0))
-		return
-	user.visible_message("<span class='notice'>[user] starts unwrenching [src] from the wall...</span>", "<span class='notice'>You are unwrenching [src] from the wall...</span>", "<span class='warning'>You hear ratcheting.</span>")
-	. = TRUE
-	if(!I.use_tool(src, user, 30, volume = I.tool_volume))
-		return
-	WRENCH_UNANCHOR_WALL_MESSAGE
-	new/obj/item/mounted/frame/light_switch(get_turf(src))
-	qdel(src)
+	if(istype(W, /obj/item/wrench))
+		playsound(get_turf(src), W.usesound, 50, 1)
+		if(do_after(user, 30 * W.toolspeed, target = src))
+			to_chat(user, "<span class='notice'>You detach \the [src] from the wall.</span>")
+			new/obj/item/mounted/frame/light_switch(get_turf(src))
+			qdel(src)
+		return 1
 
-/obj/machinery/light_switch/multitool_menu(mob/user, obj/item/multitool/P)
+	return src.attack_hand(user)
+
+/obj/machinery/light_switch/multitool_menu(var/mob/user, var/obj/item/multitool/P)
 	return {"
 	<ul>
 	<li><b>Light Circuit Connection:</b> <a href='?src=[UID()];toggle_light_connect=1'>[light_connect ? "On" : "Off"]</a></li>
@@ -179,7 +171,7 @@
 	<li><b>Logic ID Tag:</b> [format_tag("Logic ID Tag", "logic_id_tag")]</li>
 	</ul>"}
 
-/obj/machinery/light_switch/multitool_topic(mob/user, list/href_list, obj/O)
+/obj/machinery/light_switch/multitool_topic(var/mob/user,var/list/href_list,var/obj/O)
 	..()
 	if("toggle_light_connect" in href_list)
 		light_connect = !light_connect

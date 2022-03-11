@@ -1,34 +1,46 @@
 
-GLOBAL_LIST_INIT(body_accessory_by_name, list("None" = null))
-GLOBAL_LIST_INIT(body_accessory_by_species, list())
+var/global/list/body_accessory_by_name = list("None" = null)
+
+/hook/startup/proc/initalize_body_accessories()
+
+	__init_body_accessory(/datum/body_accessory/body)
+	__init_body_accessory(/datum/body_accessory/tail)
+
+	if(body_accessory_by_name.len)
+		if(initialize_body_accessory_by_species())
+			return 1
+
+	return 0 //fail if no bodies are found
+
+var/global/list/body_accessory_by_species = list("None" = null)
 
 /proc/initialize_body_accessory_by_species()
-	for(var/B in GLOB.body_accessory_by_name)
-		var/datum/body_accessory/accessory = GLOB.body_accessory_by_name[B]
+	for(var/B in body_accessory_by_name)
+		var/datum/body_accessory/accessory = body_accessory_by_name[B]
 		if(!istype(accessory))	continue
 
 		for(var/species in accessory.allowed_species)
-			if(!GLOB.body_accessory_by_species["[species]"])
-				GLOB.body_accessory_by_species["[species]"] = list()
-			GLOB.body_accessory_by_species["[species]"]["[accessory.name]"] = accessory
+			if(!body_accessory_by_species["[species]"])	body_accessory_by_species["[species]"] = list()
+			body_accessory_by_species["[species]"] += accessory
 
-	if(GLOB.body_accessory_by_species.len)
-		return TRUE
-	return FALSE
+	if(body_accessory_by_species.len)
+		return 1
+	return 0
 
-/proc/__init_body_accessory(ba_path)
+/proc/__init_body_accessory(var/ba_path)
 	if(ispath(ba_path))
 		var/_added_counter = 0
 
 		for(var/A in subtypesof(ba_path))
 			var/datum/body_accessory/B = new A
 			if(istype(B))
-				GLOB.body_accessory_by_name[B.name] += B
+				body_accessory_by_name[B.name] += B
 				++_added_counter
 
 		if(_added_counter)
-			return TRUE
-	return FALSE
+			return 1
+	return 0
+
 
 /datum/body_accessory
 	var/name = "default"
@@ -46,11 +58,8 @@ GLOBAL_LIST_INIT(body_accessory_by_species, list())
 
 	var/list/allowed_species = list()
 
-	/// If true, adds an underlay (in addition to the regular overlay!) to the character sprite, with the state "[icon_state]_BEHIND".
-	var/has_behind = FALSE
-
-/datum/body_accessory/proc/try_restrictions(mob/living/carbon/human/H)
-	return (H.dna.species.name in allowed_species)
+/datum/body_accessory/proc/try_restrictions(var/mob/living/carbon/human/H)
+	return 1
 
 /datum/body_accessory/proc/get_animated_icon() //return animated if it has it, return static if it does not.
 	if(animated_icon)
@@ -69,6 +78,16 @@ GLOBAL_LIST_INIT(body_accessory_by_species, list())
 /datum/body_accessory/body
 	blend_mode = ICON_MULTIPLY
 
+/datum/body_accessory/body/snake
+	name = "Snake"
+
+	icon = 'icons/mob/body_accessory_64.dmi'
+	icon_state = "snake"
+
+	pixel_x_offset = -16
+
+
+
 //Tails
 /datum/body_accessory/tail
 	icon = 'icons/mob/body_accessory.dmi'
@@ -77,134 +96,47 @@ GLOBAL_LIST_INIT(body_accessory_by_species, list())
 	icon_state = "null"
 	animated_icon_state = "null"
 
-/datum/body_accessory/tail/try_restrictions(mob/living/carbon/human/H)
-	if(H.wear_suit && (H.wear_suit.flags_inv & HIDETAIL))
-		return FALSE
-	return ..()
+/datum/body_accessory/tail/try_restrictions(var/mob/living/carbon/human/H)
+	if(!H.wear_suit || !(H.wear_suit.flags_inv & HIDETAIL))
+		return 1
+	return 0
 
-//Tajaran
+
 /datum/body_accessory/tail/wingler_tail // Jay wingler fluff tail
 	name = "Striped Tail"
+
 	icon_state = "winglertail"
 	animated_icon_state = "winglertail_a"
 	allowed_species = list("Tajaran")
 
-/datum/body_accessory/tail/tiny //Pretty ambiguous as to what species it belongs to, tail could've been injured or docked.
-	name = "Tiny Tail"
-	icon_state = "tiny"
-	animated_icon_state = "tiny_a"
-	allowed_species = list("Vulpkanin", "Tajaran")
-
-/datum/body_accessory/tail/short //Same as above.
-	name = "Short Tail"
-	icon_state = "short"
-	animated_icon_state = "short_a"
-	allowed_species = list("Vulpkanin", "Tajaran")
 
 //Vulpkanin
-/datum/body_accessory/tail/bushy
-	name = "Bushy Tail"
-	icon_state = "bushy"
-	animated_icon_state = "bushy_a"
+/datum/body_accessory/tail/vulpkanin_2
+	name = "Vulpkanin Alt 1 (Bushy)"
+	icon_state = "vulptail2"
+	animated_icon_state = "vulptail2_a"
 	allowed_species = list("Vulpkanin")
 
-/datum/body_accessory/tail/straight
-	name = "Straight Tail"
-	icon_state = "straight"
-	animated_icon_state = "straight_a"
+/datum/body_accessory/tail/vulpkanin_3
+	name = "Vulpkanin Alt 2 (Straight)"
+	icon_state = "vulptail3"
+	animated_icon_state = "vulptail3_a"
 	allowed_species = list("Vulpkanin")
 
-/datum/body_accessory/tail/straight_bushy
-	name = "Straight Bushy Tail"
-	icon_state = "straightbushy"
-	animated_icon_state = "straightbushy_a"
+/datum/body_accessory/tail/vulpkanin_4
+	name = "Vulpkanin Alt 3 (Tiny)"
+	icon_state = "vulptail4"
+	animated_icon_state = "vulptail4_a"
 	allowed_species = list("Vulpkanin")
 
-//Wryn
-/datum/body_accessory/tail/wryn
-	name = "Bee Tail"
-	icon_state = "wryntail"
-	allowed_species = list("Wryn")
+/datum/body_accessory/tail/vulpkanin_5
+	name = "Vulpkanin Alt 4 (Short)"
+	icon_state = "vulptail5"
+	animated_icon_state = "vulptail5_a"
+	allowed_species = list("Vulpkanin")
 
-//Moth wings
-/datum/body_accessory/wing
-	icon = 'icons/mob/sprite_accessories/moth/moth_wings.dmi'
-	animated_icon = null
-	name = "Plain Wings"
-	icon_state = "plain"
-	allowed_species = list("Nian")
-	has_behind = TRUE
-
-/datum/body_accessory/wing/plain
-
-/datum/body_accessory/wing/monarch
-	name = "Monarch Wings"
-	icon_state = "monarch"
-
-/datum/body_accessory/wing/luna
-	name = "Luna Wings"
-	icon_state = "luna"
-
-/datum/body_accessory/wing/atlas
-	name = "Atlas Wings"
-	icon_state = "atlas"
-
-/datum/body_accessory/wing/reddish
-	name = "Reddish Wings"
-	icon_state = "redish"
-
-/datum/body_accessory/wing/royal
-	name = "Royal Wings"
-	icon_state = "royal"
-
-/datum/body_accessory/wing/gothic
-	name = "Gothic Wings"
-	icon_state = "gothic"
-
-/datum/body_accessory/wing/lovers
-	name = "Lovers Wings"
-	icon_state = "lovers"
-
-/datum/body_accessory/wing/whitefly
-	name = "White Fly Wings"
-	icon_state = "whitefly"
-
-/datum/body_accessory/wing/burnt_off
-	name = "Burnt Off Wings"
-	icon_state = "burnt_off"
-
-/datum/body_accessory/wing/firewatch
-	name = "Firewatch Wings"
-	icon_state = "firewatch"
-
-/datum/body_accessory/wing/deathhead
-	name = "Deathshead Wings"
-	icon_state = "deathhead"
-
-/datum/body_accessory/wing/poison
-	name = "Poison Wings"
-	icon_state = "poison"
-
-/datum/body_accessory/wing/ragged
-	name = "Ragged Wings"
-	icon_state = "ragged"
-
-/datum/body_accessory/wing/moonfly
-	name = "Moon Fly Wings"
-	icon_state = "moonfly"
-
-/datum/body_accessory/wing/snow
-	name = "Snow Wings"
-	icon_state = "snow"
-
-/datum/body_accessory/wing/oakworm
-	name = "Oak Worm Wings"
-	icon_state = "oakworm"
-
-/datum/body_accessory/wing/jungle
-	name = "Jungle Wings"
-	icon_state = "jungle"
-
-/datum/body_accessory/wing/witchwing
-	name = "Witch Wing Wings"
-	icon_state = "witchwing"
+/datum/body_accessory/tail/vulpkanin_6
+	name = "Vulpkanin Alt 5 (Straight Bushy)"
+	icon_state = "vulptail6"
+	animated_icon_state = "vulptail6_a"
+	allowed_species = list("Vulpkanin")

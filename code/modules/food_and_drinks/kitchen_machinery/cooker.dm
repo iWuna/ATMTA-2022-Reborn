@@ -4,7 +4,7 @@
 	layer = 2.9
 	density = 1
 	anchored = 1
-	use_power = IDLE_POWER_USE
+	use_power = 1
 	idle_power_usage = 5
 	var/on = 0
 	var/onicon = null
@@ -43,8 +43,6 @@
 		return 1
 	if(istype(check, /obj/item/grab))
 		return special_attack(check, user)
-	if(has_specials && checkSpecials(check))
-		return TRUE
 	to_chat(user, "<span class ='notice'>You can only process food!</span>")
 	return 0
 
@@ -67,7 +65,7 @@
 /obj/machinery/cooker/proc/burn_food(mob/user, obj/item/reagent_containers/props)
 	var/obj/item/reagent_containers/food/snacks/badrecipe/burnt = new(get_turf(src))
 	setRegents(props, burnt)
-	to_chat(user, "<span class='warning'>You smell burning coming from [src]!</span>")
+	to_chat(user, "<span class='warning'>You smell burning coming from the [src]!</span>")
 	var/datum/effect_system/smoke_spread/bad/smoke = new    // burning things makes smoke!
 	smoke.set_up(5, 0, src)
 	smoke.start()
@@ -75,7 +73,7 @@
 		var/turf/location = get_turf(src)
 		var/obj/effect/decal/cleanable/liquid_fuel/oil = new(location)
 		oil.name = "fat"
-		oil.desc = "Uh oh, looks like some fat from [src]!"
+		oil.desc = "uh oh, looks like some fat from the [src]"
 		oil.loc = location
 		location.hotspot_expose(700, 50, 1)
 		//TODO have a chance of setting the tile on fire
@@ -100,6 +98,12 @@
 	if(upgradeable)
 	//Not all cooker types currently support build/upgrade stuff, so not all of it will work well with this
 	//Until we decide whether or not we want to bring back the cereal maker or old grill/oven in some form, this initial check will have to suffice
+		if(isscrewdriver(I))
+			default_deconstruction_screwdriver(user, openicon, officon, I)
+			return
+		if(iscrowbar(I))
+			default_deconstruction_crowbar(I)
+			return
 		if(istype(I, /obj/item/storage/part_replacer))
 			exchange_parts(user, I)
 			return
@@ -142,20 +146,6 @@
 		turnoff(I)
 		//qdel(I)
 
-/obj/machinery/cooker/crowbar_act(mob/user, obj/item/I)
-	if(!upgradeable)
-		return
-	if(default_deconstruction_crowbar(user, I))
-		return TRUE
-
-/obj/machinery/cooker/screwdriver_act(mob/user, obj/item/I)
-	if(!upgradeable)
-		return
-	if(default_deconstruction_screwdriver(user, openicon, officon, I))
-		return TRUE
-
-
-
 /obj/machinery/cooker/proc/special_attack(obj/item/grab/G, mob/user)
 	return 0
 
@@ -166,5 +156,5 @@
 		return 0
 	return 0
 
-/obj/machinery/cooker/proc/cookSpecial(special)
+/obj/machinery/cooker/proc/cookSpecial(var/special)
 	return

@@ -3,7 +3,7 @@
 //PUBLIC -  call these wherever you want
 
 
-/mob/proc/throw_alert(category, type, severity, obj/new_master, override = FALSE, timeout_override, no_anim)
+/mob/proc/throw_alert(category, type, severity, obj/new_master, override = FALSE)
 
 /*
  Proc to create or update an alert. Returns the alert if the alert is new or updated, 0 if it was thrown already
@@ -19,8 +19,9 @@
 	if(!category)
 		return
 
-	var/obj/screen/alert/alert = LAZYACCESS(alerts, category)
-	if(alert)
+	var/obj/screen/alert/alert
+	if(alerts[category])
+		alert = alerts[category]
 		if(alert.override_alerts)
 			return 0
 		if(new_master && new_master != alert.master)
@@ -56,24 +57,22 @@
 		alert.icon_state = "[initial(alert.icon_state)][severity]"
 		alert.severity = severity
 
-	LAZYSET(alerts, category, alert) // This also creates the list if it doesn't exist
+	alerts[category] = alert
 	if(client && hud_used)
 		hud_used.reorganize_alerts()
+	alert.transform = matrix(32, 6, MATRIX_TRANSLATE)
+	animate(alert, transform = matrix(), time = 2.5, easing = CUBIC_EASING)
 
-	if(!no_anim)
-		alert.transform = matrix(32, 6, MATRIX_TRANSLATE)
-		animate(alert, transform = matrix(), time = 2.5, easing = CUBIC_EASING)
-
-	var/timeout = timeout_override || alert.timeout
-	if(timeout)
-		addtimer(CALLBACK(alert, /obj/screen/alert/.proc/do_timeout, src, category), timeout)
-		alert.timeout = world.time + timeout - world.tick_lag
-
+	if(alert.timeout)
+		spawn(alert.timeout)
+			if(alert.timeout && alerts[category] == alert && world.time >= alert.timeout)
+				clear_alert(category)
+		alert.timeout = world.time + alert.timeout - world.tick_lag
 	return alert
 
 // Proc to clear an existing alert.
 /mob/proc/clear_alert(category, clear_override = FALSE)
-	var/obj/screen/alert/alert = LAZYACCESS(alerts, category)
+	var/obj/screen/alert/alert = alerts[category]
 	if(!alert)
 		return 0
 	if(alert.override_alerts && !clear_override)
@@ -90,26 +89,20 @@
 	icon_state = "default"
 	name = "Alert"
 	desc = "Something seems to have gone wrong with this alert, so report this bug please"
-	mouse_opacity = MOUSE_OPACITY_ICON
+	mouse_opacity = 1
 	var/timeout = 0 //If set to a number, this alert will clear itself after that many deciseconds
 	var/severity = 0
 	var/alerttooltipstyle = ""
 	var/override_alerts = FALSE //If it is overriding other alerts of the same type
 
+
 /obj/screen/alert/MouseEntered(location,control,params)
-	. = ..()
 	openToolTip(usr, src, params, title = name, content = desc, theme = alerttooltipstyle)
 
 
 /obj/screen/alert/MouseExited()
 	closeToolTip(usr)
 
-/obj/screen/alert/proc/do_timeout(mob/M, category)
-	if(!M || !M.alerts)
-		return
-
-	if(timeout && M.alerts[category] == src && world.time >= timeout)
-		M.clear_alert(category)
 
 //Gas alerts
 /obj/screen/alert/not_enough_oxy
@@ -123,12 +116,12 @@
 	icon_state = "too_much_oxy"
 
 /obj/screen/alert/not_enough_nitro
-    name = "Choking (No N2)"
+    name = "Choking (No N)"
     desc = "You're not getting enough nitrogen. Find some good air before you pass out!"
     icon_state = "not_enough_nitro"
 
 /obj/screen/alert/too_much_nitro
-    name = "Choking (N2)"
+    name = "Choking (N)"
     desc = "There's too much nitrogen in the air, and you're breathing it in! Find some good air before you pass out!"
     icon_state = "too_much_nitro"
 
@@ -184,41 +177,6 @@
 	desc = "You're severely malnourished. The hunger pains make moving around a chore."
 	icon_state = "starving"
 
-///Vampire "hunger"
-
-/obj/screen/alert/fat/vampire
-	name = "Fat"
-	desc = "You somehow drank too much blood, lardass. Run around the station and lose some weight."
-	icon_state = "v_fat"
-
-/obj/screen/alert/full/vampire
-	name = "Full"
-	desc = "You feel full and satisfied, but you know you will thirst for more blood soon..."
-	icon_state = "v_full"
-
-/obj/screen/alert/well_fed/vampire
-	name = "Well Fed"
-	desc = "You feel quite satisfied, but you could do with a bit more blood."
-	icon_state = "v_well_fed"
-
-/obj/screen/alert/fed/vampire
-	name = "Fed"
-	desc = "You feel moderately satisfied, but a bit more blood wouldn't hurt."
-	icon_state = "v_fed"
-
-/obj/screen/alert/hungry/vampire
-	name = "Hungry"
-	desc = "You currently thirst for blood."
-	icon_state = "v_hungry"
-
-/obj/screen/alert/starving/vampire
-	name = "Starving"
-	desc = "You're severely thirsty. The thirst pains make moving around a chore."
-	icon_state = "v_starving"
-
-//End of Vampire "hunger"
-
-
 /obj/screen/alert/hot
 	name = "Too Hot"
 	desc = "You're flaming hot! Get somewhere cooler and take off any insulating clothing like a fire suit."
@@ -270,9 +228,9 @@ or something covering your eyes."
 	desc = "Whoa man, you're tripping balls! Careful you don't get addicted... if you aren't already."
 	icon_state = "high"
 
-/obj/screen/alert/drunk
+/obj/screen/alert/drunk //Not implemented
 	name = "Drunk"
-	desc = "All that alcohol you've been drinking is impairing your speech, motor skills, and mental cognition."
+	desc = "All that alcohol you've been drinking is impairing your speech, motor skills, and mental cognition. Make sure to act like it."
 	icon_state = "drunk"
 
 /obj/screen/alert/embeddedobject
@@ -309,11 +267,6 @@ or shoot a gun to move around via Newton's 3rd Law of Motion."
 		var/mob/living/L = usr
 		return L.resist()
 
-//Constructs
-/obj/screen/alert/holy_fire
-	name = "Holy Fire"
-	desc = "Your body is crumbling from the holy energies. Get out."
-	icon_state = "fire"
 
 //ALIENS
 
@@ -362,18 +315,6 @@ Recharging stations are available in robotics, the dormitory bathrooms, and the 
 	desc = "Unit's power cell is running low. Recharging stations are available in robotics, the dormitory bathrooms, and the AI satellite."
 	icon_state = "lowcell"
 
-//Diona Nymph
-/obj/screen/alert/nymph
-	name = "Gestalt merge"
-	desc = "You have merged with a diona gestalt and are now part of it's biomass. You can still wiggle yourself free though."
-
-/obj/screen/alert/nymph/Click()
-	if(!usr || !usr.client)
-		return
-	if(isnymph(usr))
-		var/mob/living/simple_animal/diona/D = usr
-		return D.resist()
-
 //Need to cover all use cases - emag, illegal upgrade module, malf AI hack, traitor cyborg
 /obj/screen/alert/hacked
 	name = "Hacked"
@@ -417,67 +358,11 @@ so as to remain in compliance with the most up-to-date laws."
 		AI.eyeobj.setLoc(T)
 
 //MECHS
+
 /obj/screen/alert/low_mech_integrity
 	name = "Mech Damaged"
 	desc = "Mech integrity is low."
 	icon_state = "low_mech_integrity"
-
-/obj/screen/alert/mech_port_available
-	name = "Connect to Port"
-	desc = "Click here to connect to an air port and refill your oxygen!"
-	icon_state = "mech_port"
-	var/obj/machinery/atmospherics/unary/portables_connector/target = null
-
-/obj/screen/alert/mech_port_available/Destroy()
-	target = null
-	return ..()
-
-/obj/screen/alert/mech_port_available/Click()
-	if(!usr || !usr.client)
-		return
-	if(!istype(usr.loc, /obj/mecha) || !target)
-		return
-	var/obj/mecha/M = usr.loc
-	if(M.connect(target))
-		to_chat(usr, "<span class='notice'>[M] connects to the port.</span>")
-	else
-		to_chat(usr, "<span class='notice'>[M] failed to connect to the port.</span>")
-
-/obj/screen/alert/mech_port_disconnect
-	name = "Disconnect from Port"
-	desc = "Click here to disconnect from your air port."
-	icon_state = "mech_port_x"
-
-/obj/screen/alert/mech_port_disconnect/Click()
-	if(!usr || !usr.client)
-		return
-	if(!istype(usr.loc, /obj/mecha))
-		return
-	var/obj/mecha/M = usr.loc
-	if(M.disconnect())
-		to_chat(usr, "<span class='notice'>[M] disconnects from the port.</span>")
-	else
-		to_chat(usr, "<span class='notice'>[M] is not connected to a port at the moment.</span>")
-
-/obj/screen/alert/mech_nocell
-	name = "Missing Power Cell"
-	desc = "Mech has no power cell."
-	icon_state = "nocell"
-
-/obj/screen/alert/mech_emptycell
-	name = "Out of Power"
-	desc = "Mech is out of power."
-	icon_state = "emptycell"
-
-/obj/screen/alert/mech_lowcell
-	name = "Low Charge"
-	desc = "Mech is running out of power."
-	icon_state = "lowcell"
-
-/obj/screen/alert/mech_maintenance
-	name = "Maintenance Protocols"
-	desc = "Maintenance protocols are currently in effect, most actions disabled."
-	icon_state = "locked"
 
 //GUARDIANS
 /obj/screen/alert/cancharge
@@ -520,34 +405,6 @@ so as to remain in compliance with the most up-to-date laws."
 	timeout = 300
 	var/atom/target = null
 	var/action = NOTIFY_JUMP
-	var/show_time_left = FALSE // If true you need to call START_PROCESSING manually
-	var/image/time_left_overlay // The last image showing the time left
-	var/datum/candidate_poll/poll // If set, on Click() it'll register the player as a candidate
-
-/obj/screen/alert/notify_action/process()
-	if(show_time_left)
-		var/timeleft = timeout - world.time
-		if(timeleft <= 0)
-			return PROCESS_KILL
-
-		if(time_left_overlay)
-			overlays -= time_left_overlay
-
-		var/obj/O = new
-		O.maptext = "<span style='font-family: \"Small Fonts\"; font-weight: bold; font-size: 32px; color: [(timeleft <= 10 SECONDS) ? "red" : "white"];'>[CEILING(timeleft / 10, 1)]</span>"
-		O.maptext_width = O.maptext_height = 128
-		var/matrix/M = new
-		M.Translate(4, 16)
-		O.transform = M
-
-		var/image/I = image(O)
-		I.layer = FLOAT_LAYER
-		I.plane = FLOAT_PLANE + 1
-		overlays += I
-
-		time_left_overlay = I
-		qdel(O)
-	..()
 
 /obj/screen/alert/notify_action/Destroy()
 	target = null
@@ -556,52 +413,20 @@ so as to remain in compliance with the most up-to-date laws."
 /obj/screen/alert/notify_action/Click()
 	if(!usr || !usr.client)
 		return
+	if(!target)
+		return
 	var/mob/dead/observer/G = usr
 	if(!istype(G))
 		return
-
-	if(poll)
-		if(poll.sign_up(G))
-			// Add a small overlay to indicate we've signed up
-			display_signed_up()
-	else if(target)
-		switch(action)
-			if(NOTIFY_ATTACK)
-				target.attack_ghost(G)
-			if(NOTIFY_JUMP)
-				var/turf/T = get_turf(target)
-				if(T && isturf(T))
-					G.loc = T
-			if(NOTIFY_FOLLOW)
-				G.ManualFollow(target)
-
-/obj/screen/alert/notify_action/Topic(href, href_list)
-	if(href_list["signup"] && poll?.sign_up(usr))
-		display_signed_up()
-
-/obj/screen/alert/notify_action/proc/display_signed_up()
-	var/image/I = image('icons/mob/screen_gen.dmi', icon_state = "selector")
-	I.layer = FLOAT_LAYER
-	I.plane = FLOAT_PLANE + 2
-	overlays += I
-
-/obj/screen/alert/notify_action/proc/display_stacks(stacks = 1)
-	if(stacks <= 1)
-		return
-
-	var/obj/O = new
-	O.maptext = "<span style='font-family: \"Small Fonts\"; font-size: 32px; color: yellow;'>[stacks]x</span>"
-	O.maptext_width = O.maptext_height = 128
-	var/matrix/M = new
-	M.Translate(4, 2)
-	O.transform = M
-
-	var/image/I = image(O)
-	I.layer = FLOAT_LAYER
-	I.plane = FLOAT_PLANE + 1
-	overlays += I
-
-	qdel(O)
+	switch(action)
+		if(NOTIFY_ATTACK)
+			target.attack_ghost(G)
+		if(NOTIFY_JUMP)
+			var/turf/T = get_turf(target)
+			if(T && isturf(T))
+				G.loc = T
+		if(NOTIFY_FOLLOW)
+			G.ManualFollow(target)
 
 /obj/screen/alert/notify_soulstone
 	name = "Soul Stone"
@@ -617,26 +442,18 @@ so as to remain in compliance with the most up-to-date laws."
 	if(stone)
 		if(alert(usr, "Do you want to be captured by [stoner]'s soul stone? This will destroy your corpse and make it \
 		impossible for you to get back into the game as your regular character.",, "No", "Yes") ==  "Yes")
-			stone?.opt_in = TRUE
+			stone.opt_in = TRUE
 
 /obj/screen/alert/notify_soulstone/Destroy()
 	stone = null
 	return ..()
 
-/obj/screen/alert/notify_mapvote
-	name = "Map Vote"
-	desc = "Vote on which map you would like to play on next!"
-	icon_state = "map_vote"
-
-/obj/screen/alert/notify_mapvote/Click()
-	SSvote.browse_to(usr.client)
 
 //OBJECT-BASED
 
 /obj/screen/alert/restrained/buckled
 	name = "Buckled"
 	desc = "You've been buckled to something. Click the alert to unbuckle unless you're handcuffed."
-	icon_state = "buckled"
 
 /obj/screen/alert/restrained/handcuffed
 	name = "Handcuffed"
@@ -650,27 +467,17 @@ so as to remain in compliance with the most up-to-date laws."
 	if(isliving(usr))
 		var/mob/living/L = usr
 		return L.resist()
-
-/obj/screen/alert/restrained/buckled/Click()
-	var/mob/living/L = usr
-	if(!istype(L) || !L.can_resist())
-		return
-	L.changeNext_move(CLICK_CD_RESIST)
-	return L.resist_buckle()
-
 // PRIVATE = only edit, use, or override these if you're editing the system as a whole
 
 // Re-render all alerts - also called in /datum/hud/show_hud() because it's needed there
 /datum/hud/proc/reorganize_alerts()
 	var/list/alerts = mymob.alerts
-	if(!alerts)
-		return FALSE
 	var/icon_pref
 	if(!hud_shown)
-		for(var/i in 1 to alerts.len)
+		for(var/i = 1, i <= alerts.len, i++)
 			mymob.client.screen -= alerts[alerts[i]]
-		return TRUE
-	for(var/i in 1 to alerts.len)
+		return 1
+	for(var/i = 1, i <= alerts.len, i++)
 		var/obj/screen/alert/alert = alerts[alerts[i]]
 		if(alert.icon_state == "template")
 			if(!icon_pref)
@@ -691,10 +498,10 @@ so as to remain in compliance with the most up-to-date laws."
 				. = ""
 		alert.screen_loc = .
 		mymob.client.screen |= alert
-	return TRUE
+	return 1
 
 /mob
-	var/list/alerts // lazy list. contains /obj/screen/alert only // On /mob so clientless mobs will throw alerts properly
+	var/list/alerts = list() // contains /obj/screen/alert only // On /mob so clientless mobs will throw alerts properly
 
 /obj/screen/alert/Click(location, control, params)
 	if(!usr || !usr.client)

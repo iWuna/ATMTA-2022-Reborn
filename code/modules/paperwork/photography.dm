@@ -16,7 +16,7 @@
 	icon_state = "film"
 	item_state = "electropack"
 	w_class = WEIGHT_CLASS_TINY
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 
 
 /********
@@ -28,8 +28,8 @@
 	icon_state = "photo"
 	item_state = "paper"
 	w_class = WEIGHT_CLASS_SMALL
-	resistance_flags = FLAMMABLE
-	max_integrity = 50
+	burn_state = FLAMMABLE
+	burntime = 5
 	var/blueprints = 0 // Does this have the blueprints?
 	var/icon/img	//Big photo image
 	var/scribble	//Scribble on the back.
@@ -41,7 +41,7 @@
 
 /obj/item/photo/attackby(obj/item/P as obj, mob/user as mob, params)
 	if(istype(P, /obj/item/pen) || istype(P, /obj/item/toy/crayon))
-		var/txt = sanitize(input(user, "What would you like to write on the back?", "Photo Writing", null)  as text)
+		var/txt = sanitize_local(input(user, "What would you like to write on the back?", "Photo Writing", null)  as text)
 		txt = copytext(txt, 1, 128)
 		if(loc == user && user.stat == 0)
 			scribble = txt
@@ -56,8 +56,8 @@
 		if(istype(P, /obj/item/lighter/zippo))
 			class = "<span class='rose'>"
 
-		user.visible_message("[class][user] holds \the [P] up to \the [src], it looks like [user.p_theyre()] trying to burn it!", \
-		"[class]You hold [P] up to [src], burning it slowly.")
+		user.visible_message("[class][user] holds \the [P] up to \the [src], it looks like \he's trying to burn it!", \
+		"[class]You hold \the [P] up to \the [src], burning it slowly.")
 
 		spawn(20)
 			if(get_dist(src, user) < 2 && user.get_active_hand() == P && P.lit)
@@ -74,29 +74,19 @@
 				to_chat(user, "<span class='warning'>You must hold \the [P] steady to burn \the [src].</span>")
 
 /obj/item/photo/examine(mob/user)
-	. = ..()
-	if(in_range(user, src) || isobserver(user))
+	if(..(user, 1) || isobserver(user))
 		show(user)
 	else
-		. += "<span class='notice'>It is too far away.</span>"
+		to_chat(user, "<span class='notice'>It is too far away.</span>")
 
 /obj/item/photo/proc/show(mob/user as mob)
-	var/icon/img_shown = new/icon(img)
-	var/colormatrix = user.get_screen_colour()
-	// Apply colorblindness effects, if any.
-	if(islist(colormatrix))
-		img_shown.MapColors(
-			colormatrix[1], colormatrix[2], colormatrix[3],
-			colormatrix[4], colormatrix[5], colormatrix[6],
-			colormatrix[7], colormatrix[8], colormatrix[9],
-		)
-	usr << browse_rsc(img_shown, "tmp_photo.png")
+	usr << browse_rsc(img, "tmp_photo.png")
 	usr << browse("<html><head><title>[name]</title></head>" \
 		+ "<body style='overflow:hidden;margin:0;text-align:center'>" \
 		+ "<img src='tmp_photo.png' width='[64*photo_size]' style='-ms-interpolation-mode:nearest-neighbor' />" \
 		+ "[scribble ? "<br>Written on the back:<br><i>[scribble]</i>" : ""]"\
-		+ "</body></html>", "window=Photo[UID()];size=[64*photo_size]x[scribble ? 400 : 64*photo_size]")
-	onclose(usr, "Photo[UID()]")
+		+ "</body></html>", "window=book;size=[64*photo_size]x[scribble ? 400 : 64*photo_size]")
+	onclose(usr, "[name]")
 	return
 
 /obj/item/photo/verb/rename()
@@ -104,7 +94,7 @@
 	set category = "Object"
 	set src in usr
 
-	var/n_name = sanitize(copytext(input(usr, "What would you like to label the photo?", "Photo Labelling", name) as text, 1, MAX_MESSAGE_LEN))
+	var/n_name = sanitize_local(copytext(input(usr, "What would you like to label the photo?", "Photo Labelling", name) as text, 1, MAX_MESSAGE_LEN))
 	//loc.loc check is for making possible renaming photos in clipboards
 	if(( (loc == usr || (loc.loc && loc.loc == usr)) && usr.stat == 0))
 		name = "[(n_name ? text("[n_name]") : "photo")]"
@@ -121,7 +111,7 @@
 	icon_state = "album"
 	item_state = "briefcase"
 	can_hold = list(/obj/item/photo)
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 
 /obj/item/storage/photo_album/MouseDrop(obj/over_object as obj)
 
@@ -167,7 +157,6 @@
 	var/icon_off = "camera_off"
 	var/size = 3
 	var/see_ghosts = 0 //for the spoop of it
-	var/current_photo_num = 1
 
 
 /obj/item/camera/spooky/CheckParts(list/parts_list)
@@ -180,7 +169,7 @@
 		qdel(C)
 
 
-GLOBAL_LIST_INIT(SpookyGhosts, list("ghost","shade","shade2","ghost-narsie","horror","shadow","ghostian2"))
+var/list/SpookyGhosts = list("ghost","shade","shade2","ghost-narsie","horror","shadow","ghostian2")
 
 /obj/item/camera/spooky
 	name = "camera obscura"
@@ -232,16 +221,16 @@ GLOBAL_LIST_INIT(SpookyGhosts, list("ghost","shade","shade2","ghost-narsie","hor
 	var/atoms[] = list()
 	for(var/turf/the_turf in turfs)
 		// Add ourselves to the list of stuff to draw
-		atoms.Add(the_turf)
+		atoms.Add(the_turf);
 		// As well as anything that isn't invisible.
 		for(var/atom/A in the_turf)
 			if(A.invisibility)
 				if(see_ghosts && istype(A,/mob/dead/observer))
 					var/mob/dead/observer/O = A
-					if(O.orbiting_uid)
+					if(O.following)
 						continue
 					if(user.mind && !(user.mind.assigned_role == "Chaplain"))
-						atoms.Add(image('icons/mob/mob.dmi', O.loc, pick(GLOB.SpookyGhosts), 4, SOUTH))
+						atoms.Add(image('icons/mob/mob.dmi', O.loc, pick(SpookyGhosts), 4, SOUTH))
 					else
 						atoms.Add(image('icons/mob/mob.dmi', O.loc, "ghost", 4, SOUTH))
 				else//its not a ghost
@@ -266,7 +255,7 @@ GLOBAL_LIST_INIT(SpookyGhosts, list("ghost","shade","shade2","ghost-narsie","hor
 		var/atom/A = sorted[i]
 		if(A)
 			var/icon/img = getFlatIcon(A)//build_composite_icon(A)
-			if(istype(A, /obj/item/areaeditor/blueprints/ce))
+			if(istype(A, /obj/item/areaeditor/blueprints))
 				blueprints = 1
 
 			// If what we got back is actually a picture, draw it.
@@ -298,7 +287,7 @@ GLOBAL_LIST_INIT(SpookyGhosts, list("ghost","shade","shade2","ghost-narsie","hor
 		if(M.invisibility)
 			if(see_ghosts && istype(M,/mob/dead/observer))
 				var/mob/dead/observer/O = M
-				if(O.orbiting_uid)
+				if(O.following)
 					continue
 				if(!mob_detail)
 					mob_detail = "You can see a g-g-g-g-ghooooost! "
@@ -325,26 +314,23 @@ GLOBAL_LIST_INIT(SpookyGhosts, list("ghost","shade","shade2","ghost-narsie","hor
 				mob_detail += "You can also see [A] on the photo[A:health < 75 ? " - [A] looks hurt":""].[holding ? " [holding]":"."]."
 	return mob_detail
 
-/obj/item/camera/afterattack(atom/target, mob/user, flag)
-	if(!on || !pictures_left || ismob(target.loc))
-		return
+/obj/item/camera/afterattack(atom/target as mob|obj|turf|area, mob/user as mob, flag)
+	if(!on || !pictures_left || ismob(target.loc)) return
 	captureimage(target, user, flag)
 
 	playsound(loc, pick('sound/items/polaroid1.ogg', 'sound/items/polaroid2.ogg'), 75, 1, -3)
-	set_light(3, 2, LIGHT_COLOR_TUNGSTEN)
-	addtimer(CALLBACK(src, /atom./proc/set_light, 0), 2)
+
 	pictures_left--
 	desc = "A polaroid camera. It has [pictures_left] photos left."
 	to_chat(user, "<span class='notice'>[pictures_left] photos left.</span>")
 	icon_state = icon_off
-	on = FALSE
-	if(istype(src,/obj/item/camera/spooky))
-		if(user.mind && user.mind.assigned_role == "Chaplain" && see_ghosts)
-			if(prob(24))
-				handle_haunt(user)
+	on = 0
+	if(user.mind && !(user.mind.assigned_role == "Chaplain"))
+		if(prob(24))
+			handle_haunt(user)
 	spawn(64)
 		icon_state = icon_on
-		on = TRUE
+		on = 1
 
 /obj/item/camera/proc/can_capture_turf(turf/T, mob/user)
 	var/viewer = user
@@ -387,10 +373,7 @@ GLOBAL_LIST_INIT(SpookyGhosts, list("ghost","shade","shade2","ghost-narsie","hor
 	var/datum/picture/P = new()
 	if(istype(src,/obj/item/camera/digital))
 		P.fields["name"] = input(user,"Name photo:","photo")
-		if(!P.fields["name"])
-			P.fields["name"] = "Photo [current_photo_num]"
-			current_photo_num++
-		P.name = P.fields["name"] //So the name is displayed on the print/delete list.
+		P.name = P.fields["name"]//So the name is displayed on the print/delete list.
 	else
 		P.fields["name"] = "photo"
 	P.fields["author"] = user
@@ -404,7 +387,7 @@ GLOBAL_LIST_INIT(SpookyGhosts, list("ghost","shade","shade2","ghost-narsie","hor
 
 	return P
 
-/obj/item/camera/proc/printpicture(mob/user, datum/picture/P)
+/obj/item/camera/proc/printpicture(mob/user, var/datum/picture/P)
 	var/obj/item/photo/Photo = new/obj/item/photo()
 	Photo.loc = user.loc
 	if(!user.get_inactive_hand())
@@ -415,7 +398,7 @@ GLOBAL_LIST_INIT(SpookyGhosts, list("ghost","shade","shade2","ghost-narsie","hor
 		blueprints = 0
 	Photo.construct(P)
 
-/obj/item/photo/proc/construct(datum/picture/P)
+/obj/item/photo/proc/construct(var/datum/picture/P)
 	name = P.fields["name"]
 	icon = P.fields["icon"]
 	tiny = P.fields["tiny"]
@@ -550,35 +533,33 @@ GLOBAL_LIST_INIT(SpookyGhosts, list("ghost","shade","shade2","ghost-narsie","hor
 		src.icon_state = icon_on
 		camera = new /obj/machinery/camera(src)
 		camera.network = list("news")
-		GLOB.cameranet.removeCamera(camera)
+		cameranet.removeCamera(camera)
 		camera.c_tag = user.name
 	to_chat(user, "You switch the camera [on ? "on" : "off"].")
 
 /obj/item/videocam/examine(mob/user)
-	. = ..()
-	if(in_range(user, src))
-		. += "This video camera can send live feeds to the entertainment network. It's [camera ? "" : "in"]active."
+	if(..(user, 1))
+		to_chat(user, "This video camera can send live feeds to the entertainment network. It's [camera ? "" : "in"]active.")
 
-/obj/item/videocam/hear_talk(mob/M as mob, list/message_pieces)
-	var/msg = multilingual_to_message(message_pieces)
+/obj/item/videocam/hear_talk(mob/M as mob, msg)
 	if(camera && on)
 		if(get_dist(src, M) <= canhear_range)
 			talk_into(M, msg)
-		for(var/obj/machinery/computer/security/telescreen/T in GLOB.machines)
+		for(var/obj/machinery/computer/security/telescreen/T in machines)
 			if(T.watchers[M] == camera)
-				T.atom_say(msg)
+				T.audible_message("<span class='game radio'><span class='name'>(Newscaster) [M]</span> says, '[msg]'", hearing_distance = 2)
 
 /obj/item/videocam/hear_message(mob/M as mob, msg)
 	if(camera && on)
-		for(var/obj/machinery/computer/security/telescreen/T in GLOB.machines)
+		for(var/obj/machinery/computer/security/telescreen/T in machines)
 			if(T.watchers[M] == camera)
-				T.atom_say(msg)
+				T.audible_message("<span class='game radio'><span class='name'>(Newscaster) [M]</span> [msg]", hearing_distance = 2)
 
 
 ///hauntings, like hallucinations but more spooky
 
 /obj/item/camera/proc/handle_haunt(mob/user as mob)
-			var/list/creepyasssounds = list('sound/effects/ghost.ogg', 'sound/effects/ghost2.ogg', 'sound/effects/heartbeat.ogg', 'sound/effects/screech.ogg',\
+			var/list/creepyasssounds = list('sound/effects/ghost.ogg', 'sound/effects/ghost2.ogg', 'sound/effects/Heart Beat.ogg', 'sound/effects/screech.ogg',\
 						'sound/hallucinations/behind_you1.ogg', 'sound/hallucinations/behind_you2.ogg', 'sound/hallucinations/far_noise.ogg', 'sound/hallucinations/growl1.ogg', 'sound/hallucinations/growl2.ogg',\
 						'sound/hallucinations/growl3.ogg', 'sound/hallucinations/im_here1.ogg', 'sound/hallucinations/im_here2.ogg', 'sound/hallucinations/i_see_you1.ogg', 'sound/hallucinations/i_see_you2.ogg',\
 						'sound/hallucinations/look_up1.ogg', 'sound/hallucinations/look_up2.ogg', 'sound/hallucinations/over_here1.ogg', 'sound/hallucinations/over_here2.ogg', 'sound/hallucinations/over_here3.ogg',\

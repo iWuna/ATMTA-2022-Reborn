@@ -4,17 +4,19 @@
 	gender = PLURAL
 	icon = 'icons/obj/items.dmi'
 	icon_state = "soap"
-	lefthand_file = 'icons/mob/inhands/equipment/custodial_lefthand.dmi'
-	righthand_file = 'icons/mob/inhands/equipment/custodial_righthand.dmi'
 	w_class = WEIGHT_CLASS_TINY
 	throwforce = 0
 	throw_speed = 4
 	throw_range = 20
 	discrete = 1
-	var/cleanspeed = 50 //slower than mop
 
-/obj/item/soap/ComponentInitialize()
-	AddComponent(/datum/component/slippery, src, 4, 2, 100, 0, FALSE)
+	trip_stun = 4
+	trip_weaken = 2
+	trip_chance = 100
+	trip_walksafe = FALSE
+	trip_verb = TV_SLIP
+
+	var/cleanspeed = 50 //slower than mop
 
 /obj/item/soap/afterattack(atom/target, mob/user, proximity)
 	if(!proximity) return
@@ -24,11 +26,11 @@
 		to_chat(user, "<span class='notice'>You need to take that [target.name] off before cleaning it.</span>")
 	else if(target == user && user.a_intent == INTENT_GRAB && ishuman(target))
 		var/mob/living/carbon/human/muncher = user
-		if(muncher && isdrask(muncher))
-			to_chat(user, "<span class='notice'>You take a bite of [src]. Delicious!</span>")
+		if(muncher && muncher.get_species() == "Drask")
+			to_chat(user, "You take a bite of the [name]. Delicious!")
 			playsound(user.loc, 'sound/items/eatfood.ogg', 50, 0)
-			user.adjust_nutrition(2)
-	else if(istype(target, /obj/effect/decal/cleanable) || istype(target, /obj/effect/rune))
+			user.nutrition += 2
+	else if(istype(target,/obj/effect/decal/cleanable))
 		user.visible_message("<span class='warning'>[user] begins to scrub \the [target.name] out with [src].</span>")
 		if(do_after(user, cleanspeed, target = target) && target)
 			to_chat(user, "<span class='notice'>You scrub \the [target.name] out.</span>")
@@ -51,12 +53,13 @@
 
 /obj/item/soap/proc/clean_turf(turf/simulated/T)
 	T.clean_blood()
+	T.dirt = 0
 	for(var/obj/effect/O in T)
-		if(O.is_cleanable())
+		if(is_cleanable(O))
 			qdel(O)
 
 /obj/item/soap/attack(mob/target as mob, mob/user as mob)
-	if(target && user && ishuman(target) && ishuman(user) && !target.stat && !user.stat && user.zone_selected == "mouth" )
+	if(target && user && ishuman(target) && ishuman(user) && !target.stat && !user.stat && user.zone_sel &&user.zone_sel.selecting == "mouth" )
 		user.visible_message("<span class='warning'>\the [user] washes \the [target]'s mouth out with [name]!</span>")
 		return
 	..()

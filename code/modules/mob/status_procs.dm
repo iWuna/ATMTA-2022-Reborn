@@ -52,11 +52,25 @@
 	return
 
 
-/mob/proc/RestoreEars()
+/mob/proc/EarDamage()
+	return
+
+/mob/proc/SetEarDamage()
 	return
 
 /mob/proc/AdjustEarDamage()
 	return
+
+
+/mob/proc/EarDeaf()
+	return
+
+/mob/proc/SetEarDeaf()
+	return
+
+/mob/proc/AdjustEarDeaf()
+	return
+
 
 /mob/proc/EyeBlind()
 	return
@@ -169,9 +183,6 @@
 /mob/proc/Stun()
 	return
 
-/mob/proc/IsStunned()
-	return stunned
-
 /mob/proc/SetStunned()
 	return
 
@@ -189,9 +200,6 @@
 	return
 
 
-/mob/proc/IsWeakened()
-	return weakened
-
 /mob/proc/Weaken()
 	return
 
@@ -200,7 +208,3 @@
 
 /mob/proc/AdjustWeakened()
 	return
-
-/mob/proc/adjust_bodytemperature(amount, min_temp = 0, max_temp = INFINITY)
-	if(bodytemperature >= min_temp && bodytemperature <= max_temp)
-		bodytemperature = clamp(bodytemperature + amount, min_temp, max_temp)

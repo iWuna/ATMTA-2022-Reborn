@@ -10,7 +10,7 @@
 	w_class = WEIGHT_CLASS_SMALL
 	armour_penetration = 100
 	attack_verb = list("bludgeoned", "whacked", "disciplined")
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 
 /obj/item/twohanded/staff/broom
 	name = "broom"
@@ -27,7 +27,7 @@
 	if(user)
 		user.update_inv_l_hand()
 		user.update_inv_r_hand()
-		if(user.mind in SSticker.mode.wizards)
+		if(user.mind in ticker.mode.wizards)
 			user.flying = wielded ? 1 : 0
 			if(wielded)
 				to_chat(user, "<span class='notice'>You hold \the [src] between your legs.</span>")
@@ -43,18 +43,13 @@
 			if(wielded)
 				to_chat(user, "<span class='notice'>You hold \the [src] between your legs.</span>")
 
-/obj/item/twohanded/staff/broom/attackby(obj/O, mob/user)
+/obj/item/twohanded/staff/broom/attackby(var/obj/O, mob/user)
 	if(istype(O, /obj/item/clothing/mask/horsehead))
 		new/obj/item/twohanded/staff/broom/horsebroom(get_turf(src))
 		user.unEquip(O)
 		qdel(O)
 		qdel(src)
 		return
-	..()
-
-/obj/item/twohanded/staff/broom/dropped(mob/user)
-	if((user.mind in SSticker.mode.wizards) && user.flying)
-		user.flying = FALSE
 	..()
 
 /obj/item/twohanded/staff/broom/horsebroom

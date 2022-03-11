@@ -3,7 +3,7 @@
 	desc = "A fancy red armband!"
 	icon_state = "red"
 	item_color = "red"
-	slot = ACCESSORY_SLOT_ARMBAND
+	slot = "armband"
 
 /obj/item/clothing/accessory/armband/sec
 	name = "security armband"

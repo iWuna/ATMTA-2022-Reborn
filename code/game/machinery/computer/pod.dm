@@ -23,7 +23,7 @@
 	timings = list()
 	times = list()
 	synced = list()
-	for(var/obj/machinery/mass_driver/M in GLOB.machines)
+	for(var/obj/machinery/mass_driver/M in world)
 		if(M.z != src.z)	continue
 		for(var/ident_tag in id_tags)
 			if((M.id_tag == ident_tag) && !(ident_tag in synced))
@@ -39,7 +39,7 @@
 				loopings += ident_tag
 				loopings[ident_tag] = 0
 				break
-	for(var/obj/machinery/door/poddoor/M in GLOB.airlocks)
+	for(var/obj/machinery/door/poddoor/M in airlocks)
 		if(M.z != src.z)	continue
 		for(var/ident_tag in id_tags)
 			if((M.id_tag == ident_tag) && !(ident_tag in synced) && !(ident_tag in door_only_tags))
@@ -48,8 +48,8 @@
 
 	return
 
-/obj/machinery/computer/pod/proc/solo_sync(ident_tag)
-	for(var/obj/machinery/mass_driver/M in GLOB.machines)
+/obj/machinery/computer/pod/proc/solo_sync(var/ident_tag)
+	for(var/obj/machinery/mass_driver/M in world)
 		if(M.z != src.z)	continue
 		if((M.id_tag == ident_tag) && !(ident_tag in synced))
 			synced += ident_tag
@@ -65,7 +65,7 @@
 			loopings[ident_tag] = 0
 			break
 	if(!(ident_tag in synced))
-		for(var/obj/machinery/door/poddoor/M in GLOB.airlocks)
+		for(var/obj/machinery/door/poddoor/M in airlocks)
 			if(M.z != src.z)	continue
 			if((M.id_tag == ident_tag) && !(ident_tag in synced) && !(ident_tag in door_only_tags))
 				door_only_tags += ident_tag
@@ -74,11 +74,11 @@
 	return
 
 
-/obj/machinery/computer/pod/proc/launch_sequence(ident_tag)
+/obj/machinery/computer/pod/proc/launch_sequence(var/ident_tag)
 	if(stat & (NOPOWER|BROKEN))
 		return
 	var/anydriver = 0
-	for(var/obj/machinery/mass_driver/M in GLOB.machines)
+	for(var/obj/machinery/mass_driver/M in world)
 		if(M.z != src.z)	continue
 		if(M.id_tag == ident_tag)
 			anydriver = 1
@@ -86,7 +86,7 @@
 		visible_message("Cannot locate any mass driver of that ID. Cancelling firing sequence!")
 		return
 
-	for(var/obj/machinery/door/poddoor/M in GLOB.airlocks)
+	for(var/obj/machinery/door/poddoor/M in airlocks)
 		if(M.z != src.z)	continue
 		if(M.id_tag == ident_tag)
 			spawn()
@@ -94,13 +94,13 @@
 	sleep(20)
 
 
-	for(var/obj/machinery/mass_driver/M in GLOB.machines)
+	for(var/obj/machinery/mass_driver/M in world)
 		if(M.z != src.z)	continue
 		if(M.id_tag == ident_tag)
 			M.drive()
 
 	sleep(50)
-	for(var/obj/machinery/door/poddoor/M in GLOB.airlocks)
+	for(var/obj/machinery/door/poddoor/M in airlocks)
 		if(M.z != src.z)	continue
 		if(M.id_tag == ident_tag)
 			spawn()
@@ -108,12 +108,12 @@
 	return
 
 
-/obj/machinery/computer/pod/attack_ai(mob/user as mob)
+/obj/machinery/computer/pod/attack_ai(var/mob/user as mob)
 	src.add_hiddenprint(user)
 	return attack_hand(user)
 
 
-/obj/machinery/computer/pod/attack_hand(mob/user as mob)
+/obj/machinery/computer/pod/attack_hand(var/mob/user as mob)
 	if(..())
 		return
 
@@ -205,8 +205,8 @@
 		if(href_list["dstele"])
 			var/choices = list(0)
 			var/list/reachable_levels = levels_by_trait(REACHABLE)
-			for(var/z in reachable_levels)
-				choices += z
+			for(var/datum/space_level/S in reachable_levels)
+				choices += S.zpos
 			var/obj/machinery/computer/pod/deathsquad/D = src
 			var/input = input("Enter the destination Z-Level. The mechs will arrive from the East. Leave 0 if you don't want to set a specific ZLevel", "Mass Driver Controls", 0) in choices
 			D.teleporter_dest = input
@@ -219,7 +219,7 @@
 			var/ident_tag = href_list["driver"]
 			var/t = text2num(href_list["power"])
 			t = min(max(0.25, t), 16)
-			for(var/obj/machinery/mass_driver/M in GLOB.machines)
+			for(var/obj/machinery/mass_driver/M in world)
 				if(M.id_tag == ident_tag)
 					M.power = t
 			powers[ident_tag] = t
@@ -240,7 +240,7 @@
 			maxtimes[ident_tag] = min(max(round(maxtimes[ident_tag]), 0), 120)
 		if(href_list["door"])
 			var/ident_tag = href_list["driver"]
-			for(var/obj/machinery/door/poddoor/M in GLOB.airlocks)
+			for(var/obj/machinery/door/poddoor/M in airlocks)
 				if(M.z != src.z)	continue
 				if(M.id_tag == ident_tag)
 					spawn()
@@ -261,18 +261,18 @@
 	icon_state = "oldcomp"
 	icon_screen = "library"
 	icon_keyboard = null
-	name = "\improper DoorMex control computer"
+	name = "DoorMex Control Computer"
 	circuit = /obj/item/circuitboard/olddoor
 
 
 /obj/machinery/computer/pod/old/syndicate
 	name = "external airlock controls"
 	desc = "The Syndicate operate on a tight budget. Operates external airlocks."
-	req_access = list(ACCESS_SYNDICATE)
+	req_access = list(access_syndicate)
 	circuit = /obj/item/circuitboard/syndicatedoor
 	light_color = "#00FFFF"
 
-/obj/machinery/computer/pod/old/syndicate/attack_hand(mob/user as mob)
+/obj/machinery/computer/pod/old/syndicate/attack_hand(var/mob/user as mob)
 	if(!allowed(user))
 		to_chat(user, "<span class='warning'>Access Denied</span>")
 		return
@@ -280,7 +280,7 @@
 		..()
 
 /obj/machinery/computer/pod/old/swf
-	name = "\improper Magix System IV"
+	name = "Magix System IV"
 	desc = "An arcane artifact that holds much magic. Running E-Knock 2.2: Sorceror's Edition"
 	circuit = /obj/item/circuitboard/swfdoor
 
@@ -290,11 +290,11 @@
 	var/teleporter_dest = 0
 	circuit = /obj/item/circuitboard/pod/deathsquad
 
-/obj/machinery/computer/pod/deathsquad/launch_sequence(ident_tag)
+/obj/machinery/computer/pod/deathsquad/launch_sequence(var/ident_tag)
 	if(stat & (NOPOWER|BROKEN))
 		return
 	var/anydriver = 0
-	for(var/obj/machinery/mass_driver/M in GLOB.machines)
+	for(var/obj/machinery/mass_driver/M in world)
 		if(M.z != src.z)	continue
 		if(M.id_tag == ident_tag)
 			anydriver = 1
@@ -303,30 +303,30 @@
 		return
 
 	var/spawn_marauder[] = new()
-	for(var/thing in GLOB.landmarks_list)
-		var/obj/effect/landmark/L = thing
+	for(var/obj/effect/landmark/L in world)
 		if(L.name == "Marauder Entry")
 			spawn_marauder.Add(L)
-	for(var/obj/effect/landmark/mechlaunch/L in GLOB.landmarks_list)
-		var/obj/effect/portal/P = new(L.loc, pick(spawn_marauder))
-		P.invisibility = 101 //So it is not seen by anyone.
-		P.failchance = 0 //So it has no fail chance when teleporting.
-		spawn_marauder.Remove(P.target)
+	for(var/obj/effect/landmark/L in world)
+		if(L.name == "Marauder Exit")
+			var/obj/effect/portal/P = new(L.loc, pick(spawn_marauder))
+			P.invisibility = 101//So it is not seen by anyone.
+			P.failchance = 0//So it has no fail chance when teleporting.
+			spawn_marauder.Remove(P.target)
 
-	for(var/obj/machinery/door/poddoor/M in GLOB.airlocks)
+	for(var/obj/machinery/door/poddoor/M in airlocks)
 		if(M.z != src.z)	continue
 		if(M.id_tag == ident_tag)
 			spawn()
 				M.open()
 	sleep(20)
 
-	for(var/obj/machinery/mass_driver/M in GLOB.machines)
+	for(var/obj/machinery/mass_driver/M in world)
 		if(M.z != src.z)	continue
 		if(M.id_tag == ident_tag)
 			M.drive()
 
 	sleep(50)
-	for(var/obj/machinery/door/poddoor/M in GLOB.airlocks)
+	for(var/obj/machinery/door/poddoor/M in airlocks)
 		if(M.z != src.z)	continue
 		if(M.id_tag == ident_tag)
 			spawn()
@@ -341,7 +341,7 @@
 	return
 
 /obj/structure/deathsquad_tele
-	name = "mech teleporter"
+	name = "Mech Teleporter"
 	density = 0
 	anchored = 1
 	icon = 'icons/obj/stationobjs.dmi'
@@ -350,7 +350,7 @@
 	var/id_tag = ""
 
 
-/obj/structure/deathsquad_tele/Bumped(atom/movable/AM)
+/obj/structure/deathsquad_tele/Bumped(var/atom/movable/AM)
 	if(!ztarget)	return ..()
 	var/y = AM.y
 	spawn()

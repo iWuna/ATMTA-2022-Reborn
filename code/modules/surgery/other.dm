@@ -21,10 +21,10 @@
 /datum/surgery/infection/can_start(mob/user, mob/living/carbon/target)
 	if(ishuman(target))
 		var/mob/living/carbon/human/H = target
-		var/obj/item/organ/external/affected = H.get_organ(user.zone_selected)
+		var/obj/item/organ/external/affected = H.get_organ(user.zone_sel.selecting)
 		if(!affected)
 			return 0
-		if(affected.is_robotic())
+		if(affected.status & ORGAN_ROBOT)
 			return 0
 		return 1
 	return 0
@@ -32,18 +32,18 @@
 /datum/surgery/bleeding/can_start(mob/user, mob/living/carbon/target)
 	if(ishuman(target))
 		var/mob/living/carbon/human/H = target
-		var/obj/item/organ/external/affected = H.get_organ(user.zone_selected)
+		var/obj/item/organ/external/affected = H.get_organ(user.zone_sel.selecting)
 		if(!affected)
-			return FALSE
+			return 0
 
-		if(affected.status & ORGAN_INT_BLEEDING)
-			return TRUE
-		return FALSE
+		if(affected.internal_bleeding)
+			return 1
+		return 0
 
 /datum/surgery/debridement/can_start(mob/user, mob/living/carbon/target)
 	if(ishuman(target))
 		var/mob/living/carbon/human/H = target
-		var/obj/item/organ/external/affected = H.get_organ(user.zone_selected)
+		var/obj/item/organ/external/affected = H.get_organ(user.zone_sel.selecting)
 
 		if(!hasorgans(target))
 			return 0
@@ -72,16 +72,15 @@
 /datum/surgery_step/fix_vein/can_use(mob/living/user, mob/living/carbon/human/target, target_zone, obj/item/tool,datum/surgery/surgery)
 	var/obj/item/organ/external/affected = target.get_organ(target_zone)
 	if(!affected)
-		return FALSE
+		return 0
 
-	if(affected.status & ORGAN_INT_BLEEDING)
-		return TRUE
+	return affected.internal_bleeding
 
 /datum/surgery_step/fix_vein/begin_step(mob/living/user, mob/living/carbon/human/target, target_zone, obj/item/tool,datum/surgery/surgery)
 	var/obj/item/organ/external/affected = target.get_organ(target_zone)
 	user.visible_message("[user] starts patching the damaged vein in [target]'s [affected.name] with \the [tool]." , \
 	"You start patching the damaged vein in [target]'s [affected.name] with \the [tool].")
-	target.custom_pain("The pain in [affected.name] is unbearable!")
+	target.custom_pain("The pain in [affected.name] is unbearable!",1)
 	..()
 
 /datum/surgery_step/fix_vein/end_step(mob/living/user, mob/living/carbon/human/target, target_zone, obj/item/tool,datum/surgery/surgery)
@@ -89,7 +88,7 @@
 	user.visible_message("<span class='notice'> [user] has patched the damaged vein in [target]'s [affected.name] with \the [tool].</span>", \
 		"<span class='notice'> You have patched the damaged vein in [target]'s [affected.name] with \the [tool].</span>")
 
-	affected.fix_internal_bleeding()
+	affected.internal_bleeding = FALSE
 	if(ishuman(user) && prob(40))
 		var/mob/living/carbon/human/U = user
 		U.bloody_hands(target, 0)
@@ -134,7 +133,7 @@
 	var/obj/item/organ/external/affected = target.get_organ(target_zone)
 	user.visible_message("[user] starts cutting away necrotic tissue in [target]'s [affected.name] with \the [tool]." , \
 	"You start cutting away necrotic tissue in [target]'s [affected.name] with \the [tool].")
-	target.custom_pain("The pain in [affected.name] is unbearable!")
+	target.custom_pain("The pain in [affected.name] is unbearable!",1)
 	..()
 
 /datum/surgery_step/fix_dead_tissue/end_step(mob/living/user, mob/living/carbon/human/target, target_zone, obj/item/tool,datum/surgery/surgery)
@@ -192,7 +191,7 @@
 	var/obj/item/organ/external/affected = target.get_organ(target_zone)
 	user.visible_message("[user] starts applying medication to the affected tissue in [target]'s [affected.name] with \the [tool]." , \
 	"You start applying medication to the affected tissue in [target]'s [affected.name] with \the [tool].")
-	target.custom_pain("Something in your [affected.name] is causing you a lot of pain!")
+	target.custom_pain("Something in your [affected.name] is causing you a lot of pain!",1)
 	..()
 
 /datum/surgery_step/treat_necrosis/end_step(mob/living/user, mob/living/carbon/human/target, target_zone, obj/item/tool,datum/surgery/surgery)
@@ -209,7 +208,7 @@
 
 	var/trans = container.reagents.trans_to(target, container.amount_per_transfer_from_this)
 	if(trans > 0)
-		container.reagents.reaction(target, REAGENT_INGEST)	//technically it's contact, but the reagents are being applied to internal tissue
+		container.reagents.reaction(target, INGEST)	//technically it's contact, but the reagents are being applied to internal tissue
 
 		if(mitocholide)
 			affected.status &= ~ORGAN_DEAD
@@ -229,7 +228,7 @@
 	var/obj/item/reagent_containers/container = tool
 
 	var/trans = container.reagents.trans_to(target, container.amount_per_transfer_from_this)
-	container.reagents.reaction(target, REAGENT_INGEST)	//technically it's contact, but the reagents are being applied to internal tissue
+	container.reagents.reaction(target, INGEST)	//technically it's contact, but the reagents are being applied to internal tissue
 
 	user.visible_message("<span class='warning'> [user]'s hand slips, applying [trans] units of the solution to the wrong place in [target]'s [affected.name] with the [tool]!</span>" , \
 	"<span class='warning'> Your hand slips, applying [trans] units of the solution to the wrong place in [target]'s [affected.name] with the [tool]!</span>")
@@ -242,7 +241,7 @@
 //////////////////////////////////////////////////////////////////
 /datum/surgery/remove_thrall
 	name = "Remove Shadow Tumor"
-	steps = list(/datum/surgery_step/generic/cut_open, /datum/surgery_step/generic/clamp_bleeders, /datum/surgery_step/generic/retract_skin,  /datum/surgery_step/internal/dethrall, /datum/surgery_step/generic/cauterize)
+	steps = list(/datum/surgery_step/generic/cut_open, /datum/surgery_step/generic/clamp_bleeders, /datum/surgery_step/generic/retract_skin, /datum/surgery_step/open_encased/saw,/datum/surgery_step/open_encased/retract, /datum/surgery_step/internal/dethrall, /datum/surgery_step/glue_bone, /datum/surgery_step/set_bone,/datum/surgery_step/finish_bone,/datum/surgery_step/generic/cauterize)
 	possible_locs = list("head", "chest", "groin")
 
 /datum/surgery/remove_thrall/synth
@@ -257,11 +256,11 @@
 	if(!is_thrall(target))
 		return 0
 	var/obj/item/organ/internal/brain/B = target.get_int_organ(/obj/item/organ/internal/brain)
-	var/obj/item/organ/external/affected = target.get_organ(user.zone_selected)
+	var/obj/item/organ/external/affected = target.get_organ(user.zone_sel.selecting)
 	if(!B)
 		// No brain to remove the tumor from
 		return 0
-	if(affected.is_robotic())
+	if(affected.status & ORGAN_ROBOT)
 		return 0
 	if(!(B in affected.internal_organs))
 		return 0
@@ -273,11 +272,11 @@
 	if(!is_thrall(target))
 		return 0
 	var/obj/item/organ/internal/brain/B = target.get_int_organ(/obj/item/organ/internal/brain)
-	var/obj/item/organ/external/affected = target.get_organ(user.zone_selected)
+	var/obj/item/organ/external/affected = target.get_organ(user.zone_sel.selecting)
 	if(!B)
 		// No brain to remove the tumor from
 		return 0
-	if(!affected.is_robotic())
+	if(!(affected.status & ORGAN_ROBOT))
 		return 0
 	if(!(B in affected.internal_organs))
 		return 0
@@ -304,11 +303,11 @@
 	..()
 
 /datum/surgery_step/internal/dethrall/end_step(mob/living/user, mob/living/carbon/human/target, target_zone, obj/item/tool,datum/surgery/surgery)
-	if(isshadowlinglesser(target)) //Empowered thralls cannot be deconverted
+	if(target.get_species() == "Lesser Shadowling") //Empowered thralls cannot be deconverted
 		to_chat(target, "<span class='shadowling'><b><i>NOT LIKE THIS!</i></b></span>")
 		user.visible_message("<span class='warning'>[target] suddenly slams upward and knocks down [user]!</span>", \
 							 "<span class='userdanger'>[target] suddenly bolts up and slams you with tremendous force!</span>")
-		user.StopResting() //Remove all stuns
+		user.resting = 0 //Remove all stuns
 		user.SetSleeping(0)
 		user.SetStunned(0)
 		user.SetWeakened(0)
@@ -328,8 +327,8 @@
 	user.visible_message("[user] shines light onto the tumor in [target]'s [E]!", "<span class='notice'>You cleanse the contamination from [target]'s brain!</span>")
 	if(target.vision_type) //Turns off their darksight if it's still active.
 		to_chat(target, "<span class='boldannounce'>Your eyes are suddenly wrought with immense pain as your darksight is forcibly dismissed!</span>")
-		target.set_sight(null)
-	SSticker.mode.remove_thrall(target.mind, 0)
+		target.vision_type = null
+	ticker.mode.remove_thrall(target.mind, 0)
 	target.visible_message("<span class='warning'>A strange black mass falls from [target]'s [E]!</span>")
 	var/obj/item/organ/thing = new /obj/item/organ/internal/shadowtumor(get_turf(target))
 	thing.set_dna(target.dna)

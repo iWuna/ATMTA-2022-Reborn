@@ -1,7 +1,6 @@
 /mob/living/simple_animal/possessed_object
 	name = "possessed doodad"
 	var/spirit_name = "mysterious force" // What we call ourselves in attack messages.
-	mob_biotypes = MOB_SPIRIT
 	health = 50
 	maxHealth = 50
 
@@ -16,45 +15,50 @@
 
 	allow_spin = 0			// No spinning. Spinning breaks our floating animation.
 	no_spin_thrown = 1
-	del_on_death = TRUE
 
 	var/obj/item/possessed_item
 
 /mob/living/simple_animal/possessed_object/examine(mob/user)
-	. = possessed_item.examine(user)
+	possessed_item.examine(user)
 	if(health > (maxHealth / 30))
-		. += "<span class='warning'>[src] appears to be floating without any support!</span>"
+		to_chat(usr, "<span class='warning'>[src] appears to be floating without any support!</span>")
 	else
-		. += "<span class='warning'>[src] appears to be having trouble staying afloat!</span>"
+		to_chat(usr, "<span class='warning'>[src] appears to be having trouble staying afloat!</span>")
 
 
-/mob/living/simple_animal/possessed_object/do_attack_animation(atom/A, visual_effect_icon, used_item, no_effect)
+/mob/living/simple_animal/possessed_object/do_attack_animation(atom/A)
 	..()
 	animate_ghostly_presence(src, -1, 20, 1) // Restart the floating animation after the attack animation, as it will be cancelled.
 
 
-/mob/living/simple_animal/possessed_object/start_pulling(atom/movable/AM, state, force = pull_force, show_message = FALSE) // Silly motherfuckers think they can pull things.
-	if(show_message)
-		to_chat(src, "<span class='warning'>You are unable to pull [AM]!</span>")
+/mob/living/simple_animal/possessed_object/start_pulling(var/atom/movable/AM) // Silly motherfuckers think they can pull things.
+	to_chat(src, "<span class='warning'>You are unable to pull [AM]!</span>")
 
 
 /mob/living/simple_animal/possessed_object/ghost() // Ghosting will return the object to normal, and will not disqualify the ghoster from various mid-round antag positions.
 	var/response = alert(src, "End your possession of this object? (It will not stop you from respawning later)","Are you sure you want to ghost?","Ghost","Stay in body")
 	if(response != "Ghost")
 		return
-	StartResting()
+	resting = 1
 	var/mob/dead/observer/ghost = ghostize(1)
 	ghost.timeofdeath = world.time
 	death(0) // Turn back into a regular object.
 
+
 /mob/living/simple_animal/possessed_object/death(gibbed)
-	if(can_die())
-		ghostize(GHOST_CAN_REENTER)
-		// if gibbed, the item goes with the ghost
-		if(!gibbed && possessed_item.loc == src)
-			// Put the normal item back once the EVIL SPIRIT has been vanquished from it. If it's not already in place
-			possessed_item.forceMove(loc)
-	return ..()
+	var/mob/dead/observer/ghost = ghostize(1)
+	..()
+
+	if(gibbed) // Leave no trace.
+		ghost.timeofdeath = world.time
+		qdel(src)
+		return
+
+	if(possessed_item.loc == src)
+		possessed_item.forceMove(loc) // Put the normal item back once the EVIL SPIRIT has been vanquished from it. If it's not already in place
+
+	qdel(src)
+
 
 /mob/living/simple_animal/possessed_object/Life(seconds, times_fired)
 	..()
@@ -79,7 +83,7 @@
 	to_chat(src, "<span class='shadowling'><b>Your spirit has entered [src] and possessed it.</b><br>You are able to do most things a humanoid would be able to do with a [src] in their hands.<br>If you want to end your ghostly possession, use the '<b>ghost</b>' verb, it won't penalize your ability to respawn.</span>")
 
 
-/mob/living/simple_animal/possessed_object/New(atom/loc as obj)
+/mob/living/simple_animal/possessed_object/New(var/atom/loc as obj)
 	..()
 
 	if(!istype(loc, /obj/item)) // Some silly motherfucker spawned us directly via the game panel.
@@ -97,6 +101,8 @@
 	forceMove( possessed_loc )
 	possessed_item.forceMove(src) // We'll keep the actual item inside of us until we die.
 
+	zone_sel = new /obj/screen/zone_sel(src) // Create a new zone selection item so the human attacks have something to reference. Horrifying and ugly hack, do not look directly at this.
+
 	update_icon(1)
 
 	visible_message("<span class='shadowling'>[src] rises into the air and begins to float!</span>") // Inform those around us that shit's gettin' spooky.
@@ -108,7 +114,7 @@
 
 
 /mob/living/simple_animal/possessed_object/IsAdvancedToolUser() // So we can shoot guns (Mostly ourselves), among other things.
-	return TRUE
+	return 1
 
 
 /mob/living/simple_animal/possessed_object/get_access() // If we've possessed an ID card we've got access to lots of fun things!
@@ -117,7 +123,7 @@
 		. = possessed_id.access
 
 
-/mob/living/simple_animal/possessed_object/ClickOn(atom/A, params)
+/mob/living/simple_animal/possessed_object/ClickOn(var/atom/A, var/params)
 	if(client.click_intercept)
 		client.click_intercept.InterceptClickOn(src, params, A)
 		return

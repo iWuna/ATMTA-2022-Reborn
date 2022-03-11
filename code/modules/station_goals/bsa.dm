@@ -2,7 +2,6 @@
 // Cargo orders part for high price
 // Requires high amount of power
 // Requires high level stock parts
-
 /datum/station_goal/bluespace_cannon
 	name = "Bluespace Artillery"
 
@@ -16,7 +15,7 @@
 
 /datum/station_goal/bluespace_cannon/on_report()
 	//Unlock BSA parts
-	var/datum/supply_packs/misc/station_goal/bsa/P = SSshuttle.supply_packs["[/datum/supply_packs/misc/station_goal/bsa]"]
+	var/datum/supply_packs/misc/bsa/P = shuttle_master.supply_packs["[/datum/supply_packs/misc/bsa]"]
 	P.special_enabled = TRUE
 
 /datum/station_goal/bluespace_cannon/check_completion()
@@ -28,7 +27,7 @@
 	return FALSE
 
 /obj/machinery/bsa
-	icon = 'icons/obj/machines/particle_accelerator.dmi'
+	icon = 'icons/obj/machines/particle_accelerator3.dmi'
 	density = 1
 	anchored = 1
 
@@ -91,7 +90,7 @@
 
 /obj/machinery/bsa/middle/proc/check_completion()
 	if(!front || !back)
-		return "No multitool-linked parts detected!"
+		return "No linked parts detected!"
 	if(!front.anchored || !back.anchored || !anchored)
 		return "Linked parts unwrenched!"
 	if(front.y != y || back.y != y || !(front.x > x && back.x < x || front.x < x && back.x > x) || front.z != z || back.z != z)
@@ -105,11 +104,11 @@
 	var/x_max
 	switch(cannon_dir)
 		if(EAST)
-			x_min = x - BSA_SIZE_BACK
-			x_max = x + BSA_SIZE_FRONT
+			x_min = x - 4 //replace with defines later
+			x_max = x + 6
 		if(WEST)
-			x_min = x + BSA_SIZE_BACK
-			x_max = x - BSA_SIZE_FRONT
+			x_min = x + 4
+			x_max = x - 6
 
 	for(var/turf/T in block(locate(x_min,y-1,z),locate(x_max,y+1,z)))
 		if(T.density || isspaceturf(T))
@@ -215,7 +214,6 @@
 	playsound(src, 'sound/machines/bsa_fire.ogg', 100, 1)
 
 	message_admins("[key_name_admin(user)] has launched an artillery strike.")
-	log_admin("[key_name(user)] has launched an artillery strike.") // Line below handles logging the explosion to disk
 	explosion(bullseye,ex_power,ex_power*2,ex_power*4)
 
 	reload()
@@ -225,7 +223,7 @@
 	last_fire_time = world.time / 10
 
 /obj/item/circuitboard/machine/bsa/back
-	board_name = "Bluespace Artillery Generator"
+	name = "Bluespace Artillery Generator (Machine Board)"
 	build_path = /obj/machinery/bsa/back
 	origin_tech = "engineering=2;combat=2;bluespace=2" //No freebies!
 	req_components = list(
@@ -233,15 +231,15 @@
 							/obj/item/stack/cable_coil = 2)
 
 /obj/item/circuitboard/machine/bsa/middle
-	board_name = "Bluespace Artillery Fusor"
+	name = "Bluespace Artillery Fusor (Machine Board)"
 	build_path = /obj/machinery/bsa/middle
 	origin_tech = "engineering=2;combat=2;bluespace=2"
 	req_components = list(
-							/obj/item/stack/ore/bluespace_crystal = 20,
+							/obj/item/ore/bluespace_crystal = 20,
 							/obj/item/stack/cable_coil = 2)
 
 /obj/item/circuitboard/machine/bsa/front
-	board_name = "Bluespace Artillery Bore"
+	name = "Bluespace Artillery Bore (Machine Board)"
 	build_path = /obj/machinery/bsa/front
 	origin_tech = "engineering=2;combat=2;bluespace=2"
 	req_components = list(
@@ -249,7 +247,7 @@
 							/obj/item/stack/cable_coil = 2)
 
 /obj/item/circuitboard/computer/bsa_control
-	board_name = "Bluespace Artillery Controls"
+	name = "Bluespace Artillery Controls (Computer Board)"
 	build_path = /obj/machinery/computer/bsa_control
 	origin_tech = "engineering=2;combat=2;bluespace=2"
 
@@ -258,9 +256,9 @@
 	var/obj/machinery/bsa/full/cannon
 	var/notice
 	var/target
-	use_power = NO_POWER_USE
+	use_power = 0
 	circuit = /obj/item/circuitboard/computer/bsa_control
-	icon = 'icons/obj/machines/particle_accelerator.dmi'
+	icon = 'icons/obj/machines/particle_accelerator3.dmi'
 	icon_state = "control_boxp"
 	var/icon_state_broken = "control_box"
 	var/icon_state_nopower = "control_boxw"
@@ -307,52 +305,58 @@
 		return 1
 	ui_interact(user)
 
-/obj/machinery/computer/bsa_control/ui_interact(mob/user, ui_key = "main", datum/tgui/ui = null, force_open = FALSE, datum/tgui/master_ui = null, datum/ui_state/state = GLOB.default_state)
-	ui = SStgui.try_update_ui(user, src, ui_key, ui, force_open)
+/obj/machinery/computer/bsa_control/ui_interact(mob/user, ui_key = "main", var/datum/nanoui/ui = null, var/force_open = 1)
+	ui = SSnanoui.try_update_ui(user, src, ui_key, ui, force_open)
 	if(!ui)
-		ui = new(user, src, ui_key, "BlueSpaceArtilleryControl", name, 400, 155, master_ui, state)
+		ui = new(user, src, ui_key, "bsa.tmpl", name, 400, 305)
 		ui.open()
+		ui.set_auto_update(1)
 
-/obj/machinery/computer/bsa_control/ui_data(mob/user)
+/obj/machinery/computer/bsa_control/ui_data(mob/user, ui_key = "main", datum/topic_state/state = default_state)
 	var/list/data = list()
 	data["connected"] = cannon
 	data["notice"] = notice
 	if(target)
 		data["target"] = get_target_name()
+
 	if(cannon)
 		var/reload_cooldown = cannon.reload_cooldown
 		var/last_fire_time = cannon.last_fire_time
 		var/time_to_wait = max(0, round(reload_cooldown - ((world.time / 10) - last_fire_time)))
 		var/minutes = max(0, round(time_to_wait / 60))
 		var/seconds = max(0, time_to_wait - (60 * minutes))
-		var/seconds2 = (seconds < 10) ? "0[seconds]" : seconds
-		data["reloadtime_text"] = "[minutes]:[seconds2]"
+
+		data["reloadtime_mins"] = minutes
+		data["reloadtime_secs"] = (seconds < 10) ? "0[seconds]" : seconds
 		data["ready"] = minutes == 0 && seconds == 0
 	else
 		data["ready"] = FALSE
+
 	return data
 
-/obj/machinery/computer/bsa_control/ui_act(action, params)
+/obj/machinery/computer/bsa_control/Topic(href, href_list)
 	if(..())
-		return
-	switch(action)
-		if("build")
-			cannon = deploy()
-		if("fire")
-			fire(usr)
-		if("recalibrate")
-			calibrate(usr)
+		return 1
+
+	if(href_list["build"])
+		cannon = deploy()
+		. = TRUE
+	else if(href_list["fire"])
+		fire(usr)
+		. = TRUE
+	else if(href_list["recalibrate"])
+		calibrate(usr)
+		. = TRUE
 	update_icon()
-	return TRUE
 
 /obj/machinery/computer/bsa_control/proc/calibrate(mob/user)
 	var/list/gps_locators = list()
-	for(var/obj/item/gps/G in GLOB.GPS_list) //nulls on the list somehow
+	for(var/obj/item/gps/G in GPS_list) //nulls on the list somehow
 		gps_locators[G.gpstag] = G
 
 	var/list/options = gps_locators
 	if(area_aim)
-		options += target_all_areas ? SSmapping.ghostteleportlocs : SSmapping.teleportlocs
+		options += target_all_areas ? ghostteleportlocs : teleportlocs
 	var/V = input(user,"Select target", "Select target",null) in options|null
 	target = options[V]
 

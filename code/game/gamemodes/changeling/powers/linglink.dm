@@ -1,14 +1,12 @@
-/datum/action/changeling/linglink
+/obj/effect/proc_holder/changeling/linglink
 	name = "Hivemind Link"
-	desc = "We link our victim's mind into the hivemind for personal interrogation."
-	helptext = "If we find a human mad enough to support our cause, this can be a helpful tool to stay in touch."
-	button_icon_state = "hivemind_link"
+	desc = "Link your victim's mind into the hivemind for personal interrogation"
 	chemical_cost = 0
 	dna_cost = 0
 	req_human = 1
 	max_genetic_damage = 100
 
-/datum/action/changeling/linglink/can_sting(mob/living/carbon/user)
+/obj/effect/proc_holder/changeling/linglink/can_sting(mob/living/carbon/user)
 	if(!..())
 		return
 	var/datum/changeling/changeling = user.mind.changeling
@@ -36,7 +34,7 @@
 			return
 		return changeling.can_absorb_dna(user,target)
 
-/datum/action/changeling/linglink/sting_action(mob/user)
+/obj/effect/proc_holder/changeling/linglink/sting_action(mob/user)
 	var/datum/changeling/changeling = user.mind.changeling
 	var/obj/item/grab/G = user.get_active_hand()
 	var/mob/living/carbon/target = G.affecting
@@ -49,10 +47,10 @@
 				to_chat(user, "<span class='notice'>We stealthily stab [target] with a minor proboscis...</span>")
 				to_chat(target, "<span class='userdanger'>You experience a stabbing sensation and your ears begin to ring...</span>")
 			if(3)
-				to_chat(user, "<span class='notice'>You mold [target]'s mind like clay, [target.p_they()] can now speak in the hivemind!</span>")
+				to_chat(user, "<span class='notice'>You mold the [target]'s mind like clay, they can now speak in the hivemind!</span>")
 				to_chat(target, "<span class='userdanger'>A migraine throbs behind your eyes, you hear yourself screaming - but your mouth has not opened!</span>")
-				for(var/mob/M in GLOB.mob_list)
-					if(GLOB.all_languages["Changeling"] in M.languages)
+				for(var/mob/M in mob_list)
+					if(all_languages["Changeling"] in M.languages)
 						to_chat(M, "<i><font color=#800080>We can sense a foreign presence in the hivemind...</font></i>")
 				target.mind.linglink = 1
 				target.add_language("Changeling")
@@ -60,7 +58,7 @@
 				to_chat(target, "<font color=#800040><span class='boldannounce'>You can now communicate in the changeling hivemind, say \":g message\" to communicate!</span>")
 				target.reagents.add_reagent("salbutamol", 40) // So they don't choke to death while you interrogate them
 				sleep(1800)
-		SSblackbox.record_feedback("nested tally", "changeling_powers", 1, list("[name]"))
+		feedback_add_details("changeling_powers","A[stage]")
 		if(!do_mob(user, target, 20))
 			to_chat(user, "<span class='warning'>Our link with [target] has ended!</span>")
 			target.remove_language("Changeling")

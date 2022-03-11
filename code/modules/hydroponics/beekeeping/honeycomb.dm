@@ -17,8 +17,6 @@
 	pixel_y = rand(8,-8)
 	update_icon()
 
-/obj/item/reagent_containers/honeycomb/set_APTFT()
-	set hidden = TRUE
 
 /obj/item/reagent_containers/honeycomb/update_icon()
 	overlays.Cut()
@@ -32,7 +30,7 @@
 
 
 /obj/item/reagent_containers/honeycomb/proc/set_reagent(reagent)
-	var/datum/reagent/R = GLOB.chemical_reagents_list[reagent]
+	var/datum/reagent/R = chemical_reagents_list[reagent]
 	if(istype(R))
 		name = "honeycomb ([R.name])"
 		honey_color = R.color

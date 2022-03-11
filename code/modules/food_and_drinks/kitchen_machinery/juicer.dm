@@ -6,7 +6,7 @@
 	layer = 2.9
 	density = 1
 	anchored = 0
-	use_power = IDLE_POWER_USE
+	use_power = 1
 	idle_power_usage = 5
 	active_power_usage = 100
 	pass_flags = PASSTABLE
@@ -31,7 +31,6 @@
 	)
 
 /obj/machinery/juicer/New()
-	. = ..()
 	beaker = new /obj/item/reagent_containers/glass/beaker/large(src)
 
 /obj/machinery/juicer/update_icon()
@@ -166,7 +165,8 @@
 		if(beaker.reagents.total_volume >= beaker.reagents.maximum_volume)
 			break
 
-/obj/structure/closet/crate/juice/populate_contents()
+/obj/structure/closet/crate/juice/New()
+	..()
 	new/obj/machinery/juicer(src)
 	new/obj/item/reagent_containers/food/snacks/grown/tomato(src)
 	new/obj/item/reagent_containers/food/snacks/grown/carrot(src)

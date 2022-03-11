@@ -72,12 +72,12 @@
 		secondary_type = new secondary_type()
 	if(no_register)		//for booster pack cards
 		return
-	if(SSmob_hunt)
+	if(mob_hunt_server)
 		if(set_trap)
-			if(SSmob_hunt.register_trap(src))
+			if(mob_hunt_server.register_trap(src))
 				return
 		else if(select_spawn())
-			if(SSmob_hunt.register_spawn(src))
+			if(mob_hunt_server.register_spawn(src))
 				return
 	qdel(src)	//if you reach this, the datum is just pure clutter, so delete it
 
@@ -88,9 +88,8 @@
 		return 0
 	while(possible_areas.len)
 		//randomly select an area from our possible_areas list to try spawning in, then remove it from possible_areas so it won't get picked over and over forever.
-		var/spawn_area_path = pickweight(possible_areas)
-		var/area/spawn_area = locate(spawn_area_path)
-		possible_areas -= spawn_area_path
+		var/area/spawn_area = locate(pickweight(possible_areas))
+		possible_areas -= spawn_area
 		if(!spawn_area)
 			break
 		//clear and generate a fresh list of turfs in the selected area, weighted based on white/black lists
@@ -109,8 +108,8 @@
 /datum/mob_hunt/proc/get_possible_areas()
 	var/list/possible_areas = list()
 	//setup, sets all station areas (and subtypes) to weight 1
-	for(var/A in GLOB.the_station_areas)
-		if(A == /area/holodeck)	//don't allow holodeck areas as possible spawns since it will allow it to spawn in the holodeck rooms on CC level as well
+	for(var/A in the_station_areas)
+		if(A == /area/holodeck)	//don't allow holodeck areas as possible spawns since it will allow it to spawn in the holodeck rooms on z2 as well
 			continue
 		if(A in possible_areas)
 			continue
@@ -140,7 +139,7 @@
 		for(var/areapath in typesof(A))
 			possible_areas[areapath] -= 2
 	//removes "bad areas" which shouldn't be on-station but are subtypes of station areas. probably should the unused ones and consider repathing the rest
-	var/list/bad_areas = list(subtypesof(/area/construction), /area/solar/derelict_starboard, /area/solar/derelict_aft)
+	var/list/bad_areas = list(subtypesof(/area/construction), /area/solar/derelict_starboard, /area/solar/derelict_aft, /area/solar/constructionsite)
 	for(var/A in bad_areas)
 		possible_areas -= A
 	//weight check, remove negative or zero weight areas from the list, then return the list.

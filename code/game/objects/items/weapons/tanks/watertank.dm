@@ -9,9 +9,6 @@
 	slot_flags = SLOT_BACK
 	slowdown = 1
 	actions_types = list(/datum/action/item_action/toggle_mister)
-	max_integrity = 200
-	armor = list(MELEE = 0, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, RAD = 0, FIRE = 100, ACID = 30)
-	resistance_flags = FIRE_PROOF
 
 	var/obj/item/noz
 	var/on = 0
@@ -21,10 +18,6 @@
 	..()
 	create_reagents(volume)
 	noz = make_noz()
-
-/obj/item/watertank/Destroy()
-	QDEL_NULL(noz)
-	return ..()
 
 /obj/item/watertank/ui_action_click()
 	toggle_mister()
@@ -123,8 +116,7 @@
 	amount_per_transfer_from_this = 50
 	possible_transfer_amounts = list(25,50,100)
 	volume = 500
-	flags = NOBLUDGEON
-	container_type = OPENCONTAINER
+	flags = NODROP | OPENCONTAINER | NOBLUDGEON
 
 	var/obj/item/watertank/tank
 
@@ -136,10 +128,6 @@
 		loc = tank
 	return
 
-/obj/item/reagent_containers/spray/mister/Destroy()
-	tank = null
-	return ..()
-
 /obj/item/reagent_containers/spray/mister/dropped(mob/user as mob)
 	..()
 	to_chat(user, "<span class='notice'>The mister snaps back onto the watertank.</span>")
@@ -149,7 +137,7 @@
 /obj/item/reagent_containers/spray/mister/attack_self()
 	return
 
-/proc/check_tank_exists(parent_tank, mob/living/carbon/human/M, obj/O)
+/proc/check_tank_exists(parent_tank, var/mob/living/carbon/human/M, var/obj/O)
 	if(!parent_tank || !istype(parent_tank, /obj/item/watertank))	//To avoid weird issues from admin spawns
 		M.unEquip(O)
 		qdel(0)
@@ -190,7 +178,7 @@
 /obj/item/watertank/janitor/make_noz()
 	return new /obj/item/reagent_containers/spray/mister/janitor(src)
 
-/obj/item/reagent_containers/spray/mister/janitor/attack_self(mob/user)
+/obj/item/reagent_containers/spray/mister/janitor/attack_self(var/mob/user)
 	amount_per_transfer_from_this = (amount_per_transfer_from_this == 10 ? 5 : 10)
 	to_chat(user, "<span class='notice'>You [amount_per_transfer_from_this == 10 ? "remove" : "fix"] the nozzle. You'll now use [amount_per_transfer_from_this] units per spray.</span>")
 
@@ -240,7 +228,6 @@
 	var/nanofrost_cooldown = 0
 
 /obj/item/extinguisher/mini/nozzle/New(parent_tank)
-	. = ..()
 	if(check_tank_exists(parent_tank, src))
 		tank = parent_tank
 		reagents = tank.reagents
@@ -290,22 +277,22 @@
 		if(Adj)
 			return //Safety check so you don't blast yourself trying to refill your tank
 		var/datum/reagents/R = reagents
-		if(R.total_volume < 100)
-			to_chat(user, "You need at least 100 units of water to use the nanofrost launcher!")
+		if(R.total_volume < 50)
+			to_chat(user, "You need at least 50 units of water to use the nanofrost launcher!")
 			return
 		if(nanofrost_cooldown)
 			to_chat(user, "Nanofrost launcher is still recharging")
 			return
 		nanofrost_cooldown = 1
-		R.remove_any(100)
+		R.remove_any(50)
 		var/obj/effect/nanofrost_container/A = new /obj/effect/nanofrost_container(get_turf(src))
 		log_game("[key_name(user)] used Nanofrost at [get_area(user)] ([user.x], [user.y], [user.z]).")
 		playsound(src,'sound/items/syringeproj.ogg',40,1)
 		for(var/a=0, a<5, a++)
 			step_towards(A, target)
-			sleep(2)
+			sleep(1)
 		A.Smoke()
-		spawn(100)
+		spawn(50)
 			if(src)
 				nanofrost_cooldown = 0
 		return
@@ -328,7 +315,7 @@
 	desc = "A frozen shell of ice containing nanofrost that freezes the surrounding area after activation."
 	icon = 'icons/effects/effects.dmi'
 	icon_state = "frozen_smoke_capsule"
-	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
+	mouse_opacity = 0
 	pass_flags = PASSTABLE
 
 /obj/effect/nanofrost_container/proc/Smoke()

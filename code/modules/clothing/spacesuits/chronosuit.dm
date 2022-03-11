@@ -1,11 +1,10 @@
 /obj/item/clothing/head/helmet/space/chronos
-	name = "chronosuit helmet"
+	name = "Chronosuit Helmet"
 	desc = "A white helmet with an opaque blue visor."
 	icon_state = "chronohelmet"
 	item_state = "chronohelmet"
 	slowdown = 1
-	armor = list(MELEE = 60, BULLET = 60, LASER = 60, ENERGY = 60, BOMB = 30, BIO = 90, RAD = 90, FIRE = 100, ACID = 100)
-	resistance_flags = FIRE_PROOF | ACID_PROOF
+	armor = list(melee = 60, bullet = 30/*bullet through the visor*/, laser = 60, energy = 60, bomb = 30, bio = 90, rad = 90)
 	var/obj/item/clothing/suit/space/chronos/suit = null
 
 /obj/item/clothing/head/helmet/space/chronos/dropped()
@@ -19,13 +18,12 @@
 
 
 /obj/item/clothing/suit/space/chronos
-	name = "chronosuit"
+	name = "Chronosuit"
 	desc = "An advanced spacesuit equipped with teleportation and anti-compression technology"
 	icon_state = "chronosuit"
 	item_state = "chronosuit"
 	actions_types = list(/datum/action/item_action/toggle)
-	armor = list(MELEE = 60, BULLET = 60, LASER = 60, ENERGY = 60, BOMB = 30, BIO = 90, RAD = 90, FIRE = 100, ACID = 1000)
-	resistance_flags = FIRE_PROOF | ACID_PROOF
+	armor = list(melee = 60, bullet = 60, laser = 60, energy = 60, bomb = 30, bio = 90, rad = 90)
 	var/obj/item/clothing/head/helmet/space/chronos/helmet = null
 	var/obj/effect/chronos_cam/camera = null
 	var/activating = 0
@@ -34,7 +32,7 @@
 	var/teleporting = 0
 
 
-/obj/item/clothing/suit/space/chronos/proc/new_camera(mob/user)
+/obj/item/clothing/suit/space/chronos/proc/new_camera(var/mob/user)
 	if(camera)
 		qdel(camera)
 	camera = new /obj/effect/chronos_cam(get_turf(user))
@@ -65,7 +63,7 @@
 				to_chat(user, "<span class='userdanger'>Elecrtromagnetic pulse detected, shutting down systems to preserve integrity...</span>")
 			deactivate()
 
-/obj/item/clothing/suit/space/chronos/proc/chronowalk(mob/living/carbon/human/user)
+/obj/item/clothing/suit/space/chronos/proc/chronowalk(var/mob/living/carbon/human/user)
 	if(!teleporting && user && (user.stat == CONSCIOUS))
 		teleporting = 1
 		var/turf/from_turf = get_turf(user)
@@ -82,7 +80,9 @@
 		phaseanim.layer = FLY_LAYER
 		phaseanim.master = user
 		user.ExtinguishMob()
-		user.forceMove(holder)
+		if(user.buckled)
+			user.buckled.unbuckle_mob()
+		user.loc = holder
 		flick("chronophase", phaseanim)
 		spawn(7)
 			if(user)
@@ -95,7 +95,7 @@
 					phaseanim.loc = to_turf
 					sleep(7)
 			if(holder)
-				if(user && (user in holder.contents))
+				if(user && user in holder.contents)
 					user.loc = to_turf
 					if(user.client)
 						if(camera)
@@ -122,7 +122,7 @@
 			else
 				new_camera(user)
 	else
-		STOP_PROCESSING(SSobj, src)
+		processing_objects.Remove(src)
 
 /obj/item/clothing/suit/space/chronos/proc/activate()
 	if(!activating && !activated && !teleporting)
@@ -143,7 +143,7 @@
 					to_chat(user, "\[ <span style='color: #00ff00;'>ok</span> \] Starting ui display driver")
 					to_chat(user, "\[ <span style='color: #00ff00;'>ok</span> \] Initializing chronowalk4-view")
 					new_camera(user)
-					START_PROCESSING(SSobj, src)
+					processing_objects.Add(src)
 					activated = 1
 				else
 					to_chat(user, "\[ <span style='color: #ff0000;'>fail</span> \] Mounting /dev/helmet")
@@ -178,21 +178,15 @@
 
 
 /obj/effect/chronos_cam
-	name = "chronosuit view"
+	name = "Chronosuit View"
 	density = 0
 	anchored = 1
 	invisibility = 101
 	opacity = 0
-	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
+	mouse_opacity = 0
 	var/mob/holder = null
 
-/obj/effect/chronos_cam/singularity_act()
-	return
-
-/obj/effect/chronos_cam/singularity_pull()
-	return
-
-/obj/effect/chronos_cam/relaymove(mob/user, direction)
+/obj/effect/chronos_cam/relaymove(var/mob/user, direction)
 	if(holder)
 		if(user == holder)
 			if(user.client && user.client.eye != src)

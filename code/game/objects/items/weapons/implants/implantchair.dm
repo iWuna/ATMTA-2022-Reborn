@@ -17,6 +17,13 @@
 	var/mob/living/carbon/occupant = null
 	var/injecting = 0
 
+/obj/machinery/implantchair/proc
+	go_out()
+	put_mob(mob/living/carbon/M)
+	implant(var/mob/M)
+	add_implants()
+
+
 /obj/machinery/implantchair/New()
 	..()
 	add_implants()
@@ -71,8 +78,8 @@
 		if(!ismob(G.affecting))
 			return
 		var/mob/M = G.affecting
-		if(M.has_buckled_mobs())
-			to_chat(user, "[M] will not fit into [src] because [M.p_they()] [M.p_have()] a slime latched onto [M.p_their()] head.")
+		if(M.buckled_mob)
+			to_chat(usr, "[M] will not fit into [src] because they have a slime latched onto their head.")
 			return
 		if(put_mob(M))
 			qdel(G)
@@ -80,7 +87,7 @@
 	return
 
 
-/obj/machinery/implantchair/proc/go_out(mob/M)
+/obj/machinery/implantchair/go_out(mob/M)
 	if(!( src.occupant ))
 		return
 	if(M == occupant) // so that the guy inside can't eject himself -Agouri
@@ -94,12 +101,12 @@
 	return
 
 
-/obj/machinery/implantchair/proc/put_mob(mob/living/carbon/M)
+/obj/machinery/implantchair/put_mob(mob/living/carbon/M)
 	if(!iscarbon(M))
-		to_chat(usr, "<span class='warning'>[src] cannot hold this!</span>")
+		to_chat(usr, "<span class='warning'>The [src.name] cannot hold this!</span>")
 		return
 	if(src.occupant)
-		to_chat(usr, "<span class='warning'>[src] is already occupied!</span>")
+		to_chat(usr, "<span class='warning'>The [src.name] is already occupied!</span>")
 		return
 	M.stop_pulling()
 	M.forceMove(src)
@@ -109,23 +116,22 @@
 	return 1
 
 
-/obj/machinery/implantchair/proc/implant(mob/M)
-	if(!iscarbon(M))
+/obj/machinery/implantchair/implant(mob/M)
+	if(!istype(M, /mob/living/carbon))
 		return
-	if(!length(implant_list))
-		return
+	if(!implant_list.len)	return
 	for(var/obj/item/implant/mindshield/imp in implant_list)
-		if(!imp)
-			continue
+		if(!imp)	continue
 		if(istype(imp, /obj/item/implant/mindshield))
-			visible_message("<span class='warning'>[src] implants [M].</span>")
+			M.visible_message("<span class='warning'>[M] has been implanted by the [src.name].</span>")
 
 			if(imp.implant(M))
 				implant_list -= imp
 			break
+	return
 
 
-/obj/machinery/implantchair/proc/add_implants()
+/obj/machinery/implantchair/add_implants()
 	for(var/i=0, i<src.max_implants, i++)
 		var/obj/item/implant/mindshield/I = new /obj/item/implant/mindshield(src)
 		implant_list += I

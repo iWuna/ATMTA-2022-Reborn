@@ -3,7 +3,6 @@
 	desc = "How do you even reuse a bullet?"
 	var/ammo_type = /obj/item/ammo_casing/caseless/
 	var/dropped = 0
-	impact_effect_type = null
 
 /obj/item/projectile/bullet/reusable/on_hit(atom/target, blocked = 0)
 	. = ..()
@@ -42,13 +41,17 @@
 	if(dropped)
 		return
 	dropped = 1
-	var/obj/item/ammo_casing/caseless/foam_dart/newdart = new ammo_type(get_turf(src))
+	var/obj/item/ammo_casing/caseless/foam_dart/newdart = new ammo_type(loc)
 	var/obj/item/ammo_casing/caseless/foam_dart/old_dart = ammo_casing
 	newdart.modified = old_dart.modified
-	newdart.BB.damage_type = damage_type
 	if(pen)
-		newdart.add_pen(pen)
+		var/obj/item/projectile/bullet/reusable/foam_dart/newdart_FD = newdart.BB
+		newdart_FD.pen = pen
+		pen.loc = newdart_FD
 		pen = null
+	newdart.BB.damage = damage
+	newdart.BB.nodamage = nodamage
+	newdart.BB.damage_type = damage_type
 	newdart.update_icon()
 
 /obj/item/projectile/bullet/reusable/foam_dart/Destroy()
@@ -60,17 +63,4 @@
 	icon_state = "foamdart_riot"
 	ammo_type = /obj/item/ammo_casing/caseless/foam_dart/riot
 	stamina = 25
-	log_override = FALSE
-
-/obj/item/projectile/bullet/reusable/foam_dart/sniper
-	name = "foam sniper dart"
-	icon_state = "foamdartsniper"
-	ammo_type = /obj/item/ammo_casing/caseless/foam_dart/sniper
-	range = 30
-
-/obj/item/projectile/bullet/reusable/foam_dart/sniper/riot
-	name = "riot sniper foam dart"
-	icon_state = "foamdartsniper_riot"
-	ammo_type = /obj/item/ammo_casing/caseless/foam_dart/sniper/riot
-	stamina = 100
 	log_override = FALSE

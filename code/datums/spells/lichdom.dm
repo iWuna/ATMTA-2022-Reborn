@@ -1,4 +1,4 @@
-/obj/effect/proc_holder/spell/lichdom
+/obj/effect/proc_holder/spell/targeted/lichdom
 	name = "Bind Soul"
 	desc = "A dark necromantic pact that can forever bind your soul to an item of your choosing. So long as both your body and the item remain intact and on the same plane you can revive from death, though the time between reincarnations grows steadily with use."
 	school = "necromancy"
@@ -7,8 +7,10 @@
 	centcom_cancast = 0
 	invocation = "NECREM IMORTIUM!"
 	invocation_type = "shout"
+	range = -1
 	level_max = 0 //cannot be improved
 	cooldown_min = 10
+	include_user = 1
 
 	var/obj/marked_item
 	var/mob/living/current_body
@@ -17,27 +19,24 @@
 
 	action_icon_state = "skeleton"
 
-/obj/effect/proc_holder/spell/lichdom/create_new_targeting()
-	return new /datum/spell_targeting/self
-
-/obj/effect/proc_holder/spell/lichdom/Destroy()
-	for(var/datum/mind/M in SSticker.mode.wizards) //Make sure no other bones are about
+/obj/effect/proc_holder/spell/targeted/lichdom/Destroy()
+	for(var/datum/mind/M in ticker.mode.wizards) //Make sure no other bones are about
 		for(var/obj/effect/proc_holder/spell/S in M.spell_list)
-			if(istype(S,/obj/effect/proc_holder/spell/lichdom) && S != src)
+			if(istype(S,/obj/effect/proc_holder/spell/targeted/lichdom) && S != src)
 				return ..()
 	if(existence_stops_round_end)
-		GLOB.configuration.gamemode.disable_certain_round_early_end = FALSE
+		config.continuous_rounds = 0
 	return ..()
 
-/obj/effect/proc_holder/spell/lichdom/cast(list/targets, mob/user = usr)
-	if(!GLOB.configuration.gamemode.disable_certain_round_early_end)
-		existence_stops_round_end = TRUE
-		GLOB.configuration.gamemode.disable_certain_round_early_end = TRUE
+/obj/effect/proc_holder/spell/targeted/lichdom/cast(list/targets,mob/user = usr)
+	if(!config.continuous_rounds)
+		existence_stops_round_end = 1
+		config.continuous_rounds = 1
 
 	for(var/mob/M in targets)
 		var/list/hand_items = list()
 		if(iscarbon(M))
-			hand_items = list(M.get_active_hand(), M.get_inactive_hand())
+			hand_items = list(M.get_active_hand(),M.get_inactive_hand())
 
 		if(marked_item && !stat_allowed) //sanity, shouldn't happen without badminry
 			marked_item = null
@@ -69,15 +68,18 @@
 
 			lich.real_name = M.mind.name
 			M.mind.transfer_to(lich)
-			lich.set_species(/datum/species/skeleton)
+			lich.set_species("Skeleton")
 			to_chat(lich, "<span class='warning'>Your bones clatter and shutter as they're pulled back into this world!</span>")
 			charge_max += 600
 			var/mob/old_body = current_body
 			var/turf/body_turf = get_turf(old_body)
 			current_body = lich
-			lich.Weaken(10 + 10 * resurrections)
+			lich.Weaken(10+10*resurrections)
 			++resurrections
-			equip_lich(lich)
+			lich.equip_to_slot_or_del(new /obj/item/clothing/shoes/sandal(lich), slot_shoes)
+			lich.equip_to_slot_or_del(new /obj/item/clothing/under/color/black(lich), slot_w_uniform)
+			lich.equip_to_slot_or_del(new /obj/item/clothing/suit/wizrobe/black(lich), slot_wear_suit)
+			lich.equip_to_slot_or_del(new /obj/item/clothing/head/wizard/black(lich), slot_head)
 
 			if(old_body && old_body.loc)
 				if(iscarbon(old_body))
@@ -93,10 +95,10 @@
 		if(!marked_item) //linking item to the spell
 			message = "<span class='warning'>"
 			for(var/obj/item in hand_items)
-				if((ABSTRACT in item.flags) || (NODROP in item.flags))
+				if(ABSTRACT in item.flags || NODROP in item.flags)
 					continue
 				marked_item = item
-				to_chat(M, "<span class='warning'>You begin to focus your very being into [item]...</span>")
+				to_chat(M, "<span class='warning'>You begin to focus your very being into the [item.name]...</span>")
 				break
 
 			if(!marked_item)
@@ -105,7 +107,7 @@
 
 			spawn(50)
 				if(marked_item.loc != M) //I changed my mind I don't want to put my soul in a cheeseburger!
-					to_chat(M, "<span class='warning'>Your soul snaps back to your body as you drop [marked_item]!</span>")
+					to_chat(M, "<span class='warning'>Your soul snaps back to your body as you drop the [marked_item.name]!</span>")
 					marked_item = null
 					return
 				name = "RISE!"
@@ -120,15 +122,12 @@
 				current_body = M.mind.current
 				if(ishuman(M))
 					var/mob/living/carbon/human/H = M
-					H.set_species(/datum/species/skeleton)
+					H.set_species("Skeleton")
 					H.unEquip(H.wear_suit)
 					H.unEquip(H.head)
 					H.unEquip(H.shoes)
 					H.unEquip(H.head)
-					equip_lich(H)
-
-/obj/effect/proc_holder/spell/lichdom/proc/equip_lich(mob/living/carbon/human/H)
-		H.equip_to_slot_or_del(new /obj/item/clothing/suit/wizrobe/black(H), slot_wear_suit)
-		H.equip_to_slot_or_del(new /obj/item/clothing/head/wizard/black(H), slot_head)
-		H.equip_to_slot_or_del(new /obj/item/clothing/shoes/sandal(H), slot_shoes)
-		H.equip_to_slot_or_del(new /obj/item/clothing/under/color/black(H), slot_w_uniform)
+					H.equip_to_slot_or_del(new /obj/item/clothing/suit/wizrobe/black(H), slot_wear_suit)
+					H.equip_to_slot_or_del(new /obj/item/clothing/head/wizard/black(H), slot_head)
+					H.equip_to_slot_or_del(new /obj/item/clothing/shoes/sandal(H), slot_shoes)
+					H.equip_to_slot_or_del(new /obj/item/clothing/under/color/black(H), slot_w_uniform)

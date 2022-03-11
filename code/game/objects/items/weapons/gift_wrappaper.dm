@@ -13,7 +13,7 @@
 	icon = 'icons/obj/items.dmi'
 	icon_state = "gift1"
 	item_state = "gift1"
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 
 /obj/item/a_gift/New()
 	..()
@@ -33,6 +33,11 @@
 	else
 		to_chat(user, "<span class='notice'>The gift was empty!</span>")
 	qdel(src)
+	return
+
+/obj/item/a_gift/ex_act()
+	qdel(src)
+	return
 
 /obj/effect/spresent/relaymove(mob/user as mob)
 	if(user.stat)
@@ -49,7 +54,8 @@
 	to_chat(user, "<span class='notice'>You cut open the present.</span>")
 
 	for(var/mob/M in src) //Should only be one but whatever.
-		M.forceMove(loc)
+		M.loc = src.loc
+		M.reset_perspective(null)
 
 	qdel(src)
 
@@ -91,8 +97,8 @@
 		/obj/random/figure,
 		/obj/item/toy/minimeteor,
 		/obj/item/toy/redbutton,
-		/obj/item/toy/figure/owl,
-		/obj/item/toy/figure/griffin,
+		/obj/item/toy/owl,
+		/obj/item/toy/griffin,
 		/obj/item/clothing/head/blob,
 		/obj/item/id_decal/gold,
 		/obj/item/id_decal/silver,
@@ -129,11 +135,10 @@
 	desc = "You can use this to wrap items in."
 	icon = 'icons/obj/items.dmi'
 	icon_state = "wrap_paper"
-	singular_name = "wrapping paper"
 	flags = NOBLUDGEON
 	amount = 25
 	max_amount = 25
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 
 /obj/item/stack/wrapping_paper/attack_self(mob/user)
 	to_chat(user, "<span class='notice'>You need to use it on a package that has already been wrapped!</span>")

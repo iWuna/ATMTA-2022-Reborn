@@ -1,6 +1,5 @@
 /obj/item/clothing/suit/storage
 	var/obj/item/storage/internal/pockets
-	w_class = WEIGHT_CLASS_NORMAL //we don't want these to be able to fit in their own pockets.
 
 /obj/item/clothing/suit/storage/New()
 	..()
@@ -26,14 +25,14 @@
 	return pockets.attackby(W, user, params)
 
 /obj/item/clothing/suit/storage/emp_act(severity)
-	..()
 	pockets.emp_act(severity)
-
-/obj/item/clothing/suit/storage/hear_talk(mob/M, list/message_pieces)
-	pockets.hear_talk(M, message_pieces)
 	..()
 
-/obj/item/clothing/suit/storage/hear_message(mob/M, msg)
+/obj/item/clothing/suit/storage/hear_talk(mob/M, var/msg)
+	pockets.hear_talk(M, msg)
+	..()
+
+/obj/item/clothing/suit/storage/hear_message(mob/M, var/msg)
 	pockets.hear_message(M, msg)
 	..()
 

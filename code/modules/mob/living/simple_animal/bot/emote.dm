@@ -1,4 +1,4 @@
-/mob/living/simple_animal/bot/emote(act, m_type = 1, message = null, force)
+/mob/living/simple_animal/bot/emote(var/act, var/m_type=1, var/message = null)
 	var/param = null
 	if(findtext(act, "-", 1, null))
 		var/t1 = findtext(act, "-", 1, null)
@@ -9,7 +9,7 @@
 		act = copytext(act,1,length(act))
 
 	//Emote Cooldown System (it's so simple!)
-	//handle_emote_CD() located in [code\modules\mob\emote.dm]
+	// proc/handle_emote_CD() located in [code\modules\mob\emote.dm]
 	var/on_CD = 0
 	act = lowertext(act)
 	switch(act)
@@ -22,7 +22,7 @@
 		else
 			on_CD = 0	//If it doesn't induce the cooldown, we won't check for the cooldown
 
-	if(!force && on_CD == 1)		// Check if we need to suppress the emote attempt.
+	if(on_CD == 1)		// Check if we need to suppress the emote attempt.
 		return			// Suppress emote, you're still cooling off.
 	//--FalseIncarnate
 
@@ -69,6 +69,4 @@
 			playsound(src.loc, 'sound/goonstation/voice/robot_scream.ogg', 80, 0)
 			m_type = 2
 
-		if("help")
-			to_chat(src, "scream(s), yes, no, beep, buzz, ping")
-	..()
+	..(act, m_type, message)

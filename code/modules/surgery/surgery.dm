@@ -32,7 +32,7 @@
 
 	var/datum/surgery_step/S = get_surgery_step()
 	if(S)
-		if(S.try_op(user, target, user.zone_selected, user.get_active_hand(), src))
+		if(S.try_op(user, target, user.zone_sel.selecting, user.get_active_hand(), src))
 			return 1
 	return 0
 
@@ -67,6 +67,10 @@
 	//How much blood this step can get on surgeon. 1 - hands, 2 - full body.
 	var/blood_level = 0
 
+	var/list/allowed_mob = list()
+	var/list/disallowed_mob = list()
+
+
 /datum/surgery_step/proc/try_op(mob/user, mob/living/carbon/target, target_zone, obj/item/tool, datum/surgery/surgery)
 	var/success = 0
 	if(accept_hand)
@@ -86,6 +90,8 @@
 		if(target_zone == surgery.location)
 			initiate(user, target, target_zone, tool, surgery)
 			return 1//returns 1 so we don't stab the guy in the dick or wherever.
+	if(isrobot(user) && user.a_intent != INTENT_HARM) //to save asimov borgs a LOT of heartache
+		return 1
 	return 0
 
 /datum/surgery_step/proc/initiate(mob/user, mob/living/carbon/target, target_zone, obj/item/tool, datum/surgery/surgery)
@@ -111,7 +117,7 @@
 		prob_chance *= get_location_modifier(target)
 
 
-		if(!ispath(surgery.steps[surgery.status], /datum/surgery_step/robotics))//Repairing robotic limbs doesn't hurt, and neither does cutting someone out of a rig
+		if(!ispath(surgery.steps[surgery.status], /datum/surgery_step/robotics) && !ispath(surgery.steps[surgery.status], /datum/surgery_step/rigsuit))//Repairing robotic limbs doesn't hurt, and neither does cutting someone out of a rig
 			if(ishuman(target))
 				var/mob/living/carbon/human/H = target //typecast to human
 				prob_chance *= get_pain_modifier(H)//operating on conscious people is hard.
@@ -140,8 +146,19 @@
 // Checks if this step applies to the user mob at all
 /datum/surgery_step/proc/is_valid_target(mob/living/carbon/human/target)
 	if(!hasorgans(target))
-		return FALSE
-	return TRUE
+		return 0
+
+	if(allowed_mob)//can i just remove this and/or change it?
+		for(var/species in allowed_mob)
+			if(target.get_species() == species)
+				return 1
+
+	if(disallowed_mob)
+		for(var/species in disallowed_mob)
+			if(target.get_species() == species)
+				return 0
+
+	return 1
 
 // checks whether this step can be applied with the given user and target
 /datum/surgery_step/proc/can_use(mob/living/user, mob/living/carbon/human/target, target_zone, obj/item/tool,datum/surgery/surgery)
@@ -170,7 +187,7 @@
 	return null
 
 /proc/spread_germs_to_organ(obj/item/organ/E, mob/living/carbon/human/user, obj/item/tool)
-	if(!istype(user) || !istype(E) || E.is_robotic() || E.sterile)
+	if(!istype(user) || !istype(E) || !(E.status & ORGAN_ROBOT) || E.sterile)
 		return
 
 	var/germ_level = user.germ_level
@@ -178,7 +195,7 @@
 	//germ spread from surgeon touching the patient
 	if(user.gloves)
 		germ_level = user.gloves.germ_level
-	E.germ_level = max(germ_level, E.germ_level)
+	E.germ_level += germ_level
 	spread_germs_by_incision(E, tool) //germ spread from environement to patient
 
 /proc/spread_germs_by_incision(obj/item/organ/external/E,obj/item/tool)
@@ -189,26 +206,27 @@
 
 	for(var/mob/living/carbon/human/H in view(2, E.loc))//germs from people
 		if(AStar(E.loc, H.loc, /turf/proc/Distance, 2, simulated_only = 0))
-			if(!HAS_TRAIT(H, TRAIT_NOBREATH) && !H.wear_mask) //wearing a mask helps preventing people from breathing cooties into open incisions
+			if((!(BREATHLESS in H.mutations) || !(NO_BREATHE in H.species.species_traits)) && !H.wear_mask) //wearing a mask helps preventing people from breathing cooties into open incisions
 				germs += H.germ_level * 0.25
 
 	for(var/obj/effect/decal/cleanable/M in view(2, E.loc))//germs from messes
 		if(AStar(E.loc, M.loc, /turf/proc/Distance, 2, simulated_only = 0))
-			germs++
+			if(!istype(M,/obj/effect/decal/cleanable/dirt))//dirt is too common
+				germs++
 
-	if(tool && tool.blood_DNA && tool.blood_DNA.len) //germs from blood-stained tools
+	if(tool.blood_DNA && tool.blood_DNA.len) //germs from blood-stained tools
 		germs += 30
 
 	if(E.internal_organs.len)
 		germs = germs / (E.internal_organs.len + 1) // +1 for the external limb this eventually applies to; let's not multiply germs now.
 		for(var/obj/item/organ/internal/O in E.internal_organs)
-			if(!O.is_robotic())
+			if(!(O.status & ORGAN_ROBOT))
 				O.germ_level += germs
 
 	E.germ_level += germs
 
 /proc/sort_surgeries()
-	var/gap = GLOB.surgery_steps.len
+	var/gap = surgery_steps.len
 	var/swapped = 1
 	while(gap > 1 || swapped)
 		swapped = 0
@@ -216,9 +234,9 @@
 			gap = round(gap / 1.247330950103979)
 		if(gap < 1)
 			gap = 1
-		for(var/i = 1; gap + i <= GLOB.surgery_steps.len; i++)
-			var/datum/surgery_step/l = GLOB.surgery_steps[i]		//Fucking hate
-			var/datum/surgery_step/r = GLOB.surgery_steps[gap+i]	//how lists work here
+		for(var/i = 1; gap + i <= surgery_steps.len; i++)
+			var/datum/surgery_step/l = surgery_steps[i]		//Fucking hate
+			var/datum/surgery_step/r = surgery_steps[gap+i]	//how lists work here
 			if(l.priority < r.priority)
-				GLOB.surgery_steps.Swap(i, gap + i)
+				surgery_steps.Swap(i, gap + i)
 				swapped = 1

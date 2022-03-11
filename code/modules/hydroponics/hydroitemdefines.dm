@@ -8,49 +8,55 @@
 	w_class = WEIGHT_CLASS_TINY
 	slot_flags = SLOT_BELT
 	origin_tech = "magnets=2;biotech=2"
-	materials = list(MAT_METAL = 30, MAT_GLASS = 20)
+	materials = list(MAT_METAL=30, MAT_GLASS=20)
 
 // *************************************
 // Hydroponics Tools
 // *************************************
 
 /obj/item/reagent_containers/spray/weedspray // -- Skie
-	name = "weed spray"
 	desc = "It's a toxic mixture, in spray form, to kill small weeds."
 	icon = 'icons/obj/hydroponics/equipment.dmi'
+	name = "weed spray"
 	icon_state = "weedspray"
 	item_state = "plantbgone"
 	volume = 100
-	container_type = OPENCONTAINER
+	flags = OPENCONTAINER
 	slot_flags = SLOT_BELT
 	throwforce = 0
 	w_class = WEIGHT_CLASS_SMALL
 	throw_speed = 3
 	throw_range = 10
-	list_reagents = list("atrazine" = 100)
+
+/obj/item/reagent_containers/spray/weedspray/New()
+	..()
+	reagents.add_reagent("atrazine", 100)
 
 /obj/item/reagent_containers/spray/weedspray/suicide_act(mob/user)
-	user.visible_message("<span class='suicide'>[user] is huffing [src]! It looks like [user.p_theyre()] trying to commit suicide.</span>")
-	return TOXLOSS
+	user.visible_message("<span class='suicide'>[user] is huffing the [src.name]! It looks like \he's trying to commit suicide.</span>")
+	return (TOXLOSS)
 
 /obj/item/reagent_containers/spray/pestspray // -- Skie
-	name = "pest spray"
 	desc = "It's some pest eliminator spray! <I>Do not inhale!</I>"
 	icon = 'icons/obj/hydroponics/equipment.dmi'
+	name = "pest spray"
 	icon_state = "pestspray"
 	item_state = "plantbgone"
 	volume = 100
-	container_type = OPENCONTAINER
+	flags = OPENCONTAINER
 	slot_flags = SLOT_BELT
 	throwforce = 0
 	w_class = WEIGHT_CLASS_SMALL
 	throw_speed = 3
 	throw_range = 10
-	list_reagents = list("pestkiller" = 100)
+
+/obj/item/reagent_containers/spray/pestspray/New()
+	..()
+	reagents.add_reagent("pestkiller", 100)
 
 /obj/item/reagent_containers/spray/pestspray/suicide_act(mob/user)
-	user.visible_message("<span class='suicide'>[user] is huffing [src]! It looks like [user.p_theyre()] trying to commit suicide.</span>")
-	return TOXLOSS
+	user.visible_message("<span class='suicide'>[user] is huffing the [src.name]! It looks like \he's trying to commit suicide.</span>")
+	return (TOXLOSS)
 
 /obj/item/cultivator
 	name = "cultivator"
@@ -66,21 +72,10 @@
 	attack_verb = list("slashed", "sliced", "cut", "clawed")
 	hitsound = 'sound/weapons/bladeslice.ogg'
 
-/obj/item/cultivator/rake
-	name = "rake"
-	icon_state = "rake"
-	w_class = WEIGHT_CLASS_NORMAL
-	attack_verb = list("slashed", "sliced", "bashed", "clawed")
-	hitsound = null
-	materials = null
-	flags = NONE
-	resistance_flags = FLAMMABLE
-
 /obj/item/hatchet
 	name = "hatchet"
 	desc = "A very sharp axe blade upon a short fibremetal handle. It has a long history of chopping things, but now it is used for chopping wood."
 	icon_state = "hatchet"
-	item_state = "hatchet"
 	flags = CONDUCT
 	force = 12
 	w_class = WEIGHT_CLASS_TINY
@@ -94,9 +89,9 @@
 	sharp = 1
 
 /obj/item/hatchet/suicide_act(mob/user)
-	user.visible_message("<span class='suicide'>[user] is chopping at [user.p_them()]self with [src]! It looks like [user.p_theyre()] trying to commit suicide.</span>")
+	user.visible_message("<span class='suicide'>[user] is chopping at \himself with the [src.name]! It looks like \he's trying to commit suicide.</span>")
 	playsound(loc, 'sound/weapons/bladeslice.ogg', 50, 1, -1)
-	return BRUTELOSS
+	return (BRUTELOSS)
 
 /obj/item/hatchet/unathiknife
 	name = "duelling knife"
@@ -104,16 +99,10 @@
 	icon_state = "unathiknife"
 	attack_verb = list("ripped", "torn", "cut")
 
-/obj/item/hatchet/wooden
-	desc = "A crude axe blade upon a short wooden handle."
-	icon_state = "woodhatchet"
-	materials = null
-	flags = NONE
-
 /obj/item/scythe
+	icon_state = "scythe0"
 	name = "scythe"
 	desc = "A sharp and curved blade on a long fibremetal handle, this tool makes it easy to reap what you sow."
-	icon_state = "scythe0"
 	force = 13
 	throwforce = 5
 	throw_speed = 2
@@ -129,25 +118,17 @@
 	var/extend = 1
 	var/swiping = FALSE
 
-/obj/item/scythe/bone
-	name = "bone scythe"
-	desc = "Perfect for harvesting. And it's not about plants."
-	icon_state = "bone_scythe"
-	force = 14
-	throw_range = 4
-	origin_tech = "materials=1;combat=2"
-
 /obj/item/scythe/suicide_act(mob/user)
-	user.visible_message("<span class='suicide'>[user] is beheading [user.p_them()]self with [src]! It looks like [user.p_theyre()] trying to commit suicide.</span>")
+	user.visible_message("<span class='suicide'>[user] is beheading \himself with the [src.name]! It looks like \he's trying to commit suicide.</span>")
 	if(ishuman(user))
 		var/mob/living/carbon/human/H = user
 		var/obj/item/organ/external/affecting = H.get_organ("head")
 		if(affecting)
 			affecting.droplimb(1, DROPLIMB_SHARP)
 			playsound(loc, pick('sound/misc/desceration-01.ogg','sound/misc/desceration-02.ogg','sound/misc/desceration-01.ogg'), 50, 1, -1)
-	return BRUTELOSS
+	return (BRUTELOSS)
 
-/obj/item/scythe/pre_attack(atom/A, mob/living/user, params)
+/obj/item/scythe/pre_attackby(atom/A, mob/living/user, params)
 	if(swiping || !istype(A, /obj/structure/spacevine) || get_turf(A) == get_turf(user))
 		return ..()
 	else
@@ -163,10 +144,10 @@
 		swiping = FALSE
 
 /obj/item/scythe/tele
-	name = "telescopic scythe"
-	desc = "A sharp and curved blade on a collapsable fibre metal handle, this tool is the pinnacle of covert reaping technology."
 	icon_state = "tscythe0"
 	item_state = null	//no sprite for folded version, like a tele-baton
+	name = "telescopic scythe"
+	desc = "A sharp and curved blade on a collapsable fibre metal handle, this tool is the pinnacle of covert reaping technology."
 	force = 3
 	sharp = 0
 	w_class = WEIGHT_CLASS_SMALL
@@ -206,6 +187,17 @@
 		H.update_inv_l_hand()
 		H.update_inv_r_hand()
 	add_fingerprint(user)
+	if(!blood_DNA)
+		return
+	if(blood_overlay && (blood_DNA.len >= 1))	//updated blood overlay, if any
+		overlays.Cut()	//this might delete other item overlays as well but eeeeeh
+
+		var/icon/I = new /icon(icon, icon_state)
+		I.Blend(new /icon('icons/effects/blood.dmi', rgb(255,255,255)), ICON_ADD)
+		I.Blend(new /icon('icons/effects/blood.dmi', "itemblood"), ICON_MULTIPLY)
+		blood_overlay = I
+		overlays += blood_overlay
+
 
 // *************************************
 // Nutrient defines for hydroponics
@@ -213,112 +205,79 @@
 
 
 /obj/item/reagent_containers/glass/bottle/nutrient
-	name = "jug of nutrient"
-	desc = "A decent sized plastic jug."
+	name = "bottle of nutrient"
 	icon = 'icons/obj/chemical.dmi'
-	icon_state = "plastic_jug"
-	item_state = "plastic_jug"
+	icon_state = "bottle16"
+	volume = 50
 	w_class = WEIGHT_CLASS_TINY
 	amount_per_transfer_from_this = 10
-	possible_transfer_amounts = list(1,2,5,10,20,40,80)
-	container_type = OPENCONTAINER
-	volume = 80
-	hitsound = 'sound/weapons/jug_empty_impact.ogg'
-	mob_throw_hit_sound = 'sound/weapons/jug_empty_impact.ogg'
-	force = 0.2
-	throwforce = 0.2
+	possible_transfer_amounts = list(1,2,5,10,15,25,50)
 
 /obj/item/reagent_containers/glass/bottle/nutrient/New()
 	..()
-	add_lid()
 	pixel_x = rand(-5, 5)
 	pixel_y = rand(-5, 5)
-
-/obj/item/reagent_containers/glass/bottle/nutrient/on_reagent_change()
-	. = ..()
-	update_icon()
-	if(reagents.total_volume)
-		hitsound = 'sound/weapons/jug_filled_impact.ogg'
-		mob_throw_hit_sound = 'sound/weapons/jug_filled_impact.ogg'
-	else
-		hitsound = 'sound/weapons/jug_empty_impact.ogg'
-		mob_throw_hit_sound = 'sound/weapons/jug_empty_impact.ogg'
-
-/obj/item/reagent_containers/glass/bottle/nutrient/update_icon()
-	cut_overlays()
-
-	if(reagents.total_volume)
-		var/image/filling = image('icons/obj/reagentfillings.dmi', src, "plastic_jug10")
-
-		var/percent = round((reagents.total_volume / volume) * 100)
-		switch(percent)
-			if(0 to 10)
-				filling.icon_state = "plastic_jug-10"
-			if(11 to 29)
-				filling.icon_state = "plastic_jug25"
-			if(30 to 45)
-				filling.icon_state = "plastic_jug40"
-			if(46 to 61)
-				filling.icon_state = "plastic_jug55"
-			if(62 to 77)
-				filling.icon_state = "plastic_jug70"
-			if(78 to 92)
-				filling.icon_state = "plastic_jug85"
-			if(93 to INFINITY)
-				filling.icon_state = "plastic_jug100"
-
-		filling.icon += mix_color_from_reagents(reagents.reagent_list)
-		add_overlay(filling)
-
-	if(!is_open_container())
-		add_overlay("lid_jug")
-
 
 /obj/item/reagent_containers/glass/bottle/nutrient/ez
-	name = "jug of E-Z-Nutrient"
+	name = "bottle of E-Z-Nutrient"
 	desc = "Contains a fertilizer that causes mild mutations with each harvest."
 	icon = 'icons/obj/chemical.dmi'
-	icon_state = "plastic_jug_ez"
-	list_reagents = list("eznutriment" = 80)
+	icon_state = "bottle16"
+
+/obj/item/reagent_containers/glass/bottle/nutrient/ez/New()
+	..()
+	reagents.add_reagent("eznutriment", 50)
 
 /obj/item/reagent_containers/glass/bottle/nutrient/l4z
-	name = "jug of Left 4 Zed"
+	name = "bottle of Left 4 Zed"
 	desc = "Contains a fertilizer that limits plant yields to no more than one and causes significant mutations in plants."
 	icon = 'icons/obj/chemical.dmi'
-	icon_state = "plastic_jug_l4z"
-	list_reagents = list("left4zednutriment" = 80)
+	icon_state = "bottle18"
+
+/obj/item/reagent_containers/glass/bottle/nutrient/l4z/New()
+	..()
+	reagents.add_reagent("left4zednutriment", 50)
 
 /obj/item/reagent_containers/glass/bottle/nutrient/rh
-	name = "jug of Robust Harvest"
+	name = "bottle of Robust Harvest"
 	desc = "Contains a fertilizer that increases the yield of a plant by 30% while causing no mutations."
 	icon = 'icons/obj/chemical.dmi'
-	icon_state = "plastic_jug_rh"
-	list_reagents = list("robustharvestnutriment" = 80)
+	icon_state = "bottle15"
+
+/obj/item/reagent_containers/glass/bottle/nutrient/rh/New()
+	..()
+	reagents.add_reagent("robustharvestnutriment", 50)
 
 /obj/item/reagent_containers/glass/bottle/nutrient/empty
+	name = "bottle"
 	icon = 'icons/obj/chemical.dmi'
-	icon_state = "plastic_jug"
+	icon_state = "bottle16"
 
-/obj/item/reagent_containers/glass/bottle/nutrient/killer
+/obj/item/reagent_containers/glass/bottle/killer
+	name = "bottle"
 	icon = 'icons/obj/chemical.dmi'
-	icon_state = "plastic_jug_k"
+	icon_state = "bottle16"
+	volume = 50
 	w_class = WEIGHT_CLASS_TINY
+	amount_per_transfer_from_this = 10
+	possible_transfer_amounts = list(1,2,5,10,15,25,50)
 
-/obj/item/reagent_containers/glass/bottle/nutrient/killer/New()
-	..()
-	pixel_x = rand(-5, 5)
-	pixel_y = rand(-5, 5)
-
-/obj/item/reagent_containers/glass/bottle/nutrient/killer/weedkiller
-	name = "jug of weed killer"
+/obj/item/reagent_containers/glass/bottle/killer/weedkiller
+	name = "bottle of weed killer"
 	desc = "Contains a herbicide."
 	icon = 'icons/obj/chemical.dmi'
-	icon_state = "plastic_jug_wk"
-	list_reagents = list("atrazine" = 80)
+	icon_state = "bottle19"
 
-/obj/item/reagent_containers/glass/bottle/nutrient/killer/pestkiller
-	name = "jug of pest spray"
+/obj/item/reagent_containers/glass/bottle/killer/weedkiller/New()
+	..()
+	reagents.add_reagent("atrazine", 50)
+
+/obj/item/reagent_containers/glass/bottle/killer/pestkiller
+	name = "bottle of pest spray"
 	desc = "Contains a pesticide."
 	icon = 'icons/obj/chemical.dmi'
-	icon_state = "plastic_jug_pk"
-	list_reagents = list("pestkiller" = 80)
+	icon_state = "bottle20"
+
+/obj/item/reagent_containers/glass/bottle/killer/pestkiller/New()
+	..()
+	reagents.add_reagent("pestkiller", 50)

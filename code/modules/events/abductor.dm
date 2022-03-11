@@ -1,23 +1,23 @@
 /datum/event/abductor
 
 /datum/event/abductor/start()
-	INVOKE_ASYNC(src, .proc/try_makeAbductorTeam)
-
-/datum/event/abductor/proc/try_makeAbductorTeam()
+	//spawn abductor team
+	processing = 0 //so it won't fire again in next tick
 	if(!makeAbductorTeam())
 		message_admins("Abductor event failed to find players. Retrying in 30s.")
-		addtimer(CALLBACK(src, .proc/makeAbductorTeam), 30 SECONDS)
+		spawn(300)
+			makeAbductorTeam()
 
 /datum/event/abductor/proc/makeAbductorTeam()
-	var/list/mob/dead/observer/candidates = SSghost_spawns.poll_candidates("Do you wish to be considered for an Abductor Team?", ROLE_ABDUCTOR, TRUE)
+	var/list/mob/dead/observer/candidates = pollCandidates("Do you wish to be considered for an Abductor Team?", ROLE_ABDUCTOR, 1)
 
 	if(candidates.len >= 2)
 		//Oh god why we can't have static functions
-		var/number =  SSticker.mode.abductor_teams + 1
+		var/number =  ticker.mode.abductor_teams + 1
 
 		var/datum/game_mode/abduction/temp
-		if(SSticker.mode.config_tag == "abduction")
-			temp = SSticker.mode
+		if(ticker.mode.config_tag == "abduction")
+			temp = ticker.mode
 		else
 			temp = new
 
@@ -42,10 +42,11 @@
 		temp.make_abductor_team(number,preset_scientist=scientist_mind,preset_agent=agent_mind)
 		temp.post_setup_team(number)
 
-		SSticker.mode.abductor_teams++
+		ticker.mode.abductor_teams++
 
-		if(SSticker.mode.config_tag != "abduction")
-			SSticker.mode.abductors |= temp.abductors
+		if(ticker.mode.config_tag != "abduction")
+			ticker.mode.abductors |= temp.abductors
+		processing = 1 //So it will get gc'd
 		return 1
 	else
 		return 0

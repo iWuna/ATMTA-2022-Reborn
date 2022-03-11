@@ -2,11 +2,16 @@
 	name = "factory blob"
 	icon = 'icons/mob/blob.dmi'
 	icon_state = "blob_factory"
-	max_integrity = 200
-	point_return = 18
+	health = 100
+	fire_resist = 2
 	var/list/spores = list()
 	var/max_spores = 3
 	var/spore_delay = 0
+	var/mob/camera/blob/overmind
+
+/obj/structure/blob/factory/update_icon()
+	if(health <= 0)
+		qdel(src)
 
 /obj/structure/blob/factory/Destroy()
 	for(var/mob/living/simple_animal/hostile/blob/blobspore/spore in spores)
@@ -17,11 +22,13 @@
 
 /obj/structure/blob/factory/run_action()
 	if(spores.len >= max_spores)
-		return
+		return 0
 	if(spore_delay > world.time)
-		return
-	flick("blob_factory_glow", src)
+		return 0
 	spore_delay = world.time + 100 // 10 seconds
 	var/mob/living/simple_animal/hostile/blob/blobspore/BS = new/mob/living/simple_animal/hostile/blob/blobspore(src.loc, src)
-	if(overmind)
-		overmind.add_mob_to_overmind(BS)
+	BS.color = color
+	BS.overmind = overmind
+	overmind.blob_mobs.Add(BS)
+	return 0
+

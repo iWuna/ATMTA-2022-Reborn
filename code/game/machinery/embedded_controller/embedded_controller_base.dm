@@ -4,7 +4,7 @@
 	name = "Embedded Controller"
 	anchored = 1
 
-	use_power = IDLE_POWER_USE
+	use_power = 1
 	idle_power_usage = 10
 
 	var/on = 1
@@ -27,15 +27,18 @@
 	src.updateDialog()
 
 /obj/machinery/embedded_controller/attack_ghost(mob/user as mob)
-	ui_interact(user)
+	src.ui_interact(user)
 
 /obj/machinery/embedded_controller/attack_ai(mob/user as mob)
-	ui_interact(user)
+	src.ui_interact(user)
 
 /obj/machinery/embedded_controller/attack_hand(mob/user as mob)
 	if(!user.IsAdvancedToolUser())
-		return FALSE
-	ui_interact(user)
+		return 0
+	src.ui_interact(user)
+
+/obj/machinery/embedded_controller/ui_interact()
+	return
 
 /obj/machinery/embedded_controller/radio
 	icon = 'icons/obj/airlock_machines.dmi'
@@ -46,17 +49,18 @@
 	var/id_tag
 	//var/radio_power_use = 50 //power used to xmit signals
 
-	frequency = 1379
+	var/frequency = 1379
 	var/radio_filter = null
-	resistance_flags = FIRE_PROOF | ACID_PROOF
+	var/datum/radio_frequency/radio_connection
+	unacidable = 1
 
 /obj/machinery/embedded_controller/radio/Initialize()
 	..()
 	set_frequency(frequency)
 
 /obj/machinery/embedded_controller/radio/Destroy()
-	if(SSradio)
-		SSradio.remove_object(src, frequency)
+	if(radio_controller)
+		radio_controller.remove_object(src, frequency)
 	radio_connection = null
 	return ..()
 
@@ -69,7 +73,7 @@
 	else
 		icon_state = "airlock_control_off"
 
-/obj/machinery/embedded_controller/radio/post_signal(datum/signal/signal, filter = null)
+/obj/machinery/embedded_controller/radio/post_signal(datum/signal/signal, var/filter = null)
 	signal.transmission_method = TRANSMISSION_RADIO
 	if(radio_connection)
 		//use_power(radio_power_use)	//neat idea, but causes way too much lag.
@@ -77,7 +81,7 @@
 	else
 		qdel(signal)
 
-/obj/machinery/embedded_controller/radio/set_frequency(new_frequency)
-	SSradio.remove_object(src, frequency)
+/obj/machinery/embedded_controller/radio/proc/set_frequency(new_frequency)
+	radio_controller.remove_object(src, frequency)
 	frequency = new_frequency
-	radio_connection = SSradio.add_object(src, frequency, radio_filter)
+	radio_connection = radio_controller.add_object(src, frequency, radio_filter)

@@ -6,7 +6,7 @@
 	force = 5
 	w_class = WEIGHT_CLASS_BULKY
 	attack_verb = list("bashed","smacked")
-	resistance_flags = FLAMMABLE
+	burn_state = FLAMMABLE
 
 	var/delayed = 0 //used to do delays
 
@@ -38,7 +38,7 @@
 
 /datum/crafting_recipe/picket_sign
 	name = "Picket Sign"
-	result = list(/obj/item/picket_sign)
+	result = /obj/item/picket_sign
 	reqs = list(/obj/item/stack/rods = 1,
 				/obj/item/stack/sheet/cardboard = 2)
 	time = 80

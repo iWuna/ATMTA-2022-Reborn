@@ -1,4 +1,4 @@
-/mob/living/silicon/robot/emote(act, m_type=1, message = null, force)
+/mob/living/silicon/robot/emote(var/act, var/m_type=1, var/message = null)
 	var/param = null
 	if(findtext(act, "-", 1, null))
 		var/t1 = findtext(act, "-", 1, null)
@@ -6,20 +6,18 @@
 		act = copytext(act, 1, t1)
 
 	//Emote Cooldown System (it's so simple!)
-	//handle_emote_CD() located in [code\modules\mob\emote.dm]
+	// proc/handle_emote_CD() located in [code\modules\mob\emote.dm]
 	var/on_CD = 0
 	act = lowertext(act)
 	switch(act)
 		//Cooldown-inducing emotes
 		if("law","flip","flips","halt")		//halt is exempt because it's used to stop criminal scum //WHOEVER THOUGHT THAT WAS A GOOD IDEA IS GOING TO GET SHOT.
 			on_CD = handle_emote_CD()			//proc located in code\modules\mob\emote.dm
-		if("spin","spins")
-			on_CD = handle_emote_CD(5 SECONDS)
 		//Everything else, including typos of the above emotes
 		else
 			on_CD = 0	//If it doesn't induce the cooldown, we won't check for the cooldown
 
-	if(!force && on_CD == 1)		// Check if we need to suppress the emote attempt.
+	if(on_CD == 1)		// Check if we need to suppress the emote attempt.
 		return			// Suppress emote, you're still cooling off.
 	//--FalseIncarnate
 
@@ -159,14 +157,10 @@
 			message = "<B>[src]</B> does a flip!"
 			src.SpinAnimation(5,1)
 
-		if("spin","spins")
-			spin(20, 1)
-			message = "<B>[src]</B> spins!"
-
 		if("help")
-			to_chat(src, "salute, bow-(none)/mob, clap, flap, aflap, twitch, twitches, nod, deathgasp, glare-(none)/mob, stare-(none)/mob, look,\n law, halt, flip, spin")
+			to_chat(src, "salute, bow-(none)/mob, clap, flap, aflap, twitch, twitches, nod, deathgasp, glare-(none)/mob, stare-(none)/mob, look,\n law, halt")
 
-	..()
+	..(act, m_type, message)
 
 /mob/living/silicon/robot/verb/powerwarn()
 	set category = "Robot Commands"

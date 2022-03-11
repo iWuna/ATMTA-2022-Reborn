@@ -67,7 +67,7 @@
 	materials = list(MAT_SILVER = 2000, MAT_METAL = 5000, MAT_DIAMOND = 2000, MAT_BLUESPACE = 3000)
 	build_path = /obj/item/gun/energy/wormhole_projector
 	locked = 1
-	access_requirement = list(ACCESS_RD) //screw you, HoS, this aint yours; this is only for a man of science---and trouble.
+	access_requirement = list(access_rd) //screw you, HoS, this aint yours; this is only for a man of science---and trouble.
 	category = list("Weapons")
 
 /datum/design/large_grenade
@@ -258,25 +258,26 @@
 	locked = 1
 	category = list("Weapons")
 
-/datum/design/reactive_armour
-	name = "Reactive Armor Shell"
-	desc = "A reactive armor shell, that can have an anomaly core inserted to make a reactive armor"
-	id = "reactivearmor"
-	req_tech = list("combat" = 6, "materials" = 7, "engineering" = 5)
+
+/datum/design/beacon/rig_egun
+
+	name = "mounted energy gun"
+	desc = "A forearm-mounted energy projector."
+	id = "rig_egun"
+	req_tech = list("combat" = 4, "magnets" = 5, "powerstorage" = 5)
 	build_type = PROTOLATHE
-	materials = list(MAT_PLASMA = 8000, MAT_TITANIUM = 14000, MAT_BLUESPACE = 6000) //Big strong armor needs big-ish investment
-	build_path = /obj/item/reactive_armour_shell
-	locked = TRUE
-	access_requirement = list(ACCESS_RD)
+	materials = list (MAT_METAL = 4000, MAT_SILVER = 3000, MAT_PLASMA = 2000)
+	build_path = /obj/item/rig_module/device/mounted/egun
+	locked = 1
 	category = list("Weapons")
 
-/datum/design/bsg
-	name = "Blue Space Gun"
-	desc = "A heavy hitting energy cannon, that fires destructive bluespace blasts with a decent area of effect."
-	id = "bsg"
-	req_tech = list("combat" = 7, "materials" = 7, "magnets" = 7, "powerstorage" = 7, "bluespace" = 7)
+/datum/design/beacon/rig_self_destruct
+
+	name = "self-destruct module"
+	desc = "Oh my God, Captain. A bomb."
+	id = "rig_self_destruct"
+	req_tech = list("combat" = 5)
 	build_type = PROTOLATHE
-	materials = list(MAT_METAL = 12000, MAT_GLASS = 2000, MAT_SILVER = 4000, MAT_PLASMA = 4000,  MAT_TITANIUM = 4000, MAT_BLUESPACE = 6000) // Big gun, big cost
-	build_path = /obj/item/gun/energy/bsg
-	locked = TRUE
+	materials = list (MAT_METAL = 5000, MAT_GLASS = 500)
+	build_path = /obj/item/rig_module/self_destruct
 	category = list("Weapons")

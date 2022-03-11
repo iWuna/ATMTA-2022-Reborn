@@ -58,7 +58,7 @@
 		C.emote("scream")
 		user.changeNext_move(CLICK_CD_MELEE)
 		C.apply_damage(25, BURN, "head") //25 fire damage and disfigurement because your face was just deep fried!
-		head.disfigure()
+		head.disfigure("burn")
 		add_attack_logs(user, G.affecting, "Deep-fried with [src]")
 		qdel(G) //Removes the grip so the person MIGHT have a small chance to run the fuck away and to prevent rapid dunks.
 		return 0
@@ -70,7 +70,7 @@
 		return 0
 	for(var/Type in subtypesof(/datum/deepfryer_special))
 		var/datum/deepfryer_special/P = new Type()
-		if(!P.validate(I))
+		if(!istype(I, P.input))
 			continue
 		return P
 	return 0
@@ -83,6 +83,7 @@
 		return 0
 	new recipe.output(get_turf(src))
 
+
 //////////////////////////////////
 //		Deepfryer Special		//
 //		Interaction Datums		//
@@ -92,9 +93,6 @@
 	var/input		//Thing that goes in
 	var/output		//Thing that comes out
 
-/datum/deepfryer_special/proc/validate(obj/item/I)
-	return istype(I, input)
-
 /datum/deepfryer_special/shrimp
 	input = /obj/item/reagent_containers/food/snacks/shrimp
 	output = /obj/item/reagent_containers/food/snacks/fried_shrimp
@@ -103,9 +101,9 @@
 	input = /obj/item/reagent_containers/food/snacks/grown/banana
 	output = /obj/item/reagent_containers/food/snacks/friedbanana
 
-/datum/deepfryer_special/fries
+/datum/deepfryer_special/potato_chips
 	input = /obj/item/reagent_containers/food/snacks/rawsticks
-	output = /obj/item/reagent_containers/food/snacks/fries
+	output = /obj/item/reagent_containers/food/snacks/chips
 
 /datum/deepfryer_special/corn_chips
 	input = /obj/item/reagent_containers/food/snacks/grown/corn
@@ -119,24 +117,10 @@
 	input = /obj/item/reagent_containers/food/snacks/burrito
 	output = /obj/item/reagent_containers/food/snacks/chimichanga
 
-/datum/deepfryer_special/potato_chips
+/datum/deepfryer_special/fries
 	input = /obj/item/reagent_containers/food/snacks/grown/potato/wedges
-	output = /obj/item/reagent_containers/food/snacks/chips
+	output = /obj/item/reagent_containers/food/snacks/fries
 
 /datum/deepfryer_special/carrotfries
 	input = /obj/item/reagent_containers/food/snacks/grown/carrot/wedges
 	output = /obj/item/reagent_containers/food/snacks/carrotfries
-
-/datum/deepfryer_special/onionrings
-	input = /obj/item/reagent_containers/food/snacks/onion_slice
-	output = /obj/item/reagent_containers/food/snacks/onionrings
-
-/datum/deepfryer_special/fried_vox
-	input = /obj/item/organ/external
-	output = /obj/item/reagent_containers/food/snacks/fried_vox
-
-/datum/deepfryer_special/fried_vox/validate(obj/item/I)
-	if(!..())
-		return FALSE
-	var/obj/item/organ/external/E = I
-	return istype(E.dna.species, /datum/species/vox)

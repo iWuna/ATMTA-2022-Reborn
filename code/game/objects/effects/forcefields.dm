@@ -6,27 +6,10 @@
 	anchored = 1
 	opacity = 0
 	density = 1
-	var/lifetime = 30 SECONDS
-
-/obj/effect/forcefield/New()
-	..()
-	if(lifetime)
-		QDEL_IN(src, lifetime)
+	unacidable = 1
 
 /obj/effect/forcefield/CanAtmosPass(turf/T)
 	return !density
-
-/obj/effect/forcefield/wizard
-	var/mob/wizard
-
-/obj/effect/forcefield/wizard/Initialize(mapload, mob/summoner)
-	. = ..()
-	wizard = summoner
-
-/obj/effect/forcefield/wizard/CanPass(atom/movable/mover, turf/target)
-	if(mover == wizard)
-		return TRUE
-	return FALSE
 
 ///////////Mimewalls///////////
 
@@ -34,8 +17,16 @@
 	icon_state = "empty"
 	name = "invisible wall"
 	desc = "You have a bad feeling about this."
+	var/timeleft = 300
+	var/last_process = 0
 
-/obj/effect/forcefield/mime/advanced
-	name = "invisible blockade"
-	desc = "You might be here a while."
-	lifetime = 60 SECONDS
+/obj/effect/forcefield/mime/New()
+	..()
+	last_process = world.time
+	processing_objects.Add(src)
+
+/obj/effect/forcefield/mime/process()
+	timeleft -= (world.time - last_process)
+	if(timeleft <= 0)
+		processing_objects.Remove(src)
+		qdel(src)

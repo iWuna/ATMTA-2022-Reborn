@@ -20,9 +20,7 @@
 	name = "tobacco leaves"
 	desc = "Dry them out to make some smokes."
 	icon_state = "tobacco_leaves"
-	tastes = list("tobacco" = 1)
 	filling_color = "#008000"
-	distill_reagent = "menthol"
 
 // Space Tobacco
 /obj/item/seeds/tobacco/space
@@ -41,6 +39,3 @@
 	name = "space tobacco leaves"
 	desc = "Dry them out to make some space-smokes."
 	icon_state = "stobacco_leaves"
-	tastes = list("space tobacco" = 1)
-	distill_reagent = null
-	wine_power = 0.5

@@ -19,12 +19,12 @@
 		battlecry = input
 
 /mob/living/simple_animal/hostile/guardian/punch/AttackingTarget()
-	. = ..()
+	..()
 	if(iscarbon(target) && target != summoner)
 		if(length(battlecry) > 11)//no more then 11 letters in a battle cry.
 			visible_message("<span class='danger'>[src] punches [target]!</span>")
 		else
-			say("[battlecry][battlecry][battlecry][battlecry][battlecry]", TRUE)
+			say("[battlecry][battlecry][battlecry][battlecry][battlecry]")
 		playsound(loc, attack_sound, 50, 1, 1)
 		playsound(loc, attack_sound, 50, 1, 1)
 		playsound(loc, attack_sound, 50, 1, 1)
@@ -45,4 +45,4 @@
 	playstyle_string = "As a standard type you have no special abilities, but have a high damage resistance and a powerful attack capable of smashing through walls."
 	environment_smash = 2
 	battlecry = "URK"
-	admin_spawned = TRUE
+	adminseal = TRUE

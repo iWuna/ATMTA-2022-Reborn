@@ -5,16 +5,11 @@
 	damage_type = BRUTE
 	flag = "bullet"
 	hitsound_wall = "ricochet"
-	impact_effect_type = /obj/effect/temp_visual/impact_effect
 
 /obj/item/projectile/bullet/weakbullet //beanbag, heavy stamina damage
 	name = "beanbag slug"
 	damage = 5
 	stamina = 80
-
-/obj/item/projectile/bullet/c38
-	name = ".38 bullet"
-	damage = 25
 
 /obj/item/projectile/bullet/weakbullet/booze
 
@@ -35,10 +30,11 @@
 			M.AdjustDrowsy(10)
 			A.volume += 5 //Because we can
 
-/obj/item/projectile/bullet/weakbullet2
+/obj/item/projectile/bullet/weakbullet2  //detective revolver instastuns, but multiple shots are better for keeping punks down
 	name = "rubber bullet"
 	damage = 5
-	stamina = 35
+	weaken = 3
+	stamina = 60
 	icon_state = "bullet-r"
 
 /obj/item/projectile/bullet/weakbullet3
@@ -56,7 +52,7 @@
 
 /obj/item/projectile/bullet/incendiary
 
-/obj/item/projectile/bullet/incendiary/on_hit(atom/target, blocked = 0)
+/obj/item/projectile/bullet/incendiary/on_hit(var/atom/target, var/blocked = 0)
 	. = ..()
 	if(iscarbon(target))
 		var/mob/living/carbon/M = target
@@ -70,16 +66,20 @@
 	damage = 17
 	armour_penetration = 10
 
-/obj/item/projectile/bullet/armourpiercing/wt550
-	damage = 15
-	armour_penetration = 40
-
 /obj/item/projectile/bullet/pellet
 	name = "pellet"
 	damage = 12.5
-	tile_dropoff = 0.75
-	tile_dropoff_s = 1.25
-	armour_penetration = -30
+	var/tile_dropoff = 0.75
+	var/tile_dropoff_s = 1.25
+
+/obj/item/projectile/bullet/pellet/Range()
+	..()
+	if(damage > 0)
+		damage -= tile_dropoff
+	if(stamina > 0)
+		stamina -= tile_dropoff_s
+	if(damage < 0 && stamina < 0)
+		qdel(src)
 
 /obj/item/projectile/bullet/pellet/rubber
 	name = "rubber pellet"
@@ -96,7 +96,9 @@
 	..()
 
 /obj/item/projectile/bullet/pellet/weak/on_range()
- 	do_sparks(1, 1, src)
+ 	var/datum/effect_system/spark_spread/sparks = new /datum/effect_system/spark_spread
+ 	sparks.set_up(1, 1, src)
+ 	sparks.start()
  	..()
 
 /obj/item/projectile/bullet/pellet/overload
@@ -106,31 +108,26 @@
 	range = rand(1, 10)
 	..()
 
-/obj/item/projectile/bullet/pellet/assassination
-	damage = 12
-	tile_dropoff = 1	// slightly less damage and greater damage falloff compared to normal buckshot
-
-/obj/item/projectile/bullet/pellet/assassination/on_hit(atom/target, blocked = 0)
-	if(..(target, blocked))
-		var/mob/living/M = target
-		M.AdjustSilence(2)	// HELP MIME KILLING ME IN MAINT
-
 /obj/item/projectile/bullet/pellet/overload/on_hit(atom/target, blocked = 0)
  	..()
  	explosion(target, 0, 0, 2)
 
 /obj/item/projectile/bullet/pellet/overload/on_range()
  	explosion(src, 0, 0, 2)
- 	do_sparks(3, 3, src)
+ 	var/datum/effect_system/spark_spread/sparks = new /datum/effect_system/spark_spread
+ 	sparks.set_up(3, 3, src)
+ 	sparks.start()
  	..()
 
 /obj/item/projectile/bullet/midbullet
 	damage = 20
 	stamina = 65 //two rounds from the c20r knocks people down
 
-/obj/item/projectile/bullet/midbullet_r
+/obj/item/projectile/bullet/midbulletr
+	name = "rubber bullet"
 	damage = 5
-	stamina = 75 //Still two rounds to knock people down
+	stamina = 65 // Same stamina damage as mid but with less lethal damage
+	icon_state = "bullet-r"
 
 /obj/item/projectile/bullet/midbullet2
 	damage = 25
@@ -155,7 +152,7 @@
 /obj/item/projectile/bullet/heavybullet
 	damage = 35
 
-/obj/item/projectile/bullet/stunshot //taser slugs for shotguns, nothing special
+/obj/item/projectile/bullet/stunshot//taser slugs for shotguns, nothing special
 	name = "stunshot"
 	damage = 5
 	stun = 5
@@ -186,68 +183,85 @@
 	icon = 'icons/obj/meteor.dmi'
 	icon_state = "dust"
 	damage = 30
-	stun = 1
-	weaken = 4
+	weaken = 8
+	stun = 8
 	hitsound = 'sound/effects/meteorimpact.ogg'
 
-/obj/item/projectile/bullet/meteorshot/on_hit(atom/target, blocked = 0)
+/obj/item/projectile/bullet/meteorshot/on_hit(var/atom/target, var/blocked = 0)
 	..()
-	if(ismovable(target))
+	if(istype(target, /atom/movable))
 		var/atom/movable/M = target
-		if(M.move_resist < INFINITY)
-			var/atom/throw_target = get_edge_target_turf(M, get_dir(src, get_step_away(M, src)))
-			M.throw_at(throw_target, 3, 2)
+		var/atom/throw_target = get_edge_target_turf(M, get_dir(src, get_step_away(M, src)))
+		M.throw_at(throw_target, 3, 2)
 
 /obj/item/projectile/bullet/meteorshot/New()
 	..()
 	SpinAnimation()
 
-/obj/item/projectile/bullet/mime
-	damage = 40
-	var/special_effects = TRUE
+/obj/item/projectile/bullet/meteorshot/weak
+	damage = 10
+	weaken = 4
+	stun = 4
 
-/obj/item/projectile/bullet/mime/on_hit(atom/target, blocked = 0)
-	..(target, blocked)
-	if(special_effects)
-		if(iscarbon(target))
-			var/mob/living/carbon/M = target
-			M.Silence(10)
-		else if(istype(target, /obj/mecha/combat/honker))
-			var/obj/mecha/chassis = target
-			chassis.occupant_message("A mimetech anti-honk bullet has hit \the [chassis]!")
-			chassis.use_power(chassis.get_charge() / 2)
-			for(var/obj/item/mecha_parts/mecha_equipment/weapon/honker in chassis.equipment)
-				honker.set_ready_state(0)
-
-/obj/item/projectile/bullet/mime/fake
+/obj/item/projectile/bullet/honker
+	name = "banana"
 	damage = 0
-	nodamage = TRUE
-	special_effects = FALSE
-	log_override = TRUE
+	weaken = 5
+	stun = 5
+	forcedodge = 1
+	nodamage = 1
+	pass_flags = PASSTABLE | PASSGLASS | PASSGRILLE
+	hitsound = 'sound/items/bikehorn.ogg'
+	icon = 'icons/obj/hydroponics/harvest.dmi'
+	icon_state = "banana"
+	range = 200
+
+/obj/item/projectile/bullet/honker/New()
+	..()
+	SpinAnimation()
+
+/obj/item/projectile/bullet/mime
+	damage = 0
+	stun = 5
+	weaken = 5
+	slur = 20
+	stutter = 20
+
+/obj/item/projectile/bullet/mime/on_hit(var/atom/target, var/blocked = 0)
+	..(target, blocked)
+	if(iscarbon(target))
+		var/mob/living/carbon/M = target
+		M.Silence(10)
+	else if(istype(target, /obj/mecha/combat/honker))
+		var/obj/mecha/chassis = target
+		chassis.occupant_message("A mimetech anti-honk bullet has hit \the [chassis]!")
+		chassis.use_power(chassis.get_charge() / 2)
+		for(var/obj/item/mecha_parts/mecha_equipment/weapon/honker in chassis.equipment)
+			honker.set_ready_state(0)
 
 /obj/item/projectile/bullet/dart
 	name = "dart"
 	icon_state = "cbbolt"
 	damage = 6
-	var/piercing = FALSE
+	var/piercing = 0
 
 /obj/item/projectile/bullet/dart/New()
 	..()
 	create_reagents(50)
 	reagents.set_reacting(FALSE)
 
-/obj/item/projectile/bullet/dart/on_hit(atom/target, blocked = 0, hit_zone)
+/obj/item/projectile/bullet/dart/on_hit(var/atom/target, var/blocked = 0, var/hit_zone)
 	if(iscarbon(target))
 		var/mob/living/carbon/M = target
 		if(blocked != 100)
-			if(M.can_inject(null, FALSE, hit_zone, piercing)) // Pass the hit zone to see if it can inject by whether it hit the head or the body.
+			if(M.can_inject(null,0,hit_zone)) // Pass the hit zone to see if it can inject by whether it hit the head or the body.
 				..()
 				reagents.trans_to(M, reagents.total_volume)
 				return 1
 			else
 				blocked = 100
-				target.visible_message("<span class='danger'>[src] was deflected!</span>", \
-									"<span class='userdanger'>You were protected against [src]!</span>")
+				target.visible_message("<span class='danger'>The [name] was deflected!</span>", \
+									"<span class='userdanger'>You were protected against the [name]!</span>")
 	..(target, blocked, hit_zone)
 	reagents.set_reacting(TRUE)
 	reagents.handle_reactions()
@@ -267,11 +281,21 @@
 	icon = 'icons/obj/chemical.dmi'
 	icon_state = "syringeproj"
 
-/obj/item/projectile/bullet/dart/syringe/tranquilizer
+/obj/item/projectile/bullet/dart/rifle
+	damage = 0
+	icon_state = "dart"
 
+/obj/item/projectile/bullet/dart/rifle/tranq
+	icon_state = "tranq"
+
+/obj/item/projectile/bullet/dart/rifle/tranq/New()
+	..()
+	reagents.add_reagent("ketamine", 10)
+
+/obj/item/projectile/bullet/dart/syringe/tranquilizer
 /obj/item/projectile/bullet/dart/syringe/tranquilizer/New()
 	..()
-	reagents.add_reagent("haloperidol", 15)
+	reagents.add_reagent("ether", 15)
 
 /obj/item/projectile/bullet/neurotoxin
 	name = "neurotoxin spit"
@@ -280,7 +304,7 @@
 	damage_type = TOX
 	weaken = 5
 
-/obj/item/projectile/bullet/neurotoxin/on_hit(atom/target, blocked = 0)
+/obj/item/projectile/bullet/neurotoxin/on_hit(var/atom/target, var/blocked = 0)
 	if(isalien(target))
 		weaken = 0
 		nodamage = 1

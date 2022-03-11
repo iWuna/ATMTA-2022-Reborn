@@ -232,10 +232,7 @@
 	eventChance = 20
 
 /datum/holiday/xmas/greet()
-	var/greeting = "Have a merry Christmas!"
-	if(prob(30))
-		greeting += "<br><br>To celebrate, choose a random crewmate on the Manifest and give them a gift!"
-	return greeting
+	return "Have a merry Christmas!"
 
 /datum/holiday/boxing
 	name = "Boxing Day"
@@ -348,9 +345,9 @@
 	if(!istype(H))	return
 
 	H.celebrate()
-	if(!SSholiday.holidays)
-		SSholiday.holidays = list()
-	SSholiday.holidays[H.name] = H
+	if(!holiday_master.holidays)
+		holiday_master.holidays = list()
+	holiday_master.holidays[H.name] = H
 
 	//update our hub status
 	world.update_status()

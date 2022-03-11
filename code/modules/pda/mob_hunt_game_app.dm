@@ -21,20 +21,15 @@
 
 /datum/data/pda/app/mob_hunter_game/start()
 	..()
-	START_PROCESSING(SSobj, pda)
+	processing_objects.Add(pda)
 
 /datum/data/pda/app/mob_hunter_game/stop()
 	..()
 	disconnect("Program Terminated")
-	STOP_PROCESSING(SSobj, pda)
-
-/datum/data/pda/app/mob_hunter_game/Destroy()
-	STOP_PROCESSING(SSobj, pda)
-	SSmob_hunt.connected_clients -= src
-	return ..()
+	processing_objects.Remove(pda)
 
 /datum/data/pda/app/mob_hunter_game/proc/scan_nearby()
-	if(!SSmob_hunt || !connected)
+	if(!mob_hunt_server || !connected)
 		return
 	for(var/turf/T in range(scan_range, get_turf(pda)))
 		for(var/obj/effect/nanomob/N in T.contents)
@@ -46,13 +41,13 @@
 				N.reveal()
 
 /datum/data/pda/app/mob_hunter_game/proc/reconnect()
-	if(!SSmob_hunt || !SSmob_hunt.server_status || connected)
+	if(!mob_hunt_server || !mob_hunt_server.server_status || connected)
 		//show a message about the server being unavailable (because it doesn't exist / didn't get set to the global var / is offline)
 		return 0
-	SSmob_hunt.connected_clients += src
+	mob_hunt_server.connected_clients += src
 	connected = 1
 	if(pda)
-		pda.atom_say("Connection established. Capture all of the mobs, [pda.owner ? pda.owner : "hunter"]!")
+		pda.audible_message("[bicon(pda)] Connection established. Capture all of the mobs, [pda.owner ? pda.owner : "hunter"]!", null, 2)
 	return 1
 
 /datum/data/pda/app/mob_hunter_game/proc/get_player()
@@ -64,32 +59,31 @@
 	return null
 
 /datum/data/pda/app/mob_hunter_game/proc/disconnect(reason = null)
-	if(!SSmob_hunt || !connected)
+	if(!mob_hunt_server || !connected)
 		return
-	SSmob_hunt.connected_clients -= src
-	for(var/obj/effect/nanomob/N in (SSmob_hunt.normal_spawns + SSmob_hunt.trap_spawns))
+	mob_hunt_server.connected_clients -= src
+	for(var/obj/effect/nanomob/N in (mob_hunt_server.normal_spawns + mob_hunt_server.trap_spawns))
 		N.conceal(list(get_player()))
 	connected = 0
 	//show a disconnect message if we were disconnected involuntarily (reason argument provided)
 	if(pda && reason)
-		pda.atom_say("Disconnected from server. Reason: [reason].")
+		pda.audible_message("[bicon(pda)] Disconnected from server. Reason: [reason].", null, 2)
 
 /datum/data/pda/app/mob_hunter_game/program_process()
-	if(!SSmob_hunt || !connected)
+	if(!mob_hunt_server || !connected)
 		return
 	scan_nearby()
 
-/datum/data/pda/app/mob_hunter_game/proc/register_capture(datum/mob_hunt/captured, wild = FALSE)
+/datum/data/pda/app/mob_hunter_game/proc/register_capture(datum/mob_hunt/captured, wild = 0)
 	if(!captured)
-		return FALSE
-	my_collection += captured
-	RegisterSignal(captured, COMSIG_PARENT_QDELETING, .proc/remove_mob)
+		return 0
+	my_collection.Add(captured)
 	if(wild)
 		wild_captures++
-	return TRUE
+	return 1
 
 /datum/data/pda/app/mob_hunter_game/update_ui(mob/user, list/data)
-	if(!SSmob_hunt || !(src in SSmob_hunt.connected_clients))
+	if(!mob_hunt_server || !(src in mob_hunt_server.connected_clients))
 		data["connected"] = 0
 	else
 		data["connected"] = 1
@@ -144,27 +138,12 @@
 	card.forceMove(get_turf(pda))
 	remove_mob()
 
-/**
-  * Removes a Nanomob from the [my_collection] list.
-  *
-  * The Nanomob that is currently selected in the app ([current_index]) will be removed from the list unless a `mob_override` argument is given, in which case that will be removed instead.
-  *
-  * Arguments:
-  * * mob_override - A specific Nanomob to remove from the list. (Optional)
-  */
-/datum/data/pda/app/mob_hunter_game/proc/remove_mob(datum/mob_hunt/mob_override = null)
-	SIGNAL_HANDLER
-	if(!length(my_collection))
+/datum/data/pda/app/mob_hunter_game/proc/remove_mob()
+	if(!my_collection.len)
 		return
-
-	if(mob_override)
-		my_collection -= mob_override
-	else
-		my_collection -= my_collection[current_index]
-
-	var/collection_length = length(my_collection)
-	if(current_index > collection_length)
-		current_index = collection_length
+	my_collection.Remove(my_collection[current_index])
+	if(current_index > my_collection.len)
+		current_index = my_collection.len
 
 /datum/data/pda/app/mob_hunter_game/proc/set_trap()
 	if(!my_collection.len || !pda || !hacked)
@@ -173,15 +152,8 @@
 	bait = bait.type
 	new bait(1, get_turf(pda))
 
-/datum/data/pda/app/mob_hunter_game/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
-	if(..())
-		return
-
-	if(!pda.silent)
-		playsound(pda, 'sound/machines/terminal_select.ogg', 15, TRUE)
-
-	. = TRUE
-	switch(action)
+/datum/data/pda/app/mob_hunter_game/Topic(href, list/href_list)
+	switch(href_list["choice"])
 		if("Rename")
 			assign_nickname()
 		if("Release")

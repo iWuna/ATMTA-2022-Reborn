@@ -1,6 +1,6 @@
 //Medbot
 /mob/living/simple_animal/bot/medbot
-	name = "\improper Medibot"
+	name = "Medibot"
 	desc = "A little medical robot. He looks somewhat underwhelmed."
 	icon = 'icons/obj/aibots.dmi'
 	icon_state = "medibot0"
@@ -44,8 +44,6 @@
 	var/treatment_virus = "spaceacillin"
 	var/treat_virus = 1 //If on, the bot will attempt to treat viral infections, curing them if possible.
 	var/shut_up = 0 //self explanatory :)
-	var/syndicate_aligned = FALSE // Will it only treat operatives?
-	var/drops_parts = TRUE
 
 /mob/living/simple_animal/bot/medbot/tox
 	skin = "tox"
@@ -65,28 +63,23 @@
 /mob/living/simple_animal/bot/medbot/fish
 	skin = "fish"
 
-/mob/living/simple_animal/bot/medbot/machine
-	skin = "machine"
-
 /mob/living/simple_animal/bot/medbot/mysterious
-	name = "\improper Mysterious Medibot"
+	name = "Mysterious Medibot"
 	desc = "International Medibot of mystery."
 	skin = "bezerk"
 	treatment_oxy = "perfluorodecalin"
-	treatment_brute = "bicaridine"
-	treatment_fire = "kelotane"
+	treatment_brute = "styptic_powder"
+	treatment_fire = "silver_sulfadiazine"
 	treatment_tox = "charcoal"
 
 /mob/living/simple_animal/bot/medbot/syndicate
 	name = "Suspicious Medibot"
 	desc = "You'd better have insurance!"
 	skin = "bezerk"
-	faction = list("syndicate")
 	treatment_oxy = "perfluorodecalin"
-	treatment_brute = "bicaridine"
-	treatment_fire = "kelotane"
+	treatment_brute = "styptic_powder"
+	treatment_fire = "silver_sulfadiazine"
 	treatment_tox = "charcoal"
-	syndicate_aligned = TRUE
 	bot_core_type = /obj/machinery/bot_core/medbot/syndicate
 	control_freq = BOT_FREQ + 1000 // make it not show up on lists
 	radio_channel = "Syndicate"
@@ -94,17 +87,9 @@
 
 /mob/living/simple_animal/bot/medbot/syndicate/New()
 	..()
-	Radio.syndiekey = new /obj/item/encryptionkey/syndicate
-
-/mob/living/simple_animal/bot/medbot/syndicate/emagged
-	emagged = 2
-	declare_crit = 0
-	drops_parts = FALSE
+	Radio.syndie = 1
 
 /mob/living/simple_animal/bot/medbot/update_icon()
-	overlays.Cut()
-	if(skin)
-		overlays += "medskin_[skin]"
 	if(!on)
 		icon_state = "medibot0"
 		return
@@ -116,20 +101,21 @@
 	else
 		icon_state = "medibot1"
 
-/mob/living/simple_animal/bot/medbot/New(loc, new_skin)
+/mob/living/simple_animal/bot/medbot/New()
 	..()
-	var/datum/job/doctor/J = new /datum/job/doctor
-	access_card.access += J.get_access()
-	prev_access = access_card.access
-	qdel(J)
+	update_icon()
 
-	var/datum/atom_hud/medsensor = GLOB.huds[DATA_HUD_MEDICAL_ADVANCED]
+	spawn(4)
+		if(skin)
+			overlays += image('icons/obj/aibots.dmi', "medskin_[skin]")
+
+		var/datum/job/doctor/J = new/datum/job/doctor
+		access_card.access += J.get_access()
+		prev_access = access_card.access
+
+	var/datum/atom_hud/medsensor = huds[DATA_HUD_MEDICAL_ADVANCED]
 	medsensor.add_hud_to(src)
 	permanent_huds |= medsensor
-
-	if(new_skin)
-		skin = new_skin
-	update_icon()
 
 /mob/living/simple_animal/bot/medbot/bot_reset()
 	..()
@@ -285,10 +271,8 @@
 	if(assess_patient(H))
 		last_found = world.time
 		if((last_newpatient_speak + 300) < world.time) //Don't spam these messages!
-			var/list/messagevoice = list("Hey, [H.name]! Hold on, I'm coming." = 'sound/voice/mcoming.ogg', "Wait [H.name]! I want to help!" = 'sound/voice/mhelp.ogg', "[H.name], you appear to be injured!" = 'sound/voice/minjured.ogg')
-			var/message = pick(messagevoice)
+			var/message = pick("Hey, [H.name]! Hold on, I'm coming.","Wait [H.name]! I want to help!","[H.name], you appear to be injured!")
 			speak(message)
-			playsound(loc, messagevoice[message], 50, 0)
 			last_newpatient_speak = world.time
 		return H
 	else
@@ -320,10 +304,8 @@
 
 	if(!patient)
 		if(!shut_up && prob(1))
-			var/list/messagevoice = list("Radar, put a mask on!" = 'sound/voice/mradar.ogg', "There's always a catch, and I'm the best there is." = 'sound/voice/mcatch.ogg', "I knew it, I should've been a plastic surgeon." = 'sound/voice/msurgeon.ogg', "What kind of medbay is this? Everyone's dropping like flies." = 'sound/voice/mflies.ogg', "Delicious!" = 'sound/voice/mdelicious.ogg')
-			var/message = pick(messagevoice)
+			var/message = pick("Radar, put a mask on!","There's always a catch, and it's the best there is.","I knew it, I should've been a plastic surgeon.","What kind of medbay is this? Everyone's dropping like dead flies.","Delicious!")
 			speak(message)
-			playsound(loc, messagevoice[message], 50, 0)
 		var/scan_range = (stationary_mode ? 1 : DEFAULT_SCAN_RANGE) //If in stationary mode, scan range is limited to adjacent patients.
 		patient = scan(/mob/living/carbon/human, oldpatient, scan_range)
 		oldpatient = patient
@@ -383,13 +365,13 @@
 	// is secretly a silicon
 	if(ishuman(C))
 		var/mob/living/carbon/human/H = C
-		if(H.dna.species && H.dna.species.reagent_tag == PROCESS_SYN)
+		if(H.species && H.species.reagent_tag == PROCESS_SYN)
 			return 0
 
 	if(emagged == 2) //Everyone needs our medicine. (Our medicine is toxins)
 		return 1
 
-	if(syndicate_aligned && (!("syndicate" in C.faction)))
+	if((skin == "bezerk") && (!("syndicate" in C.faction)))
 		return 0
 
 	if(declare_crit && C.health <= 0) //Critical condition! Call for help!
@@ -445,7 +427,7 @@
 
 /mob/living/simple_animal/bot/medbot/examinate(atom/A as mob|obj|turf in view())
 	..()
-	if(has_vision(information_only=TRUE))
+	if(!is_blind(src))
 		chemscan(src, A)
 
 /mob/living/simple_animal/bot/medbot/proc/medicate_patient(mob/living/carbon/C)
@@ -458,11 +440,9 @@
 		soft_reset()
 		return
 
-	if(C.stat == DEAD || HAS_TRAIT(C, TRAIT_FAKEDEATH))
-		var/list/messagevoice = list("No! Stay with me!" = 'sound/voice/mno.ogg', "Live, damnit! LIVE!" = 'sound/voice/mlive.ogg', "I...I've never lost a patient before. Not today, I mean." = 'sound/voice/mlost.ogg')
-		var/message = pick(messagevoice)
-		speak(message)
-		playsound(loc, messagevoice[message], 50, 0)
+	if(C.stat == 2)
+		var/death_message = pick("No! NO!","Live, damnit! LIVE!","I...I've never lost a patient before. Not today, I mean.")
+		speak(death_message)
 		oldpatient = patient
 		soft_reset()
 		return
@@ -512,10 +492,8 @@
 					break
 
 	if(!reagent_id) //If they don't need any of that they're probably cured!
-		var/list/messagevoice = list("All patched up!" = 'sound/voice/mpatchedup.ogg', "An apple a day keeps me away." = 'sound/voice/mapple.ogg', "Feel better soon!" = 'sound/voice/mfeelbetter.ogg')
-		var/message = pick(messagevoice)
+		var/message = pick("All patched up!","An apple a day keeps me away.","Feel better soon!")
 		speak(message)
-		playsound(loc, messagevoice[message], 50, 0)
 		bot_reset()
 		return
 	else
@@ -530,7 +508,7 @@
 				if(inject_beaker)
 					if(use_beaker && reagent_glass && reagent_glass.reagents.total_volume)
 						var/fraction = min(injection_amount/reagent_glass.reagents.total_volume, 1)
-						reagent_glass.reagents.reaction(patient, REAGENT_INGEST, fraction)
+						reagent_glass.reagents.reaction(patient, INGEST, fraction)
 						reagent_glass.reagents.trans_to(patient, injection_amount) //Inject from beaker instead.
 				else
 					patient.reagents.add_reagent(reagent_id,injection_amount)
@@ -546,7 +524,7 @@
 	return
 
 /mob/living/simple_animal/bot/medbot/proc/check_overdose(mob/living/carbon/patient,reagent_id,injection_amount)
-	var/datum/reagent/R  = GLOB.chemical_reagents_list[reagent_id]
+	var/datum/reagent/R  = chemical_reagents_list[reagent_id]
 	if(!R.overdose_threshold)
 		return 0
 	var/current_volume = patient.reagents.get_reagent_amount(reagent_id)
@@ -564,49 +542,44 @@
 	visible_message("<span class='userdanger'>[src] blows apart!</span>")
 	var/turf/Tsec = get_turf(src)
 
-	if(drops_parts)
-		switch(skin)
-			if("ointment")
-				new /obj/item/storage/firstaid/fire/empty(Tsec)
-			if("tox")
-				new /obj/item/storage/firstaid/toxin/empty(Tsec)
-			if("o2")
-				new /obj/item/storage/firstaid/o2/empty(Tsec)
-			if("brute")
-				new /obj/item/storage/firstaid/brute/empty(Tsec)
-			if("adv")
-				new /obj/item/storage/firstaid/adv/empty(Tsec)
-			if("bezerk")
-				var/obj/item/storage/firstaid/tactical/empty/T = new(Tsec)
-				T.syndicate_aligned = syndicate_aligned //This is a special case since Syndicate medibots and the mysterious medibot look the same; we also dont' want crew building Syndicate medibots if the mysterious medibot blows up.
-			if("fish")
-				new /obj/item/storage/firstaid/aquatic_kit(Tsec)
-			if("machine")
-				new /obj/item/storage/firstaid/machine/empty(Tsec)
-			else
-				new /obj/item/storage/firstaid(Tsec)
+	switch(skin)
+		if("ointment")
+			new /obj/item/storage/firstaid/fire/empty(Tsec)
+		if("tox")
+			new /obj/item/storage/firstaid/toxin/empty(Tsec)
+		if("o2")
+			new /obj/item/storage/firstaid/o2/empty(Tsec)
+		if("brute")
+			new /obj/item/storage/firstaid/brute/empty(Tsec)
+		if("adv")
+			new /obj/item/storage/firstaid/adv/empty(Tsec)
+		if("bezerk")
+			new /obj/item/storage/firstaid/tactical/empty(Tsec)
+		if("fish")
+			new /obj/item/storage/firstaid/aquatic_kit(Tsec)
+		else
+			new /obj/item/storage/firstaid(Tsec)
 
-		new /obj/item/assembly/prox_sensor(Tsec)
+	new /obj/item/assembly/prox_sensor(Tsec)
 
-		new /obj/item/healthanalyzer(Tsec)
-
-		if(prob(50))
-			drop_part(robot_arm, Tsec)
+	new /obj/item/healthanalyzer(Tsec)
 
 	if(reagent_glass)
 		reagent_glass.forceMove(Tsec)
 		reagent_glass = null
 
-	if(emagged && prob(25))
-		playsound(loc, 'sound/voice/minsult.ogg', 50, 0)
+	if(prob(50))
+		new /obj/item/robot_parts/l_arm(Tsec)
 
-	do_sparks(3, 1, src)
+	var/datum/effect_system/spark_spread/s = new /datum/effect_system/spark_spread
+	s.set_up(3, 1, src)
+	s.start()
 	..()
 
 /mob/living/simple_animal/bot/medbot/proc/declare(crit_patient)
 	if(declare_cooldown)
 		return
-	if(syndicate_aligned)
+	if((skin == "bezerk"))
 		return
 	var/area/location = get_area(src)
 	speak("Medical emergency! [crit_patient ? "<b>[crit_patient]</b>" : "A patient"] is in critical condition at [location]!", radio_channel)
@@ -615,7 +588,7 @@
 		declare_cooldown = 0
 
 /obj/machinery/bot_core/medbot
-	req_one_access = list(ACCESS_MEDICAL, ACCESS_ROBOTICS)
+	req_one_access = list(access_medical, access_robotics)
 
 /obj/machinery/bot_core/medbot/syndicate
-	req_one_access = list(ACCESS_SYNDICATE)
+	req_one_access = list(access_syndicate)

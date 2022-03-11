@@ -1,12 +1,15 @@
+
 /obj/item/bee_briefcase
 	name = "briefcase"
 	desc = "This briefcase has easy-release clasps and smells vaguely of honey and blood..."
+	description_antag = "A briefcase filled with deadly bees, you should inject this with a syringe of your own blood before opening it."
 	icon = 'icons/obj/storage.dmi'
 	icon_state = "briefcase"
 	item_state = "briefcase"
 	flags = CONDUCT
 	hitsound = "swing_hit"
 	force = 10
+	throw_speed = 2
 	throw_range = 4
 	w_class = WEIGHT_CLASS_BULKY
 	attack_verb = list("bashed", "battered", "bludgeoned", "thrashed", "whacked")
@@ -20,15 +23,12 @@
 	return ..()
 
 /obj/item/bee_briefcase/examine(mob/user)
-	. = ..()
+	..()
 	if(loc == user)
 		if(bees_left)
-			. += "<span class='warning'>There are [bees_left] bees still inside in briefcase!</span>"
+			to_chat(user, "<span class='warning'>There are [bees_left] bees still inside in briefcase!</span>")
 		else
-			. += "<span class='danger'>The bees are gone... Colony collapse disorder?</span>"
-
-/obj/item/bee_briefcase/detailed_examine_antag()
-	return "A briefcase filled with deadly bees, you should inject this with a syringe of your own blood before opening it."
+			to_chat(user, "<span class='danger'>The bees are gone... Colony collapse disorder?</span>")
 
 /obj/item/bee_briefcase/attackby(obj/item/I, mob/user, params)
 	if(istype(I, /obj/item/reagent_containers/syringe))
@@ -55,8 +55,7 @@
 		to_chat(user, "You spray [I] into [src].")
 		playsound(loc, 'sound/effects/spray3.ogg', 50, 1, -6)
 
-/obj/item/bee_briefcase/attack_self(mob/user)
-	var/bees_released
+/obj/item/bee_briefcase/attack_self(mob/user as mob)
 	if(!bees_left)
 		to_chat(user, "<span class='danger'>The lack of all and any bees at this event has been somewhat of a let-down...</span>")
 		return
@@ -67,7 +66,7 @@
 
 		//Release up to 5 bees per use. Without using strange reagent, that means two uses. WITH strange reagent, you can get more if you don't release the last bee
 		for(var/bee = min(5, bees_left), bee > 0, bee--)
-			var/mob/living/simple_animal/hostile/poison/bees/syndi/B = new /mob/living/simple_animal/hostile/poison/bees/syndi(get_turf(user)) // RELEASE THE BEES!
+			var/mob/living/simple_animal/hostile/poison/bees/syndi/B = new /mob/living/simple_animal/hostile/poison/bees/syndi(null)
 			B.master_and_friends = blood_list.Copy()	//Doesn't automatically add the person who opens the case, so the bees will attack the user unless they gave their blood
-			bees_released++
-		bees_left -= bees_released
+			B.forceMove(get_turf(user))			//RELEASE THE BEES!
+		bees_left -= 5
