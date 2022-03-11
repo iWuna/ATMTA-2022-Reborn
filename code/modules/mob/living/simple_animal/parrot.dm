@@ -35,11 +35,12 @@
 	can_collar = TRUE
 
 	var/list/clean_speak = list(
-		"Hi",
-		"Hello!",
-		"Cracker?",
-		"BAWWWWK george mellons griffing me"
-	)
+		"Привет",
+		"Дарова!",
+		"Крекккерр?",
+		"БУАААК винсонт антдар грифонит миня!",
+		"БУАААК ХОЧУ ПИСЕК!",
+		"СМОЛ УМНЯША")
 	speak_emote = list("squawks", "says", "yells")
 	emote_hear = list("squawks", "bawks")
 	emote_see = list("flutters its wings")
@@ -690,28 +691,14 @@
 	name = "Poly"
 	desc = "Poly the Parrot. An expert on quantum cracker theory."
 	clean_speak = list(
-		"Poly wanna cracker!",
-		"Check the crystal, you chucklefucks!",
-		"STOP HOT-WIRING THE ENGINE, FUCKING CHRIST!",
-		"Wire the solars, you lazy bums!",
-		"WHO TOOK THE DAMN HARDSUITS?",
-		"OH GOD ITS ABOUT TO DELAMINATE CALL THE SHUTTLE",
-		"Why are there so many atmos alerts?",
-		"OH GOD WHY WOULD YOU PUT PLASMA IN THE SM?",
-		"Remember to lock the emitters!",
-		"Stop goofing off and repair the goddam station!",
-		"The supermatter is not your friend!",
-		"What were the wires again?",
-		"Goddam emaggers!",
-		"Why is nobody watching the engine?",
-		"Maybe the SM would produce more power if we fed it some clowns.",
-		"Everyone else dusted when they touched the SM, but I am sure you will be different.",
-		"I asked the mime if they turned off the scrubbers, but they didn't say a word.",
-		"This engine setup meets all safety requirements.",
-		"Chief Engineers are the SM's natural diet.",
-		"Don't eat the forbidden nacho!",
-		"Is the engine meant to be making that noise?",
-		)
+		"ПОЛИ ХОЧЕТ КРРРРЕКККЕРРР!",
+		"Проверьте сингу, вы идиоты!",
+		"Проверьте теслу, вы дебилы!",
+		"ГОСПОДИ ХВАТИТ ТЫ НЕ УМЕЕШЬ НАСТРАИВАТЬ ДВИГАТЕЛЬ!",
+		"Настройте соляры, лентяи!",
+		"КТО ВЗЯЛ ЧЕРТОВЫ РИГИ?",
+		"БОЖЕ ОНО ВЫРВАЛОСЬ ВЫЗЫВАЙТЕ ШАТТЛ",
+		"П-П-П-ПОЛЕТЕЛИ!")
 	unique_pet = TRUE
 	gold_core_spawnable = NO_SPAWN
 

@@ -32,7 +32,7 @@ GLOBAL_VAR_INIT(admin_ooc_colour, "#b82e00")
 	if(!msg)
 		msg = typing_input(src.mob, "", "ooc \"text\"")
 
-	msg = trim(sanitize(copytext(msg, 1, MAX_MESSAGE_LEN)))
+	msg = trim(sanitize(copytext_char(msg, 1, MAX_MESSAGE_LEN)))
 	if(!msg)
 		return
 
@@ -51,6 +51,12 @@ GLOBAL_VAR_INIT(admin_ooc_colour, "#b82e00")
 			log_admin("[key_name(src)] has attempted to advertise in OOC: [msg]")
 			message_admins("[key_name_admin(src)] has attempted to advertise in OOC: [msg]")
 			return
+		if(findtext(msg, "https://") || findtext(msg, "http://"))
+			if(!findtext(msg, "ss220.space"))
+				to_chat(src, "<B>Advertising other sites is not allowed.</B>")
+				log_admin("[key_name(src)] has attempted to advertise in OOC: [msg]")
+				message_admins("[key_name_admin(src)] has attempted to advertise in OOC: [msg]")
+				return
 
 	log_ooc(msg, src)
 	mob.create_log(OOC_LOG, msg)
@@ -188,7 +194,7 @@ GLOBAL_VAR_INIT(admin_ooc_colour, "#b82e00")
 	if(!msg)
 		msg = typing_input(src.mob, "Local OOC, seen only by those in view.", "looc \"text\"")
 
-	msg = trim(sanitize(copytext(msg, 1, MAX_MESSAGE_LEN)))
+	msg = trim(sanitize(copytext_char(msg, 1, MAX_MESSAGE_LEN)))
 	if(!msg)
 		return
 
@@ -204,6 +210,12 @@ GLOBAL_VAR_INIT(admin_ooc_colour, "#b82e00")
 			log_admin("[key_name(src)] has attempted to advertise in LOOC: [msg]")
 			message_admins("[key_name_admin(src)] has attempted to advertise in LOOC: [msg]")
 			return
+		if(findtext(msg, "https://") || findtext(msg, "http://"))
+			if(!findtext(msg, "ss220.space"))
+				to_chat(src, "<B>Advertising other sites is not allowed.</B>")
+				log_admin("[key_name(src)] has attempted to advertise in OOC: [msg]")
+				message_admins("[key_name_admin(src)] has attempted to advertise in OOC: [msg]")
+				return
 
 	log_looc(msg, src)
 	mob.create_log(LOOC_LOG, msg)

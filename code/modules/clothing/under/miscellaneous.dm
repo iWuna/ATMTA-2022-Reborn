@@ -68,6 +68,7 @@
 	item_color = "solgov"
 	armor = list(MELEE = 10, BULLET = 0, LASER = 0, ENERGY = 0, BOMB = 0, BIO = 0, RAD = 0, FIRE = 30, ACID = 30)
 	displays_id = 0
+
 /obj/item/clothing/under/solgov/elite
 	name = "\improper Trans-Solar Federation Specops marine uniform"
 	desc = "A comfortable and durable combat uniform worn by Trans-Solar Federation Specops Marine Forces."

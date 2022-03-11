@@ -21,7 +21,7 @@
 		new /obj/item/paper(src)
 		new /obj/item/paper(src)
 		amount += 1
-		
+
 /obj/item/paper_bundle/attackby(obj/item/W as obj, mob/user as mob, params)
 	..()
 	var/obj/item/paper/P
@@ -194,7 +194,7 @@
 	set category = "Object"
 	set src in usr
 
-	var/n_name = sanitize(copytext(input(usr, "What would you like to label the bundle?", "Bundle Labelling", name) as text, 1, MAX_MESSAGE_LEN))
+	var/n_name = sanitize(copytext_char(input(usr, "What would you like to label the bundle?", "Bundle Labelling", name) as text, 1, MAX_MESSAGE_LEN))
 	if((loc == usr && usr.stat == 0))
 		name = "[(n_name ? text("[n_name]") : "paper bundle")]"
 	add_fingerprint(usr)
