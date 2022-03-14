@@ -41,3 +41,9 @@
 	icon_state = "disco"
 	item_state = "disco"
 	item_color = "disco"
+
+/obj/item/clothing/under/atmta/waffen
+	name = "Head of Security parade uniform"
+	desc = "Heil to NT!"
+	icon_state = "hos_parade"
+	item_color = "hos_parade"
