@@ -387,3 +387,12 @@
 	cold_protection = UPPER_TORSO|LOWER_TORSO|LEGS|ARMS
 	heat_protection = UPPER_TORSO|LOWER_TORSO|LEGS|ARMS
 	strip_delay = 80
+
+//abibas
+
+/obj/item/clothing/under/atmta/addidas
+	name = "Sport suit"
+	desc = "SEX KVAS HARDBASS"
+	icon_state = "abibas"
+	item_state = "abibas"
+	item_color = "abibas"
