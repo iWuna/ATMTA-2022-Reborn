@@ -19,7 +19,7 @@
 	density = 0
 	layer = 2
 	icon = 'icons/effects/pooeffect.dmi'
-	icon_state = "poo1"
+	icon_state = "floor1"
 	anchored = 1
 	random_icon_states = list("floor1", "floor2", "floor3", "floor4", "floor5", "floor6", "floor7", "floor8")
 
