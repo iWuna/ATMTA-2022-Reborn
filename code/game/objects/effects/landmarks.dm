@@ -430,6 +430,9 @@ INITIALIZE_IMMEDIATE(/obj/effect/landmark/awaystart) //Without this away mission
 	name = "Warden"
 	icon_state = "Warden"
 
+/obj/effect/landmark/start/classd
+	name = "D-Class Prisoner"
+	icon_state = "DClass"
 
 /obj/effect/landmark/start/set_tag()
 	tag = "start*[name]"
