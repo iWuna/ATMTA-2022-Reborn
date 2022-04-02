@@ -48,6 +48,7 @@
 		equip_wizard(wizard.current)
 		INVOKE_ASYNC(src, .proc/name_wizard, wizard.current)
 		greet_wizard(wizard)
+		grant_wizardish() //AlexaMerens shitcode.
 		if(use_huds)
 			update_wiz_icons_added(wizard)
 
@@ -147,7 +148,7 @@
 
 	wizard_mob.faction = list("wizard")
 
-
+	wizard_mob.add_language("Wizardish") //AlexaMerens shitcode.
 
 	to_chat(wizard_mob, "You will find a list of available spells in your spell book. Choose your magic arsenal carefully.")
 	to_chat(wizard_mob, "The spellbook is bound to you, and others cannot use it.")
